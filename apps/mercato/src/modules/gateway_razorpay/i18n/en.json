@@ -1,0 +1,15 @@
+{
+  "gateway_razorpay.title": "Razorpay",
+  "gateway_razorpay.description": "Accept UPI, cards, netbanking, and wallets in India via Razorpay.",
+  "gateway_razorpay.feature.view": "View Razorpay configuration",
+  "gateway_razorpay.feature.configure": "Configure Razorpay settings",
+  "gateway_razorpay.payments.title": "Pay with Razorpay",
+  "gateway_razorpay.payments.description": "UPI, cards, netbanking, and wallets. A secure Razorpay window will open.",
+  "gateway_razorpay.payments.submit": "Pay securely",
+  "gateway_razorpay.payments.processing": "Waiting for payment...",
+  "gateway_razorpay.payments.unavailable": "Razorpay checkout could not be prepared for this payment.",
+  "gateway_razorpay.payments.loadFailed": "Razorpay checkout could not be loaded. Check your connection and try again.",
+  "gateway_razorpay.payments.failed": "Razorpay could not complete the payment.",
+  "gateway_razorpay.payments.dismissed": "Payment was not completed. You can try again.",
+  "gateway_razorpay.payments.verificationFailed": "We could not verify this payment. If you were charged, it will be reconciled automatically."
+}

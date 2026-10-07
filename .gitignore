@@ -1,0 +1,88 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# Environment files — never commit secrets
+.env
+.env.local
+.env.*.local
+.env.preview
+!.env.example
+
+# Build output
+.next/
+out/
+build/
+dist/
+.turbo/
+*.tsbuildinfo
+
+# Generated / runtime
+.mercato/*
+!.mercato/railway.json
+generated/
+.events/
+.queue
+.test-cache.json
+
+# Test artifacts
+coverage/
+test-results/
+playwright-report/
+
+# Uploads / storage
+public/uploads/*
+/storage/
+/data/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/settings.json
+.vscode/launch.json
+
+# Claude / AI tooling
+.claude/
+.claude.json
+.claude.json.tmp*
+.codex/
+.mcp.json
+.cursor/mcp.json
+.ai/sessions*.json
+.ai/session-exports/
+.ai/qa/test-env.json
+.ai/qa/test-env.lock/
+.ai/qa/artifacts_*/
+.ai/qa/ephemeral*
+.ai/scripts/test-env-*
+.ai/.gate-state.json
+.agents/skills/
+skills-lock.json
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+
+# Misc
+*.pem
+*.tgz
+.cache/
+tmp/
+package-lock.json
