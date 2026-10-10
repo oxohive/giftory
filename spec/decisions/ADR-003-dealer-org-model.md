@@ -1,6 +1,6 @@
 # ADR-003: Dealer Organization Model — OM `directory` vs Custom Module
 
-- **Status:** Proposed — requires a spike
+- **Status:** Accepted
 - **Deciders:** Tech lead
 - **Date:** 2026-10-10
 
@@ -23,13 +23,13 @@ Can the OM `directory` module model dealers as organizations with:
 
 ## Options
 
-### Option A — Extend OM `directory` module
+### Option A — Extend OM `directory` module ✅ Chosen
 
 Use OM organizations as the base. Add a `dealer_profiles` table that FK-references `organizations.id`. Use OM's RBAC to define `dealer:owner` and `dealer:staff` roles with a custom permission set.
 
 - **Pros:** Reuses OM's auth, user management, and multi-tenancy for free.
-- **Cons:** Depends on OM's organization model being flexible enough — unknown until spiked.
-- **Risk:** If OM does not support custom org types or role scoping at the dealer level, this option breaks down.
+- **Cons:** No built-in `type` field on organizations — but `dealer_profiles` FK acts as the type discriminator.
+- **Risk:** Mitigated — spike findings confirm all required capabilities exist.
 
 ### Option B — Custom `dealer` module (standalone)
 
@@ -39,19 +39,39 @@ Build a `dealer` module with its own organization concept. Dealer users are stil
 - **Cons:** Duplicates work OM already does (user management, invites, RBAC); more code to maintain.
 - **Risk:** Higher upfront effort; may conflict with OM internals over user-to-org relationships.
 
-## Required Spike
+## Spike Findings (2026-10-10)
 
-Before Phase 2 implementation begins, run a spike (estimated: 1 day) to answer:
+The spike was conducted by inspecting the compiled OM 0.8.0 source (`@open-mercato/core`). All four questions are resolved:
 
-1. Can an OM organization have a custom `type` field, and can the API be scoped to organizations of a specific type?
-2. Does OM support defining custom roles (e.g. `dealer:owner`) with custom permission sets, or only its built-in roles?
-3. Can a dealer user be restricted to seeing only their own organization's data via OM's RBAC without custom middleware?
-4. Does the `directory` module expose the APIs needed by FEAT-008/FEAT-009, or would we be calling internal OM methods?
+1. **Custom org `type` field** — No built-in field exists. Not needed: the presence of a `dealer_profiles` row linked via `organization_id` is the type discriminator. Any org with a `dealer_profiles` row is a dealer org.
+
+2. **Custom roles** — Fully supported. `auth.roles.create` accepts any role name except the reserved `"superadmin"` and `"admin"`. Roles `dealer:owner` and `dealer:staff` can be created and seeded with custom ACL features via `setup.defaultRoleFeatures` in the app module setup.
+
+3. **Org-scoped role restriction** — First-class feature via `role_acls.organizations_json`. Setting this to `["<dealer-org-id>"]` means the role's permissions fire only when the request is scoped to that organization. Dealer users are structurally prevented from accessing other dealers' data — no custom middleware required.
+
+4. **Directory/auth API coverage** — `POST /api/directory/organizations` creates the org; `POST /api/users` creates the dealer user with `organizationId`; `PUT /api/roles/acl` sets the scoped ACL. All FEAT-008/009 operations are covered by existing APIs.
 
 ## Decision
 
-*(Pending spike.)*
+**Option A — Accepted.**
 
-Hypothesis: **Option A** is viable. OM 0.8.0 supports custom organization types and extensible RBAC, so dealer orgs can be layered on top. Custom `dealer_profiles`, `dealer_capabilities`, and `dealer_kyc_documents` tables extend the OM org without touching core.
+Dealer organizations are OM organizations. The `dealer_profiles` table links to `organizations.id` and carries all dealer-specific data (KYC status, GSTIN, business type, etc.). Dealer users are OM users with `organization_id` pointing to their dealer org.
 
-If the spike finds Option A is not viable, fall back to Option B with a clear boundary: dealer users authenticate via OM, but everything else is custom.
+Custom roles `dealer:owner` and `dealer:staff` are created via `auth.roles.create` during app setup. Their `role_acls.organizations_json` is set to the specific dealer org ID at onboarding time, scoping all dealer permissions to their own organization only.
+
+### Implementation pattern
+
+```
+OM organizations (directory module)
+    ↑ FK: organization_id
+dealer_profiles (app module: gift_catalog or new dealer module)
+    ↑ FK: dealer_profile_id
+dealer_kyc_documents (app module)
+dealer_capabilities (app module, FEAT-009)
+
+OM roles: "dealer:owner", "dealer:staff"
+    → role_acls.organizations_json = [dealer-org-id]  ← scoped at onboarding
+OM users: users.organization_id = dealer-org-id
+```
+
+Option B is rejected — it would duplicate user management, invites, session handling, and RBAC that OM already provides correctly.
