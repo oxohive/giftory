@@ -10,6 +10,7 @@ Gift marketplace with 3D customization. Product plan: [docs/Gift_Marketplace_Com
 |---|---|---|
 | `apps/mercato` | Backend + admin: Open Mercato 0.8.0 with the Gift App modules | 3000 |
 | `apps/storefront` | Customer storefront (Next.js) | 3100 |
+| `apps/mobile` | Customer storefront (Expo/React Native) — Phase 1 port, guest-only, Razorpay only. **Sandbox-implemented, never run on a device or against a live backend** — see [apps/mobile/README.md](apps/mobile/README.md) | 8081 (Metro) |
 
 Gift App modules live in `apps/mercato/src/modules/`:
 
@@ -63,6 +64,7 @@ yarn mercato gift_catalog seed-demo      --tenant <tenantId> --org <orgId>
 | [tasks/](tasks/) | User stories and engineering tasks |
 | [apps/storefront/__integration__/storefront-and-admin.spec.ts](apps/storefront/__integration__/storefront-and-admin.spec.ts) | Phase 1 Playwright end-to-end test suite (storefront + admin) |
 | [apps/storefront/docs/backend-api-contract.md](apps/storefront/docs/backend-api-contract.md) | Storefront API contract (verified against the running backend) |
+| [spec/mobile/README.md](spec/mobile/README.md) | Mobile app task breakdown, status, and [IMPLEMENTATION-NOTES.md](spec/mobile/IMPLEMENTATION-NOTES.md) for every discrepancy/open item |
 
 ## Payments
 
