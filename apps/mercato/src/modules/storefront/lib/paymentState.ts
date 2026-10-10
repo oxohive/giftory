@@ -5,7 +5,16 @@ import { round2, toNumberOrNull, type OrderTotals } from './pricing'
 
 type Amount = string | number | null | undefined
 
-/** Sales folds shipping into `subtotalGrossAmount`; shoppers see items and shipping apart. */
+/**
+ * Two subtotal models in play:
+ *  - SalesOrder: `subtotalGrossAmount` includes the shipping adjustment.
+ *  - Storefront: subtotal = product lines only, shipping shown separately.
+ *
+ * This function bridges them: it subtracts `shippingGrossAmount` from the
+ * sales `subtotalGrossAmount` to recover the product-only subtotal that the
+ * shopper sees. Always use this function when presenting order totals to the
+ * shopper; never read `order.subtotalGrossAmount` directly.
+ */
 export function orderTotals(order: {
   subtotalGrossAmount?: Amount
   shippingGrossAmount?: Amount

@@ -1,11 +1,12 @@
 # Feature: Gift Occasions
 
 - **Feature ID:** FEAT-002
+- **Phase:** 1
 - **Status:** Implemented
 - **Objective:** Define curated gift occasions (Birthday, Anniversary, etc.) that organize the storefront home page and filter the catalog.
 - **Business Value:** Occasion-driven discovery is the primary shopping pattern — "I need a birthday gift" — so occasions are the storefront's main navigation intent.
 - **Scope:** Occasion management in admin (CRUD, activate/deactivate), public occasion list API, "Shop by occasion" tiles on the storefront home page.
-- **Out of Scope:** Occasion filter on the products listing page (see [US-001](../../tasks/US-001.md)).
+- **Out of Scope:** Occasion filter on the products listing page (see [US-001](../stories/US-001-occasion-filter.md)).
 
 ## Current Behavior
 
@@ -41,11 +42,11 @@ Table: `gift_occasions` (`apps/mercato/src/modules/gift_catalog/data/entities.ts
 
 - `gift_catalog` module
 - Storefront home page (`apps/storefront/src/app/page.tsx`)
-- [FEAT-001](gift-catalog.md) — occasion filter on catalog API
+- [FEAT-001](FEAT-001-gift-catalog.md) — occasion filter on catalog API
 
 ## Related User Stories
 
-- [US-001](../../tasks/US-001.md) — Occasion filter on products page
+- [US-001](../stories/US-001-occasion-filter.md) — Occasion filter on products page
 
 ## Evidence
 
@@ -56,4 +57,4 @@ Table: `gift_occasions` (`apps/mercato/src/modules/gift_catalog/data/entities.ts
 
 ## Known Limitations
 
-- Occasion-based filtering on the products listing page is not yet implemented in the storefront UI (see [US-001](../../tasks/US-001.md)).
+- Occasion-based filtering on the products listing page is implemented end-to-end but the UI chips are not fully built out (see [US-001](../stories/US-001-occasion-filter.md)).

@@ -1,6 +1,7 @@
 # Feature: Shopping Cart
 
 - **Feature ID:** FEAT-003
+- **Phase:** 1
 - **Status:** Implemented
 - **Objective:** Provide a persistent, server-side cart for anonymous and authenticated shoppers, supporting gift wrap and gift message per line.
 - **Business Value:** Cart persistence across sessions and devices reduces abandonment; gift-specific line options (wrap, message) are core to the product experience.
@@ -64,8 +65,8 @@ Table: `storefront_cart_lines`
 
 - `gift_catalog` module — `gift_message_max_length` per product
 - Open Mercato `catalog` module — product/variant price lookup
-- [FEAT-004](checkout-orders.md) — cart converts to order at checkout
-- [FEAT-006](customer-accounts.md) — customer session for cart adoption
+- [FEAT-004](FEAT-004-checkout-orders.md) — cart converts to order at checkout
+- [FEAT-005](FEAT-005-customer-accounts.md) — customer session for cart adoption
 
 ## Evidence
 
@@ -73,9 +74,9 @@ Table: `storefront_cart_lines`
 - `apps/mercato/src/modules/storefront/__tests__/pricing.test.ts` — pricing unit tests
 - `apps/storefront/src/components/cart/` — cart UI components
 - `apps/storefront/docs/backend-api-contract.md` §Cart — API contract
-- `apps/storefront/__integration__/storefront-and-admin.spec.ts` — Cart section (add, quantity, edit message, remove, empty, character limit, persistence)
+- `apps/storefront/__integration__/storefront-and-admin.spec.ts` — Cart section
 
 ## Known Limitations
 
-- Cart line deduplication is based on `line_key` — gift wrap and message changes create new lines rather than updating the existing one (by design, per the dedup key definition).
+- Cart line deduplication is based on `line_key` — gift wrap and message changes create new lines rather than updating the existing one (by design).
 - Customizable product designs are not yet stored on cart lines ("Personalisation will be available with our 3D designer soon" message shown).

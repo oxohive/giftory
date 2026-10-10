@@ -1,14 +1,14 @@
 # US-002: Pass the Phase 1 End-to-End Test Suite
 
-- **Parent Feature:** All Phase 1 features (FEAT-001 through FEAT-007)
+- **Phase:** 1
 - **Status:** In Progress
 - **Priority:** High
-- **Evidence / Origin:** `apps/storefront/__integration__/storefront-and-admin.spec.ts` — admin and account suites have failures; checkout and payment flows need test keys to run.
+- **Parent Features:** All Phase 1 features (FEAT-001 through FEAT-007)
 
 ## User Story
 
-As the development team,  
-I want all Phase 1 test checklist items to pass,  
+As the development team,
+I want all Phase 1 test checklist items to pass,
 so that we can confirm the full Commerce Foundation is working end-to-end before moving to Phase 2.
 
 ## Context
@@ -26,14 +26,13 @@ The Playwright suite in `apps/storefront/__integration__/storefront-and-admin.sp
 3. Checkout address validation and delivery options suites pass.
 4. Payment end-to-end flow passes with Stripe and Razorpay test keys configured.
 
-## Scope
-
-- **Included:** Executing the checklist, fixing identified bugs, confirming test credentials.
-- **Excluded:** Adding new features; this is verification of existing implementation.
-
 ## Dependencies
 
-- Payment test keys (Stripe and Razorpay) must be available in `apps/mercato/.env`.
+- Payment test keys (Stripe and Razorpay) must be set in `apps/mercato/.env`:
+  - `OM_INTEGRATION_STRIPE_PUBLISHABLE_KEY`, `OM_INTEGRATION_STRIPE_SECRET_KEY`, `OM_INTEGRATION_STRIPE_WEBHOOK_SECRET`
+  - Razorpay keys configured via admin integration UI
+  - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `NEXT_PUBLIC_RAZORPAY_KEY_ID` in `apps/storefront/.env`
+  - `OM_INTEGRATION_TEST=true` to disable rate limiting during test runs
 - A seeded admin account with credentials `admin@acme.com` / `secret` (or updated credentials).
 - A verified test customer account (email verified manually in admin).
 
@@ -45,7 +44,8 @@ The Playwright suite in `apps/storefront/__integration__/storefront-and-admin.sp
 4. Configure Stripe and Razorpay test keys for the payment end-to-end flow.
 5. Manually verify the account flows (registration + email verify, address CRUD, cart merge) since they require email delivery or a pre-verified account.
 
-## Testing Requirements
+## Run Command
 
-- Run with both servers running: `BASE_URL=http://localhost:3100 ADMIN_URL=http://localhost:3000 npx playwright test storefront-and-admin.spec.ts`
-- Skipped tests (address CRUD, cart merge) require a verified test account — verify manually in the admin console first.
+```bash
+BASE_URL=http://localhost:3100 ADMIN_URL=http://localhost:3000 npx playwright test storefront-and-admin.spec.ts
+```

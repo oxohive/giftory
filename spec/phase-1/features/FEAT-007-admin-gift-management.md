@@ -1,6 +1,7 @@
 # Feature: Admin Gift Management
 
 - **Feature ID:** FEAT-007
+- **Phase:** 1
 - **Status:** Implemented
 - **Objective:** Allow admins to manage gift occasions and configure gift profiles on products directly from the Open Mercato backoffice.
 - **Business Value:** Catalog operations (adding occasions, enabling gift wrap on products, setting message limits) must be self-service for operations staff without requiring code changes.
@@ -52,4 +53,4 @@
 
 ## Known Limitations
 
-- Admin test cases in the Playwright test suite (TC-ADMIN-*) have recent failures in CI results. Root cause unknown — likely a test credential or environment issue (test uses `admin@acme.com` but test file may use a different credential).
+- Admin test cases (`TC-ADMIN-*`) had recent failures in CI. Root cause was `dev-runtime-diagnostics-banner` intercepting clicks — fixed by adding a banner dismissal step to the `adminLogin()` helper.

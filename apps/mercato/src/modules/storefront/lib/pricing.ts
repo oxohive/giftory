@@ -2,9 +2,14 @@
  * Pure storefront pricing. Every amount the storefront shows or charges is
  * computed here from catalog price rows; client-sent prices are never read.
  *
- * Money is handled in integer minor units (paise) internally and exposed as
- * decimal major units (what Open Mercato APIs and `paymentGatewayService`
- * expect), always rounded to 2 decimals so gateway amounts stay exact.
+ * Money convention:
+ *  - All arithmetic runs in integer minor units (paise) via toMinor/fromMinor.
+ *  - App-owned DB columns (storefront_checkouts) store integer paise (numeric(18,0)).
+ *  - Open Mercato commands/APIs receive decimal major units (their contract).
+ *  - Values returned from this module are decimal major units rounded to 2dp.
+ *
+ * Never use raw JS arithmetic on monetary values; go through toMinor/fromMinor
+ * so floating-point drift is confined to sub-paise and then rounded away.
  */
 
 export type StorefrontPriceRow = {

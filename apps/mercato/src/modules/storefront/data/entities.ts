@@ -57,9 +57,15 @@ export class StorefrontCart {
   deletedAt?: Date | null
 }
 
-/** One cart line: variant + quantity + gift options. Prices are never stored here. */
+/**
+ * One cart line: variant + quantity + gift options. Prices are never stored here.
+ *
+ * Soft-deleted on removal so the audit trail is intact. The unique constraint on
+ * (cart_id, line_key) is a partial index (WHERE deleted_at IS NULL) so that a
+ * re-added line with the same key does not collide with its soft-deleted ancestor.
+ * See Migration20261010000000_storefront_paise_soft_delete for the partial index DDL.
+ */
 @Entity({ tableName: 'storefront_cart_lines' })
-@Unique({ name: 'storefront_cart_lines_cart_key_uniq', properties: ['cartId', 'lineKey'] })
 @Index({ name: 'storefront_cart_lines_scope_cart_idx', properties: ['tenantId', 'organizationId', 'cartId'] })
 export class StorefrontCartLine {
   @PrimaryKey({ type: 'uuid', defaultRaw: 'gen_random_uuid()' })
@@ -91,7 +97,12 @@ export class StorefrontCartLine {
   @Property({ name: 'gift_message', type: 'text', nullable: true })
   giftMessage?: string | null
 
-  /** product:variant:wrap:sha256(message) — identical options merge into one line. */
+  /**
+   * product:variant:wrap:sha256(message) — identical options merge into one line.
+   * Different gift messages on the same variant intentionally produce separate lines
+   * (each message is a distinct gift). The unique constraint is a partial index
+   * scoped to active rows (deleted_at IS NULL), defined in the migration.
+   */
   @Property({ name: 'line_key', type: 'text' })
   lineKey!: string
 
@@ -100,6 +111,9 @@ export class StorefrontCartLine {
 
   @Property({ name: 'updated_at', type: Date, onUpdate: () => new Date() })
   updatedAt: Date = new Date()
+
+  @Property({ name: 'deleted_at', type: Date, nullable: true })
+  deletedAt?: Date | null
 }
 
 /**
@@ -155,16 +169,17 @@ export class StorefrontCheckout {
   @Property({ name: 'currency_code', type: 'text' })
   currencyCode!: string
 
-  @Property({ name: 'subtotal_amount', type: 'numeric', precision: 18, scale: 4, default: '0' })
+  /** Snapshot amounts in integer minor units (paise). Exposed as decimal major units at API boundaries. */
+  @Property({ name: 'subtotal_amount', type: 'numeric', precision: 18, scale: 0, default: '0' })
   subtotalAmount: string = '0'
 
-  @Property({ name: 'shipping_amount', type: 'numeric', precision: 18, scale: 4, default: '0' })
+  @Property({ name: 'shipping_amount', type: 'numeric', precision: 18, scale: 0, default: '0' })
   shippingAmount: string = '0'
 
-  @Property({ name: 'tax_amount', type: 'numeric', precision: 18, scale: 4, default: '0' })
+  @Property({ name: 'tax_amount', type: 'numeric', precision: 18, scale: 0, default: '0' })
   taxAmount: string = '0'
 
-  @Property({ name: 'grand_total_amount', type: 'numeric', precision: 18, scale: 4, default: '0' })
+  @Property({ name: 'grand_total_amount', type: 'numeric', precision: 18, scale: 0, default: '0' })
   grandTotalAmount: string = '0'
 
   @Property({ name: 'provider_key', type: 'text' })

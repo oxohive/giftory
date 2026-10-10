@@ -1,24 +1,25 @@
 # Feature: Gift Product Catalog
 
 - **Feature ID:** FEAT-001
+- **Phase:** 1
 - **Status:** Implemented
 - **Objective:** Allow shoppers to browse, filter, and view gift products with gift-specific metadata.
 - **Business Value:** Core discovery surface — customers must find the right product before they can buy.
 - **Scope:** Product listing page, product detail page, category tree, gift profile metadata (occasions, recipients, customizable flag, gift wrap, gift message config).
-- **Out of Scope:** 3D customization (FEAT-011), occasion-based filtering on the products page (see US-001 — currently shows "coming soon").
+- **Out of Scope:** 3D customization (Phase 3), occasion-based filtering on the products page (see US-001).
 
 ## Current Behavior
 
 **Verified** from `apps/storefront/src/app/products/` and `apps/mercato/src/modules/gift_catalog/`.
 
-- `GET /api/storefront/catalog/products` returns paginated products with filters: `search`, `categoryId`, `categoryIds`, `handle`, `ids`, `minPrice`, `maxPrice`, `occasion`, `recipient`, `customizable`, `sort`, `page`, `pageSize`.
+- `GET /api/storefront/catalog/products` returns paginated products with filters: `search`, `categoryId`, `categoryIds`, `handle`, `ids`, `minPrice`, `maxPrice`, `occasion`, `recipient`, `customizable`, `sort`, `page`, `pageSize`, `giftOnly`.
 - `GET /api/storefront/catalog/products/{handle-or-id}` returns a product with variants, media, and gift profile.
 - `GET /api/storefront/catalog/categories` returns the category tree.
 - `GET /api/gift_catalog/storefront/profiles` returns gift profiles filtered by `productIds`.
 - `GET /api/gift_catalog/storefront/occasions` returns the active occasions list.
-- The storefront products page (`/products`) supports category filter, price range, text search, and sort. The occasion filter renders an alert: **"Occasion filter coming soon"** (hardcoded in `apps/storefront/src/app/products/page.tsx:108`).
+- The storefront products page (`/products`) supports category filter, price range, text search, and sort.
 - Product detail pages show variant price switching, customizable badge, gift wrap toggle, and gift message field.
-- 12 gift products are seeded; 4 non-gift demo products from the Open Mercato starter template also appear.
+- `giftOnly=true` filters out non-gift products (implemented for US-003).
 
 ## Gift Profile Entity
 
@@ -46,7 +47,8 @@ Table: `gift_product_profiles` (`apps/mercato/src/modules/gift_catalog/data/enti
 4. Products with `is_customizable: true` must show the customizable badge.
 5. Products with `gift_wrap_available: true` must show the gift wrap toggle.
 6. The gift message field must enforce `gift_message_max_length`.
-7. Occasion and recipient filters must return matching products via the API (even while the storefront UI doesn't expose them yet).
+7. Occasion and recipient filters must return matching products via the API.
+8. `giftOnly=true` must exclude products with no gift profile from the storefront listing.
 
 ## Dependencies
 
@@ -56,8 +58,8 @@ Table: `gift_product_profiles` (`apps/mercato/src/modules/gift_catalog/data/enti
 
 ## Related User Stories
 
-- [US-001](../../tasks/US-001.md) — Occasion filter on products page
-- [US-002](../../tasks/US-002.md) — Browse and view gift products
+- [US-001](../stories/US-001-occasion-filter.md) — Occasion filter on products page
+- [US-003](../stories/US-003-remove-demo-products.md) — Remove non-gift demo products
 
 ## Evidence
 
@@ -69,11 +71,5 @@ Table: `gift_product_profiles` (`apps/mercato/src/modules/gift_catalog/data/enti
 
 ## Known Limitations
 
-- Occasion filter UI shows "coming soon" alert (see [US-001](../../tasks/US-001.md)).
-- 4 non-gift demo products appear in the listing and should be removed.
 - No live courier rates; delivery charges are flat (Standard ₹49 / Express ₹149).
 - No GST rates configured.
-
-## Open Questions
-
-- Should the 4 non-gift demo products be deleted or hidden via a category/flag?

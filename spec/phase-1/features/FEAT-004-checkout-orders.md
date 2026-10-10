@@ -1,6 +1,7 @@
 # Feature: Checkout & Order Placement
 
 - **Feature ID:** FEAT-004
+- **Phase:** 1
 - **Status:** Implemented
 - **Objective:** Allow shoppers to enter a delivery address, choose a shipping method, pay, and receive a confirmed order — without creating duplicate orders on retry.
 - **Business Value:** Converting a cart to a paid order is the core revenue event. Idempotent order creation prevents double-charges and double-orders.
@@ -65,9 +66,9 @@ Table: `storefront_checkouts` — idempotency ledger
 
 - Open Mercato `checkout`, `sales`, `payment_gateways` modules
 - `gateway_razorpay` module (app-owned)
-- [FEAT-003](shopping-cart.md) — cart as input
-- [FEAT-006](customer-accounts.md) — customer session for authenticated checkout
-- [FEAT-008](order-history.md) — order detail after placement
+- [FEAT-003](FEAT-003-shopping-cart.md) — cart as input
+- [FEAT-005](FEAT-005-customer-accounts.md) — customer session for authenticated checkout
+- [FEAT-006](FEAT-006-order-history.md) — order detail after placement
 
 ## Evidence
 
@@ -76,11 +77,11 @@ Table: `storefront_checkouts` — idempotency ledger
 - `apps/mercato/src/modules/storefront/__tests__/paymentState.test.ts` — payment state tests
 - `apps/mercato/src/modules/gateway_razorpay/__tests__/` — Razorpay adapter, signature, webhook tests
 - `apps/storefront/docs/backend-api-contract.md` §Checkout — API contract
-- `apps/storefront/__integration__/storefront-and-admin.spec.ts` — Checkout section (address validation, delivery options, payment fallback)
+- `apps/storefront/__integration__/storefront-and-admin.spec.ts` — Checkout section
 
 ## Known Limitations
 
 - Shipping rates are flat (Standard ₹49 / Express ₹149); no live courier integration.
 - No GST rates configured.
 - Webhooks require a public HTTPS URL and cannot be tested in local development without a tunnel.
-- Email verification links in account emails point at the Open Mercato portal, not the storefront (see [US-005](../../tasks/US-005.md) gap G7).
+- Email verification links point at the Open Mercato portal, not the storefront (see [US-004](../stories/US-004-email-verification-links.md) — fixed in code, requires env var in production).

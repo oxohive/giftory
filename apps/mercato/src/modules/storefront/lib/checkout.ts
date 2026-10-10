@@ -34,7 +34,7 @@ import { decideIdempotency, hashRequest, substituteOrderId } from './idempotency
 import { loadAccessibleOrder, resolveRequester } from './orders'
 import { syncCheckoutPayment } from './paymentSync'
 import { orderAmountDue, orderTotals } from './paymentState'
-import { summarizeTotals, type OrderTotals } from './pricing'
+import { summarizeTotals, toMinor, type OrderTotals } from './pricing'
 import { isAllowedReturnUrl } from './returnUrls'
 import type { ShopperContext, StorefrontScope } from './scope'
 import { listShippingMethods, manualShippingAdjustment, quoteShipping, type ShippingMethodRecord } from './shipping'
@@ -621,10 +621,11 @@ export async function placeOrder(args: CheckoutArgs & { input: PlaceOrderInput }
     }
     checkout.orderId = orderId
     checkout.orderNumber = order.orderNumber ?? null
-    checkout.subtotalAmount = String(totals.subtotal)
-    checkout.shippingAmount = String(totals.shipping)
-    checkout.taxAmount = String(totals.tax)
-    checkout.grandTotalAmount = String(totals.grandTotal)
+    // Store as integer minor units (paise) — see CLAUDE.md money convention.
+    checkout.subtotalAmount = String(toMinor(totals.subtotal))
+    checkout.shippingAmount = String(toMinor(totals.shipping))
+    checkout.taxAmount = String(toMinor(totals.tax))
+    checkout.grandTotalAmount = String(toMinor(totals.grandTotal))
     checkout.status = CHECKOUT_STATUS.orderCreated
     await em.flush()
     createdNow = true
@@ -722,10 +723,11 @@ export async function retryOrderPayment(args: CheckoutArgs & { orderId: string; 
   if (created) {
     const totals = orderTotals(order)
     checkout.customerEntityId = order.customerEntityId ?? null
-    checkout.subtotalAmount = String(totals.subtotal)
-    checkout.shippingAmount = String(totals.shipping)
-    checkout.taxAmount = String(totals.tax)
-    checkout.grandTotalAmount = String(totals.grandTotal)
+    // Store as integer minor units (paise) — see CLAUDE.md money convention.
+    checkout.subtotalAmount = String(toMinor(totals.subtotal))
+    checkout.shippingAmount = String(toMinor(totals.shipping))
+    checkout.taxAmount = String(toMinor(totals.tax))
+    checkout.grandTotalAmount = String(toMinor(totals.grandTotal))
     // Keep guest access working for this attempt too.
     const original = checkouts.find((candidate) => candidate.guestAccessTokenHash)
     if (original) checkout.guestAccessTokenHash = original.guestAccessTokenHash

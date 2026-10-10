@@ -133,6 +133,7 @@ export async function serializeOrderDetail(em: EntityManager, scope: StorefrontS
     fulfillmentStatus: order.fulfillmentStatus ?? null,
     placedAt: iso(order.placedAt ?? order.createdAt),
     currencyCode: order.currencyCode,
+    // SalesOrder subtotal includes shipping; subtract it to get product-only subtotal (see orderTotals()).
     subtotal: Math.max(0, Math.round(((money(order.subtotalGrossAmount) ?? 0) - (money(order.shippingGrossAmount) ?? 0)) * 100) / 100),
     shippingTotal: money(order.shippingGrossAmount),
     taxTotal: money(order.taxTotalAmount),

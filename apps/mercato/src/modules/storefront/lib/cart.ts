@@ -46,7 +46,7 @@ async function loadLines(em: EntityManager, scope: StorefrontScope, cartId: stri
   return findWithDecryption(
     em,
     StorefrontCartLine,
-    { cartId, tenantId: scope.tenantId, organizationId: scope.organizationId } as FilterQuery<StorefrontCartLine>,
+    { cartId, tenantId: scope.tenantId, organizationId: scope.organizationId, deletedAt: null } as FilterQuery<StorefrontCartLine>,
     { orderBy: { createdAt: 'asc', id: 'asc' } } as never,
     scope,
   )
@@ -302,7 +302,12 @@ export async function addCartLine(em: EntityManager, scope: StorefrontScope, car
 export async function replaceCartLines(em: EntityManager, scope: StorefrontScope, cart: StorefrontCart, inputs: CartLineInput[], translate: Translate) {
   const priced = inputs.length ? await assertLinesValid(em, scope, inputs, translate) : []
   await em.transactional(async (tx) => {
-    await tx.nativeDelete(StorefrontCartLine, { cartId: cart.id, tenantId: scope.tenantId, organizationId: scope.organizationId } as FilterQuery<StorefrontCartLine>)
+    const now = new Date()
+    await tx.nativeUpdate(
+      StorefrontCartLine,
+      { cartId: cart.id, tenantId: scope.tenantId, organizationId: scope.organizationId, deletedAt: null } as FilterQuery<StorefrontCartLine>,
+      { deletedAt: now },
+    )
     const lines: StorefrontCartLine[] = []
     for (const line of priced) {
       upsertLine(tx, scope, cart.id, lines, {
@@ -341,10 +346,10 @@ export async function updateCartLine(
   const key = cartLineKey(priced!.productId, priced!.variantId, priced!.giftWrap, priced!.giftMessage)
   const twin = lines.find((candidate) => candidate.id !== line.id && candidate.lineKey === key)
   if (twin) {
-    // Gift options now equal another line: fold into it.
+    // Gift options now equal another line: fold into it and soft-delete the source.
     twin.quantity = Math.min(MAX_LINE_QUANTITY, twin.quantity + next.quantity)
     twin.updatedAt = new Date()
-    em.remove(line)
+    line.deletedAt = new Date()
   } else {
     line.quantity = next.quantity
     line.giftWrap = priced!.giftWrap
@@ -358,19 +363,22 @@ export async function updateCartLine(
 }
 
 export async function removeCartLine(em: EntityManager, scope: StorefrontScope, cart: StorefrontCart, lineId: string, translate: Translate) {
-  const removed = await em.nativeDelete(StorefrontCartLine, {
-    id: lineId,
-    cartId: cart.id,
-    tenantId: scope.tenantId,
-    organizationId: scope.organizationId,
-  } as FilterQuery<StorefrontCartLine>)
+  const removed = await em.nativeUpdate(
+    StorefrontCartLine,
+    { id: lineId, cartId: cart.id, tenantId: scope.tenantId, organizationId: scope.organizationId, deletedAt: null } as FilterQuery<StorefrontCartLine>,
+    { deletedAt: new Date() },
+  )
   if (removed === 0) throw new StorefrontError(404, 'not_found', translate('storefront.errors.cartLineNotFound', 'Cart item not found'))
   touch(cart)
   await em.flush()
 }
 
 export async function clearCart(em: EntityManager, scope: StorefrontScope, cart: StorefrontCart) {
-  await em.nativeDelete(StorefrontCartLine, { cartId: cart.id, tenantId: scope.tenantId, organizationId: scope.organizationId } as FilterQuery<StorefrontCartLine>)
+  await em.nativeUpdate(
+    StorefrontCartLine,
+    { cartId: cart.id, tenantId: scope.tenantId, organizationId: scope.organizationId, deletedAt: null } as FilterQuery<StorefrontCartLine>,
+    { deletedAt: new Date() },
+  )
   touch(cart)
   await em.flush()
 }

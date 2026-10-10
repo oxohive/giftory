@@ -1,6 +1,7 @@
 # Feature: Customer Accounts & Address Book
 
 - **Feature ID:** FEAT-005
+- **Phase:** 1
 - **Status:** Implemented
 - **Objective:** Allow shoppers to register, verify their email, log in, manage their profile and address book, and have their cart persist across sessions.
 - **Business Value:** Accounts enable order history, saved addresses, faster checkout, and guest cart recovery on return visits.
@@ -21,15 +22,15 @@
 
 ### Known Issue: Email Link Redirect
 
-Account emails (verification, password reset) contain links that point to the Open Mercato built-in portal, not the storefront's `/account/verify` route. This is documented as **gap G7** in `apps/storefront/docs/backend-api-contract.md` and is currently unresolved. See [US-005](../../tasks/US-005.md).
+Account emails (verification, password reset) contain links that point to the Open Mercato built-in portal, not the storefront's `/account/verify` route. Fixed in code (redirects + pages added); requires `PLATFORM_PORTAL_BASE_URL` set in `apps/mercato/.env` in production. See [US-004](../stories/US-004-email-verification-links.md).
 
 ### Tenant Injection
 
-On platform domains, the BFF injects `organizationId` and `tenantId` from server-side env vars (`MERCATO_ORGANIZATION_ID`, `MERCATO_TENANT_ID`) into login/signup request bodies, so the shopper does not need to supply them.
+On platform domains, the BFF injects `organizationId` and `tenantId` from server-side env vars (`MERCATO_ORGANIZATION_ID`, `MERCATO_TENANT_ID`) into login/signup request bodies.
 
 ### Address Book
 
-`GET/POST /api/storefront/account/addresses` — list and create addresses (requires customer session).  
+`GET/POST /api/storefront/account/addresses` — list and create addresses (requires customer session).
 `GET/PUT/DELETE /api/storefront/account/addresses/{id}` — single address operations.
 
 Table: `storefront_addresses`
@@ -67,7 +68,7 @@ Table: `storefront_customer_links` — links the `customer_accounts` user (`cust
 4. On login, a guest cart must merge into the customer's cart.
 5. Address book must support add, edit, delete, and set-as-default.
 6. Logout must clear both session cookies.
-7. Email verification and password reset links in emails must point to the storefront (gap G7 — currently points to Open Mercato portal).
+7. Email verification and password reset links in emails must point to the storefront (requires `PLATFORM_PORTAL_BASE_URL` in production).
 
 ## Dependencies
 
@@ -77,8 +78,7 @@ Table: `storefront_customer_links` — links the `customer_accounts` user (`cust
 
 ## Related User Stories
 
-- [US-004](../../tasks/US-004.md) — Customer account registration and login
-- [US-005](../../tasks/US-005.md) — Fix email verification redirect (gap G7)
+- [US-004](../stories/US-004-email-verification-links.md) — Fix email verification redirect (Gap G7)
 
 ## Evidence
 
@@ -86,10 +86,9 @@ Table: `storefront_customer_links` — links the `customer_accounts` user (`cust
 - `apps/storefront/src/app/api/om/[...path]/route.ts` — BFF proxy with allowlist and tenant injection
 - `apps/mercato/src/modules/storefront/data/entities.ts` — address and customer link entities
 - `apps/storefront/docs/backend-api-contract.md` §Customer Accounts, §Gap G7
-- `apps/storefront/__integration__/storefront-and-admin.spec.ts` — Customer accounts section (registration, address book, guest cart merge)
+- `apps/storefront/__integration__/storefront-and-admin.spec.ts` — Customer accounts section
 
 ## Known Limitations
 
-- Email verification links point to the Open Mercato portal, not the storefront (gap G7).
-- No email provider is configured in development; verification must be done manually in the admin.
-- Magic link authentication: API routes exist and are proxied, but storefront UI is not verified to be implemented.
+- No email provider configured in development; verification must be done manually in the admin.
+- Magic link authentication: API routes exist and are proxied, but storefront UI is not verified.

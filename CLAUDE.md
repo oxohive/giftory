@@ -1,14 +1,17 @@
 # Giftory — AI Agent Instructions
 
-Gift marketplace built on Open Mercato 0.8.0. See [docs/architecture.md](docs/architecture.md) for the full architecture and [docs/features/](docs/features/) for feature specifications.
+Gift marketplace built on Open Mercato 0.8.0. See [docs/architecture.md](docs/architecture.md) for the full architecture and [spec/](spec/) for feature specifications and user stories.
 
 ## Repository Layout
 
 ```
 apps/mercato/     # Backend + admin (Open Mercato), port 3000
 apps/storefront/  # Customer storefront (Next.js), port 3100
-docs/             # Architecture, features, decisions
-tasks/            # User stories and engineering tasks
+docs/             # Architecture and decision documents
+spec/             # Feature specs, user stories, ADRs (spec-driven development)
+  phase-1/        # Phase 1 — Commerce Foundation (implemented)
+  phase-2/        # Phase 2 — Dealer Marketplace (planning)
+  decisions/      # Architecture Decision Records (ADR-XXX)
 ```
 
 Each app has its own `AGENTS.md` with detailed rules — read those before editing.
@@ -49,7 +52,7 @@ Requires Node.js ≥ 24 for `apps/mercato`, ≥ 22 for `apps/storefront`. Databa
 ## Conventions
 
 - **Multi-tenancy:** every query must scope to `tenantId` + `organizationId`. Never trust scope from the request payload; derive it from the session or resolved context.
-- **Money:** always integer minor units + currency code. Never floats.
+- **Money:** store as integer minor units (paise) in all app-owned DB columns (`numeric(18,0)`). All arithmetic goes through `toMinor()`/`fromMinor()` in `pricing.ts`. Open Mercato commands and APIs receive decimal major units (their contract); convert at that boundary only. Never use raw JS float arithmetic on monetary values.
 - **Idempotency:** POST endpoints that create orders or payments require an `Idempotency-Key` header.
 - **Migrations:** run `yarn db:generate`, review the generated SQL, then `yarn db:migrate`. Never edit shipped migrations.
 - **Discovery files:** run `yarn generate` whenever you change `src/modules.ts`, route files, entity files, agent files, or workflow files.
@@ -60,7 +63,7 @@ Requires Node.js ≥ 24 for `apps/mercato`, ≥ 22 for `apps/storefront`. Databa
 ## Before Editing
 
 1. Read the app-level `AGENTS.md` for the app you are working in.
-2. Read the relevant feature spec in `docs/features/` if one exists.
+2. Read the relevant feature spec in `spec/phase-N/features/` if one exists.
 3. Check existing tests to understand verified behavior.
 4. Run `yarn generate` if you change discovery files in `apps/mercato`.
 
@@ -74,9 +77,9 @@ Requires Node.js ≥ 24 for `apps/mercato`, ≥ 22 for `apps/storefront`. Databa
 ## Documentation Updates
 
 When you change behavior, API contracts, or entity schemas:
-- Update the relevant `docs/features/<name>.md` file.
+- Update the relevant `spec/phase-N/features/FEAT-XXX-*.md` file.
 - Update `apps/storefront/docs/backend-api-contract.md` for storefront API changes.
-- Mark user stories in `tasks/` as Done when their acceptance criteria are met.
+- Mark user stories in `spec/phase-N/stories/` as Done when their acceptance criteria are met.
 
 ## Phase Status
 

@@ -1,6 +1,7 @@
 # Feature: Order History & Detail
 
 - **Feature ID:** FEAT-006
+- **Phase:** 1
 - **Status:** Implemented
 - **Objective:** Allow customers and guests to view their past orders, including gift options, delivery, and payment status.
 - **Business Value:** Post-purchase visibility builds trust and reduces support requests about order status.
@@ -30,8 +31,8 @@
 
 - Open Mercato `sales` module — orders
 - `storefront` module — order history API, guest access token
-- [FEAT-004](checkout-orders.md) — order creation and guest access token issuance
-- [FEAT-006](customer-accounts.md) — customer session
+- [FEAT-004](FEAT-004-checkout-orders.md) — order creation and guest access token issuance
+- [FEAT-005](FEAT-005-customer-accounts.md) — customer session
 
 ## Evidence
 
