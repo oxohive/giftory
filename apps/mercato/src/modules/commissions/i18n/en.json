@@ -1,0 +1,24 @@
+{
+  "commissions": {
+    "errors": {
+      "ruleNotFound": "Commission rule not found",
+      "snapshotNotFound": "Commission snapshot not found",
+      "ruleAlreadyDeactivated": "Commission rule is already deactivated",
+      "invalidRate": "Rate must be between 1 and 10000 basis points",
+      "assignmentNotFound": "Assignment not found for commission snapshot",
+      "unauthorized": "Authentication required",
+      "orgScopeRequired": "Organization scope required",
+      "invalidRequest": "Invalid request",
+      "requestFailed": "Request failed",
+      "internal": "Something went wrong"
+    },
+    "audit": {
+      "createRule": "Create commission rule",
+      "deactivateRule": "Deactivate commission rule",
+      "createSnapshot": "Create commission snapshot"
+    },
+    "warnings": {
+      "noRuleFound": "No commission rule found for dealer {{dealerProfileId}} — recording commission as 0"
+    }
+  }
+}

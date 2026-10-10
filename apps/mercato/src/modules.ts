@@ -173,6 +173,14 @@ for (const entry of officialModuleEntries) {
 enabledModules.push({ id: 'gift_catalog', from: '@app' })
 // Gift App: shopper-facing catalog, cart, checkout, orders and addresses API
 enabledModules.push({ id: 'storefront', from: '@app' })
+// Gift App Phase 2: manual dealer order assignment (FEAT-011)
+enabledModules.push({ id: 'dealer_orders', from: '@app' })
+// Gift App Phase 2: dealer self-registration, KYC, admin review (FEAT-008)
+enabledModules.push({ id: 'dealer_onboarding', from: '@app' })
+// Gift App Phase 2: dealer org/RBAC, capabilities, staff invite (FEAT-009)
+enabledModules.push({ id: 'dealer_org_rbac', from: '@app' })
+// Gift App Phase 2: commission rules + per-order commission snapshots (FEAT-012)
+enabledModules.push({ id: 'commissions', from: '@app' })
 
 if (enabledModules.some((entry) => entry.id === 'example')) {
   enabledModules.push({ id: 'example_customers_sync', from: '@app' })
