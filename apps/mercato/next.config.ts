@@ -83,6 +83,32 @@ const nextConfig: NextConfig & { agentRules?: boolean } = {
     '@grpc/grpc-js',
     '@grpc/proto-loader',
   ],
+  // `serverExternalPackages` above only covers the Node.js server compilation.
+  // The grpc/OTel chain also gets pulled into the CLIENT (browser) bundle via
+  // .mercato/generated/messages.client.generated.ts -> a module's
+  // message-objects.ts -> @open-mercato/core's bootstrap -> events/queue ->
+  // @open-mercato/telemetry -> @opentelemetry/sdk-node -> the gRPC exporters
+  // -> @grpc/grpc-js, which needs real Node sockets/DNS/TLS/fs that don't
+  // exist in a browser. That code path is never actually reachable client-side
+  // (telemetry only runs server-side) — it's an accidental transitive import,
+  // not a real client dependency — so stub these out for the browser bundle
+  // only, rather than trying to break the import chain itself.
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        dns: false,
+        net: false,
+        tls: false,
+        child_process: false,
+        http2: false,
+        os: false,
+        perf_hooks: false,
+      }
+    }
+    return config
+  },
   // Mirror server-only env vars that client components must observe. Keep this
   // list minimal — anything added here is inlined into the client bundle.
   env: {
