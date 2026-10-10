@@ -1,0 +1,58 @@
+{
+  "dealer_onboarding": {
+    "errors": {
+      "alreadyRegistered": "A dealer account already exists for this organization",
+      "duplicateEmail": "A dealer with this email address is already registered",
+      "profileNotFound": "Dealer profile not found",
+      "documentNotFound": "KYC document not found",
+      "cannotUploadInStatus": "Documents cannot be uploaded in the current KYC status",
+      "cannotResubmitInStatus": "Resubmission is only allowed after a rejection",
+      "alreadyApproved": "This application has already been approved",
+      "alreadyRejected": "This application has already been rejected",
+      "notUnderReview": "This application is not currently under review",
+      "organizationNotFound": "Organization not found",
+      "roleNotFound": "Required dealer role not found; ensure tenant setup has run",
+      "invalidGstin": "GSTIN must match the format 00AAAAA0000A1Z1",
+      "invalidPan": "PAN must match the format AAAAA0000A",
+      "rejectionReasonRequired": "A rejection reason is required"
+    },
+    "audit": {
+      "register": "Dealer self-registration",
+      "uploadDocument": "Upload KYC document",
+      "approve": "Approve dealer application",
+      "reject": "Reject dealer application",
+      "resubmit": "Resubmit dealer application after rejection"
+    },
+    "kycStatus": {
+      "pending_verification": "Pending Verification",
+      "under_review": "Under Review",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "businessType": {
+      "proprietorship": "Proprietorship",
+      "partnership": "Partnership",
+      "pvt_ltd": "Private Limited",
+      "llp": "LLP"
+    },
+    "documentType": {
+      "gst_certificate": "GST Certificate",
+      "pan_card": "PAN Card",
+      "address_proof": "Address Proof"
+    },
+    "notifications": {
+      "applicationReceived": {
+        "title": "Application received",
+        "body": "Your dealer application has been received and is under review."
+      },
+      "applicationApproved": {
+        "title": "Application approved",
+        "body": "Congratulations! Your dealer application has been approved. You can now access the dealer portal."
+      },
+      "applicationRejected": {
+        "title": "Application rejected",
+        "body": "Your dealer application has been rejected. Please review the reason and resubmit."
+      }
+    }
+  }
+}
