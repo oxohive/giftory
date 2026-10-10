@@ -70,6 +70,18 @@ const nextConfig: NextConfig & { agentRules?: boolean } = {
     // @open-mercato/telemetry so it can never drift into a partial (silently
     // "emits nothing") copy.
     ...telemetryServerExternalPackages,
+    // @opentelemetry/sdk-node's own build/src/{utils,sdk}.js unconditionally
+    // `require()` ALL four OTLP exporter variants (HTTP + gRPC) regardless of
+    // which protocol is actually configured — telemetryServerExternalPackages
+    // only lists the HTTP ones. Without these, webpack tries to bundle
+    // @grpc/grpc-js (which needs Node's `fs`) and fails with
+    // "Module not found: Can't resolve 'fs'" in certificate-provider.js.
+    '@opentelemetry/exporter-trace-otlp-grpc',
+    '@opentelemetry/exporter-logs-otlp-grpc',
+    '@opentelemetry/exporter-metrics-otlp-grpc',
+    '@opentelemetry/otlp-grpc-exporter-base',
+    '@grpc/grpc-js',
+    '@grpc/proto-loader',
   ],
   // Mirror server-only env vars that client components must observe. Keep this
   // list minimal — anything added here is inlined into the client bundle.
