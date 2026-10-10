@@ -336,7 +336,7 @@ export async function listCatalogProducts(
   if (query.categoryId || query.categoryIds) {
     idFilter = intersect(idFilter, categoryIds.length ? await productIdsForCategories(em, scope, categoryIds) : [])
   }
-  if (query.occasion || query.recipient || query.customizable) {
+  if (query.occasion || query.recipient || query.customizable || query.giftOnly === 'true') {
     const profiles = await listStorefrontProfiles(em, scope, {
       occasion: query.occasion,
       recipient: query.recipient,

@@ -54,6 +54,16 @@ yarn mercato gift_catalog seed-occasions --tenant <tenantId> --org <orgId>
 yarn mercato gift_catalog seed-demo      --tenant <tenantId> --org <orgId>
 ```
 
+## Documentation
+
+| Document | Contents |
+|---|---|
+| [docs/architecture.md](docs/architecture.md) | Full system architecture, tech stack, data model, roadmap |
+| [docs/features/](docs/features/) | Per-feature specifications (status, requirements, acceptance criteria) |
+| [tasks/](tasks/) | User stories and engineering tasks |
+| [apps/storefront/__integration__/storefront-and-admin.spec.ts](apps/storefront/__integration__/storefront-and-admin.spec.ts) | Phase 1 Playwright end-to-end test suite (storefront + admin) |
+| [apps/storefront/docs/backend-api-contract.md](apps/storefront/docs/backend-api-contract.md) | Storefront API contract (verified against the running backend) |
+
 ## Payments
 
 Put **test** keys in `apps/mercato/.env`:

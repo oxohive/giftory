@@ -610,54 +610,40 @@ RDS automated backups plus PITR, S3 versioning on design and production buckets,
 
 ## 17. Repository Layout
 
+> **Current (Phase 1):** The layout below is what actually exists in the repository today. The planned multi-app, multi-package layout described in earlier drafts has not been implemented yet — shared packages and additional apps will be introduced in later phases.
+
 ```
-gift-app/
+giftory/
 ├── apps/
-│   ├── backend/               # Open Mercato app + registered gift modules
-│   ├── storefront/            # Customer Next.js app
-│   ├── dealer-portal/         # Dealer Next.js app
-│   └── workers/               # BullMQ worker entrypoints (render, export, matching, ...)
-├── modules/                   # Gift domain modules (Open Mercato module format)
-│   ├── gift-catalog/
-│   ├── gift-occasion/
-│   ├── gift-bundle/
-│   ├── gift-customization/
-│   ├── gift-3d/
-│   ├── gift-design/
-│   ├── gift-proof/
-│   ├── gift-production/
-│   ├── marketplace/
-│   ├── dealer/
-│   ├── dealer-matching/
-│   ├── dealer-rfq/
-│   ├── dealer-quotation/
-│   ├── dealer-capacity/
-│   ├── marketplace-commission/
-│   ├── marketplace-payout/
-│   ├── quality-control/
-│   ├── corporate-gifting/
-│   ├── gift-recommendation/
-│   └── gift-ai/
-├── packages/
-│   ├── ui/                    # Design system
-│   ├── editor-3d/             # R3F customization editor
-│   ├── schemas/               # Shared Zod schemas (design config, RFQ, ...)
-│   ├── api-client/            # Generated typed API client
-│   ├── adapters/              # Payment, shipping, messaging, LLM, ... interfaces
-│   └── config/                # ESLint, TS, Tailwind presets
-├── assets-pipeline/           # Blender export settings, gltf-transform scripts, validators
-├── infra/
-│   ├── terraform/
-│   └── docker/
+│   ├── mercato/               # Open Mercato 0.8.0 backend + admin (port 3000)
+│   │   └── src/modules/       # App-owned Gift modules (gift_catalog, storefront, gateway_razorpay)
+│   └── storefront/            # Customer Next.js storefront (port 3100)
 ├── docs/
-│   ├── architecture.md        # this document
-│   └── adr/                   # Architecture Decision Records
-├── docker-compose.yml
-├── turbo.json
-└── pnpm-workspace.yaml
+│   ├── architecture.md        # This document
+│   ├── features/              # Per-feature specifications
+│   └── *.docx                 # Product plan and guide documents
+├── tasks/                     # User stories (US-XXX) and engineering tasks (TASK-XXX)
+├── CLAUDE.md                  # AI agent instructions (root)
+└── README.md
 ```
 
-Significant decisions are recorded as **ADRs** in `docs/adr/` (one per decision, starting with the open decisions in [§20](#20-open-decisions)).
+**Planned layout (Phase 2+):**
+
+```
+giftory/
+├── apps/
+│   ├── mercato/               # Backend remains here; gift modules grow within src/modules/
+│   ├── storefront/
+│   ├── dealer-portal/         # Phase 2
+│   └── workers/               # Phase 4 (BullMQ worker entrypoints)
+├── packages/
+│   ├── ui/                    # Phase 2 — shared design system
+│   ├── api-client/            # Phase 2 — generated typed API client
+│   ├── schemas/               # Phase 3 — shared Zod schemas (design config, RFQ, …)
+│   └── editor-3d/             # Phase 3 — React Three Fiber customization editor
+└── infra/
+    └── terraform/             # Phase 4
+```
 
 ---
 
@@ -720,7 +706,7 @@ The plan's recommended next step. Labels: **NATIVE** (Open Mercato as-is), **EXT
 
 | # | Decision | Why it matters | Default proposal |
 |---|---|---|---|
-| 1 | Target launch region/country and currency | Decides payment, shipping, KYC, tax and privacy-law choices | — |
+| 1 | Target launch region/country and currency | Decides payment, shipping, KYC, tax and privacy-law choices | India (implicit — all validators are India-specific) |
 | 2 | Payment provider | Marketplace split payments and payout rules | Stripe Connect (global) / Razorpay Route (India) |
 | 3 | Shipping provider | Rates, labels, tracking coverage | Region aggregator |
 | 4 | Open Mercato capabilities (workflows, auth, reviews, search, migrations, multi-tenancy) | Changes several EXTEND vs CUSTOM labels | Phase 0 spike |

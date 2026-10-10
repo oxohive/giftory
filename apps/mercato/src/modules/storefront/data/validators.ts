@@ -34,6 +34,8 @@ export const catalogProductsQuerySchema = z.object({
   occasion: z.enum(GIFT_OCCASION_CODES).optional(),
   recipient: z.enum(GIFT_RECIPIENT_TYPES).optional(),
   customizable: z.enum(['true', 'false']).optional(),
+  /** When 'true', restricts results to products that have a gift profile. */
+  giftOnly: z.enum(['true', 'false']).optional(),
   sort: z.enum(['newest', 'title', 'price-asc', 'price-desc']).default('newest'),
 })
 export type CatalogProductsQuery = z.infer<typeof catalogProductsQuerySchema>

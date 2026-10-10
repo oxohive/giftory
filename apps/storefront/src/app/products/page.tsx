@@ -61,6 +61,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Sea
       sort,
       minPriceMinor: rupeesToMinor(values.min),
       maxPriceMinor: rupeesToMinor(values.max),
+      giftOnly: true,
     }),
   )
 
@@ -105,8 +106,8 @@ export default async function ProductsPage({ searchParams }: { searchParams: Sea
         </aside>
         <section aria-label="Products" className="grid content-start gap-6">
           {occasionFilterUnavailable ? (
-            <Alert tone="info" title="Occasion filter coming soon">
-              Occasion tags aren’t available yet, so we’re showing all gifts.
+            <Alert tone="info" title="Occasion filter temporarily unavailable">
+              Gift tags are currently unavailable — showing all gifts instead.
             </Alert>
           ) : null}
           {productsRes.error !== null ? (

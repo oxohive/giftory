@@ -88,6 +88,9 @@ export const customerApi = {
   requestPasswordReset: (email: string) =>
     bffRequest('customer_accounts/password/reset-request', okSchema, { method: 'POST', body: { email } }),
 
+  confirmPasswordReset: (token: string, newPassword: string) =>
+    bffRequest('customer_accounts/password/reset-confirm', okSchema, { method: 'POST', body: { token, newPassword } }),
+
   profile: () => bffRequest('customer_accounts/portal/profile', profileResponseSchema),
 
   updateProfile: (input: ProfileForm) =>

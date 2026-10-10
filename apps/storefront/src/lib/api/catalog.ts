@@ -84,6 +84,8 @@ export type ProductQuery = {
   /** gift_catalog occasion / recipient codes; filtered on the server. */
   occasion?: string
   recipient?: string
+  /** When true, restricts results to products with a gift profile (excludes non-gift demo items). */
+  giftOnly?: boolean
 }
 
 const productListSchema = pagedSchema(wireProductSchema)
@@ -105,6 +107,7 @@ export async function listProducts(query: ProductQuery = {}): Promise<ProductLis
       maxPrice: query.maxPriceMinor !== undefined ? query.maxPriceMinor / 100 : undefined,
       occasion: query.occasion,
       recipient: query.recipient,
+      giftOnly: query.giftOnly ? 'true' : undefined,
     },
   })
   const items = res.items.map(toSummary)
