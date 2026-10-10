@@ -18,10 +18,16 @@ import { apiRequest } from './http'
  * units (INR) on the wire — this module does no unit conversion, per TASK-04's "Contracts produced"
  * note (callers use TASK-03's money.ts for display/arithmetic).
  *
- * KNOWN GAP (flagged, see TASK-04 report): the contract below requires `pricing.taxRate`, but the
- * storefront's cross-checked wire schema has no `tax_rate` field at all (only currency_code,
- * unit_price_net, unit_price_gross, kind). `tax_rate` is read here as an optional passthrough field
- * and defaults to 0 when absent — this has not been independently verified against a live response.
+ * RESOLVED (was flagged as a known gap in the TASK-04 report, corrected after reading the live
+ * `apps/mercato` route source directly): `tax_rate` IS a real field on the wire. The earlier claim
+ * that it was missing came from checking `apps/storefront`'s own client-side wire schema, which
+ * simply never declares it even though the backend sends it — a gap in the web app's parsing code,
+ * not the API. Confirmed against `apps/mercato/src/modules/storefront/lib/catalog.ts`'s
+ * `WirePricing`/`toWirePricing()` (snake_case `tax_rate`, sourced from the
+ * `catalog_product_variant_prices.tax_rate` column) and against the live `.env`-configured
+ * Supabase DB (column exists, populated). `numberOf(wire?.tax_rate)` below correctly surfaces the
+ * real value — it only falls back to 0 if the field is genuinely absent, which is not the normal
+ * case.
  */
 
 export interface Money {

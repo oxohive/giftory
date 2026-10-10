@@ -11,14 +11,16 @@ import { apiRequest } from './http'
  * The server verifies the HMAC signature — this module (and the app generally) never does
  * signature math itself; it only relays the three Razorpay callback fields.
  *
- * FLAGGED DISCREPANCY: `apps/storefront/src/lib/api/payments.ts`'s `confirmResponseSchema` (its
- * cross-checked, live-verified schema for this same endpoint) only validates `{ ok?, status? }`
- * via `.passthrough()` — it does not confirm `transactionId`, `paymentId`, or `synced` are present
- * on the response, and the storefront caller never reads them back (it already has `transactionId`
- * from the preceding checkout call). TASK-04's spec explicitly documents the fuller
- * `{transactionId, paymentId, status, synced}` shape as the backend's live contract, so that is
- * implemented below per instructions to trust the task file's documented research — but this
- * should be re-verified against a live response before TASK-05-08 rely on `.paymentId`/`.synced`.
+ * RESOLVED (was flagged as a discrepancy, confirmed correct after reading the live route source):
+ * `apps/mercato/src/modules/gateway_razorpay/api/confirm/route.ts` constructs its JSON response as
+ * exactly `{transactionId: matched.id, paymentId: matched.paymentId, status, synced}` on BOTH
+ * success paths (200 when the status sync succeeds, 202 when it's deferred to webhooks) — all four
+ * fields are always present, no optionality. The only other response shapes are 401/422/429 error
+ * bodies (`{error: string}`), which this module's `ApiError` handling (via TASK-03's `http.ts`)
+ * already normalizes separately from this success schema. `transactionId`/`paymentId`/`synced` can
+ * be relied on as always-present on a successful confirm, matching the original TASK-04 contract
+ * exactly — the earlier caution was unwarranted (it came from checking the web storefront's own,
+ * looser client-side schema, not the actual route).
  */
 
 export interface RazorpayConfirmInput {

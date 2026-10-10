@@ -22,12 +22,15 @@ import { apiRequest } from './http'
  * `apps/storefront/src/lib/api/cart.ts`'s `serverCartSchema` (its own live-verified wire schema for
  * this same endpoint set).
  *
- * FLAGGED DISCREPANCY: the TASK-04 contract's `CartLineIssue` has a `lineId` field, but the
- * storefront's cross-checked `lineIssueSchema` for `422 cart_invalid` details has no `lineId` at
- * all — it uses `{ index, productId, variantId, code, maxLength }`. `CartLineIssue` is declared
- * below exactly as specified in the contract (for TASK-06 to reference), but no parsing/mapping
- * function is provided for it here since the real wire shape doesn't supply the field it names;
- * TASK-06 should verify against a live `cart_invalid` response before relying on `.lineId`.
+ * CONFIRMED DISCREPANCY (verified against the live route source, not just inference): the
+ * TASK-04 contract's `CartLineIssue` has a `lineId` field, but the real `422 cart_invalid` details
+ * shape — confirmed against `apps/mercato/src/modules/storefront/lib/cart.ts`'s `issuesError()` —
+ * is genuinely `{ index, productId, variantId, code, maxLength? }`, with no `lineId` anywhere.
+ * `CartLineIssue` is declared below exactly as specified in the contract (for TASK-06 to
+ * reference), but no parsing/mapping function is provided for it here since the real wire shape
+ * doesn't supply the field it names. TASK-06 correctly worked around this by defining its own
+ * `RealCartLineIssue` type matching the confirmed shape and rendering a cart-wide banner instead
+ * of guessing a per-line attribution — see `src/features/cart/lib/cartErrorMessage.ts`.
  */
 
 export interface CartLineIssue {

@@ -18,13 +18,16 @@ import type { ListEnvelope } from './catalog'
  * same endpoint set), with camelCase renames applied per TASK-04's "Contracts produced" (e.g.
  * `grandTotalGrossAmount` -> `grandTotalGrossMajor`, line `name` -> `productTitle`).
  *
- * FLAGGED DISCREPANCY: the storefront's cross-checked `fullOrderWireSchema` for
- * `GET /storefront/orders/{id}` has no `payment{providerKey,transactionId,status}` object and no
- * `shippingAddress` field at all (the storefront UI never needed either). TASK-04's contract
- * requires both as non-optional on `OrderDetail`. Both are read here as optional/passthrough and
- * defaulted (payment falls back to the order's own `status`/`paymentStatus`; shippingAddress falls
- * back to an empty address) when the backend doesn't send them — this should be re-verified
- * against a live response before TASK-08 relies on either field.
+ * RESOLVED (was flagged as a discrepancy, corrected after reading the live route source): both
+ * `payment{providerKey,transactionId,status}` and `shippingAddress` ARE real fields on
+ * `GET /storefront/orders/{id}`'s response. Confirmed against
+ * `apps/mercato/src/modules/storefront/lib/orders.ts`'s `serializeOrderDetail()` — `payment` comes
+ * from the order's latest gateway transaction (`null` only when no checkout/payment attempt has
+ * happened yet on that order — a real, legitimate state, not a missing-field bug), and
+ * `shippingAddress` comes from `publicAddress(order.shippingAddressSnapshot)`, whose field names
+ * (`fullName/phone/line1/line2/city/state/postalCode/country`) match `addressWireSchema` below
+ * exactly. The optional/nullable handling and `EMPTY_ADDRESS` fallback below are kept as-is — they
+ * correctly cover the real "no transaction yet" case, not a hypothetical missing-field case.
  */
 
 export interface OrderSummary {
