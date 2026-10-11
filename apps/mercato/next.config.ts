@@ -121,6 +121,20 @@ const nextConfig: NextConfig & { agentRules?: boolean } = {
         v8: false,
         module: false,
       }
+      // Root-cause fix instead of chasing every downstream dependency:
+      // messageObjectPreviews.js (and every other module's message-objects.ts)
+      // calls createRequestContainer() to load DB-backed preview data — correct
+      // for SERVER-side rendering, but every module gets swept into one client
+      // registry (messages.client.generated.ts) via `import * as X`, which
+      // defeats tree-shaking and drags the ENTIRE server bootstrap (DB driver,
+      // event bus, queue, telemetry, grpc) into the browser bundle even though
+      // nothing client-side ever actually calls it. Cutting the import here
+      // stops the whole chain at its one real entry point, instead of
+      // continuing to stub each new downstream package as it's discovered.
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        '@open-mercato/shared/lib/di/container': false,
+      }
     }
     return config
   },
