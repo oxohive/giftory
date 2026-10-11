@@ -63,15 +63,41 @@ resource "aws_lb_listener" "https" {
   ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
   certificate_arn   = aws_acm_certificate_validation.mercato.certificate_arn
 
-  # Initial default: wakeup Lambda (ECS starts at 0; Lambda switches to ECS TG once healthy).
-  # Watchdog and wakeup manage this at runtime — Tofu must not reset it on every apply.
+  # Default: reject any request that doesn't match a listener rule.
+  # Requests must carry the correct Host header to reach ECS. This prevents internet
+  # scanners hitting the ALB by raw IP from counting toward the watchdog's RequestCount.
   default_action {
+    type = "fixed-response"
+    fixed_response {
+      content_type = "text/plain"
+      message_body = "Not found"
+      status_code  = "400"
+    }
+  }
+
+  tags = local.common_tags
+}
+
+# Host-scoped rule: only requests for admin.giftory.dev.oxohive.com reach the app.
+# Initial action: wakeup Lambda. Wakeup and watchdog Lambdas switch the action
+# between wakeup TG and ECS TG at runtime — Tofu must not reset it on every apply.
+resource "aws_lb_listener_rule" "mercato" {
+  listener_arn = aws_lb_listener.https.arn
+  priority     = 10
+
+  action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.wakeup.arn
   }
 
+  condition {
+    host_header {
+      values = ["${var.api_subdomain}.${var.domain_name}"]
+    }
+  }
+
   lifecycle {
-    ignore_changes = [default_action]
+    ignore_changes = [action]
   }
 
   tags = local.common_tags

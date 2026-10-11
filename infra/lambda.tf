@@ -27,7 +27,7 @@ resource "aws_lambda_function" "wakeup" {
     variables = {
       ECS_CLUSTER   = aws_ecs_cluster.main.name
       ECS_SERVICE   = aws_ecs_service.mercato.name
-      LISTENER_ARN  = aws_lb_listener.https.arn
+      RULE_ARN      = aws_lb_listener_rule.mercato.arn
       ECS_TG_ARN    = aws_lb_target_group.mercato.arn
       WAKEUP_TG_ARN = aws_lb_target_group.wakeup.arn
     }
@@ -78,7 +78,7 @@ resource "aws_lambda_function" "watchdog" {
       ALB_ARN_SUFFIX = aws_lb.main.arn_suffix
       TG_ARN_SUFFIX  = aws_lb_target_group.mercato.arn_suffix
       IDLE_MINUTES   = tostring(var.idle_timeout_minutes)
-      LISTENER_ARN   = aws_lb_listener.https.arn
+      RULE_ARN       = aws_lb_listener_rule.mercato.arn
       WAKEUP_TG_ARN  = aws_lb_target_group.wakeup.arn
     }
   }

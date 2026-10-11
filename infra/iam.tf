@@ -97,7 +97,7 @@ resource "aws_iam_role_policy" "lambda_ecs_cw" {
     Statement = [
       {
         Effect   = "Allow"
-        Action   = ["ecs:UpdateService", "ecs:DescribeServices"]
+        Action   = ["ecs:UpdateService", "ecs:DescribeServices", "ecs:ListTasks", "ecs:DescribeTasks"]
         Resource = "*"
       },
       {
@@ -109,7 +109,9 @@ resource "aws_iam_role_policy" "lambda_ecs_cw" {
         Effect = "Allow"
         Action = [
           "elasticloadbalancing:ModifyListener",
+          "elasticloadbalancing:ModifyRule",
           "elasticloadbalancing:DescribeListeners",
+          "elasticloadbalancing:DescribeRules",
           "elasticloadbalancing:DescribeTargetHealth",
         ]
         Resource = "*"

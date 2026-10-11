@@ -3,7 +3,7 @@ import os
 
 ECS_CLUSTER   = os.environ["ECS_CLUSTER"]
 ECS_SERVICE   = os.environ["ECS_SERVICE"]
-LISTENER_ARN  = os.environ["LISTENER_ARN"]
+RULE_ARN      = os.environ["RULE_ARN"]
 ECS_TG_ARN    = os.environ["ECS_TG_ARN"]
 WAKEUP_TG_ARN = os.environ["WAKEUP_TG_ARN"]
 
@@ -123,10 +123,10 @@ def is_ecs_healthy():
     return service["runningCount"] >= 1
 
 
-def switch_listener(tg_arn):
-    alb.modify_listener(
-        ListenerArn=LISTENER_ARN,
-        DefaultActions=[{"Type": "forward", "TargetGroupArn": tg_arn}],
+def switch_rule(tg_arn):
+    alb.modify_rule(
+        RuleArn=RULE_ARN,
+        Actions=[{"Type": "forward", "TargetGroupArn": tg_arn}],
     )
 
 
@@ -145,8 +145,8 @@ def handler(event, context):
     from_alb = "requestContext" in event and "elb" in event.get("requestContext", {})
 
     if from_alb and is_ecs_healthy():
-        print("ECS is healthy — switching ALB listener to ECS TG")
-        switch_listener(ECS_TG_ARN)
+        print("ECS is healthy — switching ALB rule to ECS TG")
+        switch_rule(ECS_TG_ARN)
 
         # Redirect to the original path so the next request hits ECS directly
         headers = event.get("headers") or {}
