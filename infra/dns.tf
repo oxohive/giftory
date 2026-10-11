@@ -1,7 +1,7 @@
-# ─── ACM Certificate ──────────────────────────────────────────────────────────
+# ─── ACM Certificate (backend API subdomain) ─────────────────────────────────
 
 resource "aws_acm_certificate" "mercato" {
-  domain_name       = "${var.subdomain}.${var.domain_name}"
+  domain_name       = "${var.api_subdomain}.${var.domain_name}"
   validation_method = "DNS"
 
   lifecycle {
@@ -13,7 +13,7 @@ resource "aws_acm_certificate" "mercato" {
 
 # ─── Porkbun DNS ──────────────────────────────────────────────────────────────
 
-# ACM DNS validation record
+# ACM DNS validation record for the API cert
 resource "porkbun_dns_record" "acm_validation" {
   for_each = {
     for dvo in aws_acm_certificate.mercato.domain_validation_options : dvo.domain_name => dvo
@@ -26,12 +26,21 @@ resource "porkbun_dns_record" "acm_validation" {
   ttl     = "600"
 }
 
-# CNAME pointing giftory.dev.oxohive.com → ALB hostname
-resource "porkbun_dns_record" "mercato" {
+# CNAME: api.giftory.dev.oxohive.com → ALB
+resource "porkbun_dns_record" "api" {
+  domain  = var.domain_name
+  type    = "CNAME"
+  name    = var.api_subdomain
+  content = aws_lb.main.dns_name
+  ttl     = "600"
+}
+
+# CNAME: giftory.dev.oxohive.com → Vercel
+resource "porkbun_dns_record" "storefront" {
   domain  = var.domain_name
   type    = "CNAME"
   name    = var.subdomain
-  content = aws_lb.main.dns_name
+  content = "cname.vercel-dns.com"
   ttl     = "600"
 }
 

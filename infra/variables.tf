@@ -107,9 +107,15 @@ variable "domain_name" {
 }
 
 variable "subdomain" {
-  description = "Subdomain for this environment (e.g. giftory.dev)"
+  description = "Storefront subdomain served by Vercel (e.g. giftory.dev)"
   type        = string
   default     = "giftory.dev"
+}
+
+variable "api_subdomain" {
+  description = "Backend API subdomain served by ALB (e.g. api.giftory.dev)"
+  type        = string
+  default     = "api.giftory.dev"
 }
 
 variable "porkbun_api_key" {
