@@ -98,7 +98,7 @@ const nextConfig: NextConfig & { agentRules?: boolean } = {
   // (telemetry only runs server-side) — it's an accidental transitive import,
   // not a real client dependency — so stub these out for the browser bundle
   // only, rather than trying to break the import chain itself.
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, webpack }) => {
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
@@ -135,6 +135,21 @@ const nextConfig: NextConfig & { agentRules?: boolean } = {
         ...config.resolve.alias,
         '@open-mercato/shared/lib/di/container': false,
       }
+      // The alias above only cuts ONE of messageObjectPreviews.js's server-only
+      // imports (createRequestContainer). It also imports findOneWithDecryption
+      // from @open-mercato/shared/lib/encryption/find, an independent path to
+      // node:crypto that the same file pulls in regardless. Every one of the 7
+      // modules' messageObjectPreviews.js is entirely server-only by function
+      // (DB-backed preview data, decryption) — none of it is ever legitimately
+      // called client-side. Rather than alias each new deep import as it's
+      // discovered, replace the whole file (by filename pattern, so it covers
+      // all 7 modules at once) with an empty module for the client bundle.
+      config.plugins.push(
+        new webpack.NormalModuleReplacementPlugin(
+          /\/lib\/messageObjectPreviews(\.js)?$/,
+          require.resolve('./src/lib/empty-module.js'),
+        ),
+      )
     }
     return config
   },
