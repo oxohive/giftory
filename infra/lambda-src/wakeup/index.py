@@ -148,17 +148,25 @@ def handler(event, context):
         print("ECS is healthy — switching ALB rule to ECS TG")
         switch_rule(ECS_TG_ARN)
 
-        # Redirect to the original path so the next request hits ECS directly
+        # Don't 302 immediately: ALB takes ~2s to propagate the rule change to all
+        # nodes. An instant redirect races the propagation and causes a redirect loop.
+        # Instead, serve a fast-refresh page — by the time the browser reloads (3s)
+        # the rule switch has fully propagated and the next request lands on ECS.
         headers = event.get("headers") or {}
         host    = headers.get("host", "")
         path    = event.get("path", "/")
         qs      = event.get("queryStringParameters") or {}
         qs_str  = "?" + "&".join(f"{k}={v}" for k, v in qs.items()) if qs else ""
+        target  = f"https://{host}{path}{qs_str}"
 
+        fast_refresh = WARMING_HTML.replace(
+            'content="20"',
+            f'content="3;url={target}"',
+        )
         return {
-            "statusCode": 302,
-            "headers": {"Location": f"https://{host}{path}{qs_str}"},
-            "body": "",
+            "statusCode": 200,
+            "headers": {"Content-Type": "text/html; charset=utf-8"},
+            "body": fast_refresh,
         }
 
     # ECS not healthy yet (or triggered by CloudWatch) — show warming page
