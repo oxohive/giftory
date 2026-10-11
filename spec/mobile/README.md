@@ -26,6 +26,21 @@ Phase: unassigned in `docs/architecture.md` (mobile is named only as "later phas
 
 Full detail on every deviation, discrepancy, and open item: [`IMPLEMENTATION-NOTES.md`](IMPLEMENTATION-NOTES.md).
 
+## Design-polish wave (TASK-10–15)
+
+Started 2026-10-11 after live device testing surfaced real UX gaps (no dark mode, broken-looking blank product images, filters pushing all content ~1200px down the screen, no feedback on add-to-cart, generic spinner instead of skeletons, manual form state). All 6 run in parallel against TASK-10's frozen theme-token contract, same pattern as the original build.
+
+| # | File | Owns | Status |
+|---|---|---|---|
+| 10 | [TASK-10-theme-dark-mode.md](tasks/TASK-10-theme-dark-mode.md) | `src/theme/**` — dark mode, type scale, elevation, brand font | Not Started |
+| 11 | [TASK-11-image-handling.md](tasks/TASK-11-image-handling.md) | `expo-image` migration, cart thumbnails | Not Started |
+| 12 | [TASK-12-toast-haptics.md](tasks/TASK-12-toast-haptics.md) | Toast feedback + haptics | Not Started |
+| 13 | [TASK-13-skeleton-loaders.md](tasks/TASK-13-skeleton-loaders.md) | Skeleton loading states | Not Started |
+| 14 | [TASK-14-bottom-sheet-filters.md](tasks/TASK-14-bottom-sheet-filters.md) | Bottom sheet for product filters | Not Started |
+| 15 | [TASK-15-react-hook-form.md](tasks/TASK-15-react-hook-form.md) | Migrate address forms to `react-hook-form` | Not Started |
+
+**Collision note specific to this wave:** TASK-10, TASK-12, and TASK-14 each need a provider mounted in `App.tsx` (font loading, `ToastProvider`, `GestureHandlerRootView`/`BottomSheetModalProvider`). None of them edit `App.tsx` directly — each states the exact JSX needed in its own report, merged manually afterward in one pass to avoid a 3-way collision on one file.
+
 ## Collision rule
 
 Every task owns an exclusive set of paths (see each file's **Boundaries** section). Only **TASK-01** and **TASK-09** may ever edit `apps/mobile/package.json`, `app.json`, `tsconfig.json`, or `babel.config.js`. Every other task that needs a new npm package lists it under **Dependencies to add** instead of installing it — TASK-09 merges all of these once, at the end.
