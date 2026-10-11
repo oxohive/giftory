@@ -44,6 +44,15 @@ resource "porkbun_dns_record" "api" {
   ttl     = "600"
 }
 
+# CNAME: giftory.dev.oxohive.com → Vercel
+resource "porkbun_dns_record" "storefront" {
+  domain  = var.domain_name
+  type    = "CNAME"
+  name    = var.subdomain
+  content = "cname.vercel-dns.com"
+  ttl     = "600"
+}
+
 # ─── ACM Validation wait ──────────────────────────────────────────────────────
 
 resource "aws_acm_certificate_validation" "mercato" {
