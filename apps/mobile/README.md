@@ -36,13 +36,25 @@ No native linking step was run in this build — `react-native-razorpay` needs a
 If Metro's dev server runs on a remote machine the phone can't reach directly (e.g. a cloud VM accessed over SSH), `npm start`'s default LAN QR code won't work. Two options, tried in this exact setup on 2026-10-11:
 
 - **`npx expo start --tunnel` (ngrok) — confirmed broken, do not use.** `@expo/ngrok` bundles ngrok v2.3.41, which ngrok's servers now hard-reject (`ERR_NGROK_121`: minimum supported agent is v3.20.0) — no newer `@expo/ngrok-bin-*` package exists on npm to fix this by upgrading. Swapping in a real ngrok v3 binary gets further (the agent connects, the raw tunnel-creation API works correctly when called directly) but `@expo/ngrok`'s own JS client then fails with a reproducible "tunnel already exists" error on a fresh random tunnel ID — an unexplained incompatibility in that library against v3's API responses, not something worth patching blind. This is a dead end until `@expo/ngrok` is updated upstream.
-- **`cloudflared` tunnel — confirmed working.** No account/signup needed for a quick tunnel:
+- **`cloudflared` tunnel — confirmed working, with one extra step.** No account/signup needed for a quick tunnel:
   ```bash
-  npm install -g --allow-scripts=cloudflared cloudflared   # one-time; --allow-scripts needed, postinstall downloads the real binary
-  npx expo start                                             # terminal 1, no --tunnel
-  cloudflared tunnel --url http://localhost:8081             # terminal 2 — prints a public https://*.trycloudflare.com URL
+  npm install -g --allow-scripts=cloudflared cloudflared        # one-time; --allow-scripts needed, postinstall downloads the real binary
+
+  # terminal 2 first — get the tunnel URL before starting Metro, since Metro needs to know it upfront
+  cloudflared tunnel --url http://localhost:8081                # prints a public https://*.trycloudflare.com URL — note it
+
+  # terminal 1 — start Metro WITH that URL, via EXPO_PACKAGER_PROXY_URL (NOT REACT_NATIVE_PACKAGER_HOSTNAME,
+  # which only overrides the hostname and leaves Metro's own port (8081) wrongly appended to the manifest's
+  # bundle URL -- confirmed by reading apps/mobile/node_modules/@expo/cli/build/src/start/server/UrlCreator.js:
+  # EXPO_PACKAGER_PROXY_URL is parsed as a full URL and its (empty) port wins, correctly producing a bare
+  # https://<tunnel-host>/... bundle URL with no port at all)
+  EXPO_PACKAGER_PROXY_URL=https://<your-tunnel-host>.trycloudflare.com npx expo start
   ```
-  On the phone: Expo Go → "Enter URL manually" → paste the printed URL (use `exp://` instead of `https://` if Expo Go doesn't accept the scheme).
+  Without `EXPO_PACKAGER_PROXY_URL`, Metro embeds its own LAN hostname/port in the manifest it serves — the phone reaches the tunnel fine (gets a manifest, shows the app name) but then tries to fetch the actual JS bundle from an address only reachable on the VM's local network, and silently shows a blank white screen forever. This was confirmed directly: `curl`-ing the tunnel's manifest endpoint showed `launchAsset.url` pointing at `<host>:8081/...` — a port number that should never appear in a tunnel's public URL, since cloudflared/ngrok handle the host:8081 proxying invisibly.
+
+  On the phone: Expo Go → "Enter URL manually" → `exp://<your-tunnel-host>.trycloudflare.com` (the `https://` form opens your phone's regular browser instead of Expo Go — use `exp://`).
+
+  Cloudflare's free quick tunnels generate a **new random hostname every time you run the command** — if you restart `cloudflared`, you must also restart Metro with the new URL.
 - VS Code's built-in **Remote-SSH port forwarding does not help here** — it only exposes a port back to the machine running the VS Code *client*, with no "Public visibility" option (that's a separate Dev Tunnels feature, not plain Remote-SSH forwarding) — confirmed by checking the actual right-click menu in this setup.
 
 ## Architecture
