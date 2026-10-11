@@ -26,7 +26,16 @@ resource "porkbun_dns_record" "acm_validation" {
   ttl     = "600"
 }
 
-# CNAME: api.giftory.dev.oxohive.com → ALB
+# CAA record allowing Amazon ACM to issue certificates for oxohive.com
+resource "porkbun_dns_record" "caa_amazon" {
+  domain  = var.domain_name
+  type    = "CAA"
+  name    = ""
+  content = "0 issue \"amazon.com\""
+  ttl     = "600"
+}
+
+# CNAME: admin.giftory.dev.oxohive.com → ALB
 resource "porkbun_dns_record" "api" {
   domain  = var.domain_name
   type    = "CNAME"
