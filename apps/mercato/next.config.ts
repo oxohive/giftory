@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from 'node:path'
 import { resolveAllowedDevOrigins } from './src/lib/dev-origins'
 import { telemetryServerExternalPackages } from '@open-mercato/telemetry/nextjs-config'
 
@@ -99,6 +100,21 @@ const nextConfig: NextConfig & { agentRules?: boolean } = {
   // not a real client dependency — so stub these out for the browser bundle
   // only, rather than trying to break the import chain itself.
   webpack: (config, { isServer, webpack }) => {
+    // @open-mercato/shared's DI container does `await import("@/di")` as an
+    // app-extension hook (node_modules/@open-mercato/shared/dist/lib/di/container.js:213),
+    // expecting the CONSUMING APP's own tsconfig "@/*" -> "./src/*" alias to
+    // resolve it to this app's src/di.ts. Next.js's built-in tsconfig-paths
+    // support only applies to imports written in the app's own source tree,
+    // not to dynamic imports made from inside a third-party node_modules
+    // package -- so this fails to resolve on BOTH the server and client
+    // builds (unlike every other fix above, which was client-only). This is
+    // the actual root cause behind the slow/500 responses on "/" and very
+    // likely the storefront API hang too, since createRequestContainer()
+    // (used by every storefront route) goes through this same container.js.
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@/di': path.resolve(__dirname, 'src/di.ts'),
+    }
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
