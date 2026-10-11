@@ -32,12 +32,14 @@ Started 2026-10-11 after live device testing surfaced real UX gaps (no dark mode
 
 | # | File | Owns | Status |
 |---|---|---|---|
-| 10 | [TASK-10-theme-dark-mode.md](tasks/TASK-10-theme-dark-mode.md) | `src/theme/**` — dark mode, type scale, elevation, brand font | Not Started |
-| 11 | [TASK-11-image-handling.md](tasks/TASK-11-image-handling.md) | `expo-image` migration, cart thumbnails | Not Started |
-| 12 | [TASK-12-toast-haptics.md](tasks/TASK-12-toast-haptics.md) | Toast feedback + haptics | Not Started |
-| 13 | [TASK-13-skeleton-loaders.md](tasks/TASK-13-skeleton-loaders.md) | Skeleton loading states | Not Started |
-| 14 | [TASK-14-bottom-sheet-filters.md](tasks/TASK-14-bottom-sheet-filters.md) | Bottom sheet for product filters | Not Started |
-| 15 | [TASK-15-react-hook-form.md](tasks/TASK-15-react-hook-form.md) | Migrate address forms to `react-hook-form` | Not Started |
+| 10 | [TASK-10-theme-dark-mode.md](tasks/TASK-10-theme-dark-mode.md) | `src/theme/**` — dark mode, type scale, elevation, brand font | ✅ Done |
+| 11 | [TASK-11-image-handling.md](tasks/TASK-11-image-handling.md) | `expo-image` migration, cart thumbnails | ✅ Done |
+| 12 | [TASK-12-toast-haptics.md](tasks/TASK-12-toast-haptics.md) | Toast feedback + haptics | ✅ Done |
+| 13 | [TASK-13-skeleton-loaders.md](tasks/TASK-13-skeleton-loaders.md) | Skeleton loading states | ✅ Done |
+| 14 | [TASK-14-bottom-sheet-filters.md](tasks/TASK-14-bottom-sheet-filters.md) | Bottom sheet for product filters | ✅ Done |
+| 15 | [TASK-15-react-hook-form.md](tasks/TASK-15-react-hook-form.md) | Migrate address forms to `react-hook-form` | ✅ Done |
+
+**Integration verified:** `npx tsc --noEmit` clean (0 errors), Android Metro bundle builds successfully (1400 modules, up from 936 before this wave, 0 resolution errors). Not yet re-tested on a physical device by the user since this wave landed.
 
 **Collision note specific to this wave:** TASK-10, TASK-12, and TASK-14 each need a provider mounted in `App.tsx` (font loading, `ToastProvider`, `GestureHandlerRootView`/`BottomSheetModalProvider`). None of them edit `App.tsx` directly — each states the exact JSX needed in its own report, merged manually afterward in one pass to avoid a 3-way collision on one file.
 
