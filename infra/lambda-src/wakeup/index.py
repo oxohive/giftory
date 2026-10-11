@@ -7,6 +7,8 @@ RULE_ARN      = os.environ["RULE_ARN"]
 ECS_TG_ARN    = os.environ["ECS_TG_ARN"]
 WAKEUP_TG_ARN = os.environ["WAKEUP_TG_ARN"]
 
+
+
 ecs = boto3.client("ecs")
 alb = boto3.client("elbv2")
 
@@ -112,15 +114,18 @@ WARMING_HTML = """<!DOCTYPE html>
 
 
 def is_ecs_healthy():
-    """Return True if ECS has at least one running task.
+    """Return True if ALB reports at least one healthy target in the ECS TG.
 
-    ALB reports targets as 'unused' (not 'healthy') while the listener points
-    to the Lambda TG, so checking ALB target health always returns False here.
-    ECS runningCount is the correct signal.
+    Checking runningCount caused 504s: the container was counted as running
+    before the app finished booting and passed the ALB health check.
+    describe_target_health is the correct signal — 'healthy' means /api/healthz
+    returned 200 and the target is ready to serve real traffic.
     """
-    resp = ecs.describe_services(cluster=ECS_CLUSTER, services=[ECS_SERVICE])
-    service = resp["services"][0]
-    return service["runningCount"] >= 1
+    resp = alb.describe_target_health(TargetGroupArn=ECS_TG_ARN)
+    return any(
+        t["TargetHealth"]["State"] == "healthy"
+        for t in resp["TargetHealthDescriptions"]
+    )
 
 
 def switch_rule(tg_arn):
