@@ -105,6 +105,16 @@ const nextConfig: NextConfig & { agentRules?: boolean } = {
         http2: false,
         os: false,
         perf_hooks: false,
+        async_hooks: false,
+        diagnostics_channel: false,
+        worker_threads: false,
+        inspector: false,
+        cluster: false,
+        dgram: false,
+        readline: false,
+        repl: false,
+        v8: false,
+        module: false,
       }
     }
     return config
