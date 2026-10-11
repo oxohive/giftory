@@ -10,7 +10,7 @@ const Stack = createNativeStackNavigator<AccountStackParamList>()
 export default function AccountStackNavigator() {
   return (
     <Stack.Navigator initialRouteName="Account">
-      <Stack.Screen name="Account" component={AccountScreen} options={{ title: 'Account' }} />
+      <Stack.Screen name="Account" component={AccountScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Addresses" component={AddressesScreen} options={{ title: 'Addresses' }} />
       <Stack.Screen name="OrderDetail" component={OrderDetailScreen} options={{ title: 'Order' }} />
     </Stack.Navigator>
