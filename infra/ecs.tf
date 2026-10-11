@@ -70,7 +70,7 @@ resource "aws_ecs_task_definition" "mercato" {
     }
 
     healthCheck = {
-      command     = ["CMD-SHELL", "wget -qO- http://localhost:3000/api/healthz || exit 1"]
+      command     = ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3000/api/healthz',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
       interval    = 30
       timeout     = 10
       retries     = 3
