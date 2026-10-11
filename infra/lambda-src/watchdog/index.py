@@ -7,9 +7,12 @@ ECS_SERVICE    = os.environ["ECS_SERVICE"]
 ALB_ARN_SUFFIX = os.environ["ALB_ARN_SUFFIX"]
 TG_ARN_SUFFIX  = os.environ["TG_ARN_SUFFIX"]
 IDLE_MINUTES   = int(os.environ.get("IDLE_MINUTES", "30"))
+LISTENER_ARN   = os.environ["LISTENER_ARN"]
+WAKEUP_TG_ARN  = os.environ["WAKEUP_TG_ARN"]
 
 ecs = boto3.client("ecs")
 cw  = boto3.client("cloudwatch")
+alb = boto3.client("elbv2")
 
 
 def handler(event, context):
@@ -42,8 +45,12 @@ def handler(event, context):
     print(f"Requests in last {IDLE_MINUTES} min: {total}")
 
     if total == 0:
-        print(f"No traffic for {IDLE_MINUTES} min — scaling to 0")
+        print(f"No traffic for {IDLE_MINUTES} min — scaling to 0 and routing to wakeup Lambda")
         ecs.update_service(cluster=ECS_CLUSTER, service=ECS_SERVICE, desiredCount=0)
+        alb.modify_listener(
+            ListenerArn=LISTENER_ARN,
+            DefaultActions=[{"Type": "forward", "TargetGroupArn": WAKEUP_TG_ARN}],
+        )
         return {"scaled": True, "reason": "idle_timeout", "requests": total}
 
     print("Traffic detected — keeping service alive")

@@ -25,8 +25,11 @@ resource "aws_lambda_function" "wakeup" {
 
   environment {
     variables = {
-      ECS_CLUSTER = aws_ecs_cluster.main.name
-      ECS_SERVICE = aws_ecs_service.mercato.name
+      ECS_CLUSTER   = aws_ecs_cluster.main.name
+      ECS_SERVICE   = aws_ecs_service.mercato.name
+      LISTENER_ARN  = aws_lb_listener.http.arn
+      ECS_TG_ARN    = aws_lb_target_group.mercato.arn
+      WAKEUP_TG_ARN = aws_lb_target_group.wakeup.arn
     }
   }
 
@@ -39,6 +42,20 @@ resource "aws_lambda_permission" "wakeup_cloudwatch" {
   function_name = aws_lambda_function.wakeup.function_name
   principal     = "lambda.alarms.cloudwatch.amazonaws.com"
   source_arn    = aws_cloudwatch_metric_alarm.no_healthy_tasks.arn
+}
+
+resource "aws_lambda_permission" "wakeup_alb" {
+  statement_id  = "AllowALBInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.wakeup.function_name
+  principal     = "elasticloadbalancing.amazonaws.com"
+  source_arn    = aws_lb_target_group.wakeup.arn
+}
+
+resource "aws_lb_target_group_attachment" "wakeup" {
+  target_group_arn = aws_lb_target_group.wakeup.arn
+  target_id        = aws_lambda_function.wakeup.arn
+  depends_on       = [aws_lambda_permission.wakeup_alb]
 }
 
 # ─── Watchdog Lambda ──────────────────────────────────────────────────────────
@@ -61,6 +78,8 @@ resource "aws_lambda_function" "watchdog" {
       ALB_ARN_SUFFIX = aws_lb.main.arn_suffix
       TG_ARN_SUFFIX  = aws_lb_target_group.mercato.arn_suffix
       IDLE_MINUTES   = tostring(var.idle_timeout_minutes)
+      LISTENER_ARN   = aws_lb_listener.http.arn
+      WAKEUP_TG_ARN  = aws_lb_target_group.wakeup.arn
     }
   }
 

@@ -104,6 +104,15 @@ resource "aws_iam_role_policy" "lambda_ecs_cw" {
         Effect   = "Allow"
         Action   = ["cloudwatch:GetMetricStatistics"]
         Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "elasticloadbalancing:ModifyListener",
+          "elasticloadbalancing:DescribeListeners",
+          "elasticloadbalancing:DescribeTargetHealth",
+        ]
+        Resource = "*"
       }
     ]
   })

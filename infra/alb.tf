@@ -32,14 +32,26 @@ resource "aws_lb_target_group" "mercato" {
   tags = local.common_tags
 }
 
+resource "aws_lb_target_group" "wakeup" {
+  name        = "${var.app_name}-wakeup-tg"
+  target_type = "lambda"
+  tags        = local.common_tags
+}
+
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.main.arn
   port              = 80
   protocol          = "HTTP"
 
+  # Initial default: wakeup Lambda (ECS starts at 0; Lambda switches to ECS TG once healthy).
+  # Watchdog and wakeup manage this at runtime — Tofu must not reset it on every apply.
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.mercato.arn
+    target_group_arn = aws_lb_target_group.wakeup.arn
+  }
+
+  lifecycle {
+    ignore_changes = [default_action]
   }
 
   tags = local.common_tags
