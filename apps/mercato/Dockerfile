@@ -93,8 +93,11 @@ RUN if [ "$INSTALL_CHROMIUM" = "1" ]; then \
     fi
 RUN corepack enable
 # Reuse the Yarn binary the builder already downloaded so corepack does not
-# attempt a network fetch (which fails if DNS is unavailable at build time).
-COPY --from=builder /root/.cache/node/corepack /root/.cache/node/corepack
+# attempt a network fetch at container start-up. The runner runs as omuser,
+# so the cache must live in that user's home, not /root/.cache.
+RUN mkdir -p /home/omuser/.cache/node
+COPY --from=builder /root/.cache/node/corepack /home/omuser/.cache/node/corepack
+RUN chown -R omuser:omuser /home/omuser/.cache
 
 COPY --chown=omuser:omuser package.json yarn.lock .yarnrc.yml ./
 RUN if grep -Eq 'http://(localhost|127\\.0\\.0\\.1):' .yarnrc.yml; then \
