@@ -7,10 +7,11 @@ Gift marketplace built on Open Mercato 0.8.0. See [docs/architecture.md](docs/ar
 ```
 apps/mercato/     # Backend + admin (Open Mercato), port 3000
 apps/storefront/  # Customer storefront (Next.js), port 3100
+infra/            # OpenTofu (Terraform) — AWS ECS Fargate + CodeBuild CI/CD
 docs/             # Architecture and decision documents
 spec/             # Feature specs, user stories, ADRs (spec-driven development)
   phase-1/        # Phase 1 — Commerce Foundation (implemented)
-  phase-2/        # Phase 2 — Dealer Marketplace (planning)
+  phase-2/        # Phase 2 — Dealer Marketplace (implemented)
   decisions/      # Architecture Decision Records (ADR-XXX)
 ```
 
@@ -57,6 +58,7 @@ Requires Node.js ≥ 24 for `apps/mercato`, ≥ 22 for `apps/storefront`. Databa
 - **Migrations:** run `yarn db:generate`, review the generated SQL, then `yarn db:migrate`. Never edit shipped migrations.
 - **Discovery files:** run `yarn generate` whenever you change `src/modules.ts`, route files, entity files, agent files, or workflow files.
 - **Module isolation:** app modules live in `apps/mercato/src/modules/<id>/`. Do not use cross-module ORM relations — communicate via IDs, snapshots, events, or enrichers.
+- **Import style:** use bare extensions for local TypeScript imports (`from '../data/entities'`, not `from '../data/entities.js'`). Turbopack (Next.js production build) cannot resolve explicit `.js` extensions on TypeScript source files. For imports that cross module boundaries (`../../other-module/...`), use the `@/modules/other-module/...` alias instead of relative paths — it avoids path-depth counting bugs and is immune to directory restructuring.
 - **Soft delete:** all business entities use `deleted_at`. Use hard delete only for PII removal requests.
 - **Secrets:** never commit secrets or credentials. Use environment variables documented in `.env.example` files.
 
@@ -85,4 +87,15 @@ When you change behavior, API contracts, or entity schemas:
 
 **Phase 1 (Commerce Foundation) — Implemented.** Gift catalog, occasions, server-side cart, checkout, Stripe + Razorpay payments, customer accounts, address book, order history, admin gift management.
 
-**Phases 2–9 — Planned.** Dealer marketplace, 3D customization, production workflow, AI gift assistant, corporate gifting, and more. See [docs/architecture.md](docs/architecture.md#19-stack-by-phase) for the roadmap.
+**Phase 2 (Dealer Marketplace) — Implemented.** Dealer self-registration + admin KYC review (`dealer_onboarding`), dealer org RBAC with staff invites (`dealer_org_rbac`), manual order assignment (`dealer_orders`), commission engine with rules and earnings API (`commissions`).
+
+**Phases 3–9 — Planned.** 3D customization, production workflow, AI gift assistant, corporate gifting, and more. See [docs/architecture.md](docs/architecture.md#19-stack-by-phase) for the roadmap.
+
+## Infrastructure
+
+The app runs on AWS ECS Fargate Spot with scale-to-zero (Mumbai, `ap-south-1`). Infrastructure is managed with OpenTofu in `infra/`. CI/CD is CodeBuild — a push to `main` triggers test → Docker build → ECR push → ECS deploy automatically.
+
+- **ALB:** `http://giftory-dev-alb-398957740.ap-south-1.elb.amazonaws.com`
+- **ECR:** `767398004313.dkr.ecr.ap-south-1.amazonaws.com/giftory-mercato`
+- **Secrets:** stored in SSM Parameter Store under `/giftory/dev/` as `SecureString`
+- **Scale-to-zero:** EventBridge watchdog scales ECS to 0 after 30 min idle; Lambda wakeup scales it back to 1 on first request
