@@ -31,6 +31,20 @@ npm run typecheck   # tsc --noEmit
 
 No native linking step was run in this build — `react-native-razorpay` needs a native build (`expo prebuild` or EAS Build) to actually work on-device; Expo Go alone won't link it.
 
+### Connecting a physical device when the dev machine isn't on the same LAN
+
+If Metro's dev server runs on a remote machine the phone can't reach directly (e.g. a cloud VM accessed over SSH), `npm start`'s default LAN QR code won't work. Two options, tried in this exact setup on 2026-10-11:
+
+- **`npx expo start --tunnel` (ngrok) — confirmed broken, do not use.** `@expo/ngrok` bundles ngrok v2.3.41, which ngrok's servers now hard-reject (`ERR_NGROK_121`: minimum supported agent is v3.20.0) — no newer `@expo/ngrok-bin-*` package exists on npm to fix this by upgrading. Swapping in a real ngrok v3 binary gets further (the agent connects, the raw tunnel-creation API works correctly when called directly) but `@expo/ngrok`'s own JS client then fails with a reproducible "tunnel already exists" error on a fresh random tunnel ID — an unexplained incompatibility in that library against v3's API responses, not something worth patching blind. This is a dead end until `@expo/ngrok` is updated upstream.
+- **`cloudflared` tunnel — confirmed working.** No account/signup needed for a quick tunnel:
+  ```bash
+  npm install -g --allow-scripts=cloudflared cloudflared   # one-time; --allow-scripts needed, postinstall downloads the real binary
+  npx expo start                                             # terminal 1, no --tunnel
+  cloudflared tunnel --url http://localhost:8081             # terminal 2 — prints a public https://*.trycloudflare.com URL
+  ```
+  On the phone: Expo Go → "Enter URL manually" → paste the printed URL (use `exp://` instead of `https://` if Expo Go doesn't accept the scheme).
+- VS Code's built-in **Remote-SSH port forwarding does not help here** — it only exposes a port back to the machine running the VS Code *client*, with no "Public visibility" option (that's a separate Dev Tunnels feature, not plain Remote-SSH forwarding) — confirmed by checking the actual right-click menu in this setup.
+
 ## Architecture
 
 - `src/navigation/` — typed React Navigation (bottom tabs + nested native-stacks). See `types.ts` for every route's param list.
