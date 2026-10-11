@@ -75,6 +75,10 @@ resource "aws_lb_listener" "https" {
     }
   }
 
+  lifecycle {
+    ignore_changes = [default_action]
+  }
+
   tags = local.common_tags
 }
 
