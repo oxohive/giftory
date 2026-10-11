@@ -24,6 +24,11 @@ def handler(event, context):
         print("Service already at 0 — nothing to do")
         return {"scaled": False, "reason": "already_zero"}
 
+    # Don't scale down while the task is still starting — wait for it to become healthy first
+    if service["runningCount"] == 0:
+        print(f"Task is still starting (pending={service['pendingCount']}) — skipping idle check")
+        return {"scaled": False, "reason": "task_starting"}
+
     # Sum ALB RequestCount over the idle window
     now   = datetime.now(timezone.utc)
     start = now - timedelta(minutes=IDLE_MINUTES)
