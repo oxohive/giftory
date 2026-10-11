@@ -1,0 +1,20 @@
+# Copy this file to terraform.tfvars and fill in real values.
+# terraform.tfvars is gitignored — never commit it.
+
+region      = "ap-south-1"
+aws_profile = "admin-sso"
+environment = "dev"
+app_name    = "giftory"
+
+mercato_image_tag    = "latest"
+idle_timeout_minutes = 30
+
+# ── Secrets (get from apps/mercato/.env) ─────────────────────────────────────
+database_url          = "postgresql://..."
+jwt_secret            = "change-me"
+auth_secret           = "change-me"
+tenant_encryption_key = "change-me"
+
+razorpay_key_id         = "rzp_test_TmHUYAsZt3PspD"
+razorpay_key_secret     = "w2v7oitp1H5YojOuY19fijMV"
+razorpay_webhook_secret = "razorpay-dev-webhook-secret"

@@ -25,8 +25,10 @@ RUN if grep -Eq 'http://(localhost|127\\.0\\.0\\.1):' .yarnrc.yml; then \
 RUN yarn install
 
 COPY . .
-RUN yarn generate
-RUN NODE_ENV=production yarn build
+RUN yarn generate && sed -i 's/^CACHE_STRATEGY=.*/CACHE_STRATEGY=memory/' .env
+RUN node ./scripts/patch-node24-json-imports.mjs && \
+    NODE_OPTIONS="--max-old-space-size=1024" NODE_ENV=production node --max-old-space-size=2048 ./node_modules/.bin/next build && \
+    rm -rf .mercato/next/.cache
 
 FROM node:24-alpine AS dev
 
@@ -80,6 +82,8 @@ ENV NODE_ENV=production \
     PORT=${CONTAINER_PORT} \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
+RUN adduser -D -u 1001 omuser
+
 WORKDIR /app
 
 RUN if [ "$INSTALL_CHROMIUM" = "1" ]; then \
@@ -88,8 +92,11 @@ RUN if [ "$INSTALL_CHROMIUM" = "1" ]; then \
       apk add --no-cache ca-certificates openssl; \
     fi
 RUN corepack enable
+# Reuse the Yarn binary the builder already downloaded so corepack does not
+# attempt a network fetch (which fails if DNS is unavailable at build time).
+COPY --from=builder /root/.cache/node/corepack /root/.cache/node/corepack
 
-COPY package.json yarn.lock .yarnrc.yml ./
+COPY --chown=omuser:omuser package.json yarn.lock .yarnrc.yml ./
 RUN if grep -Eq 'http://(localhost|127\\.0\\.0\\.1):' .yarnrc.yml; then \
       sed \
         -e "s#http://localhost:#http://${OPEN_MERCATO_DOCKER_REGISTRY_HOST}:#g" \
@@ -100,26 +107,22 @@ RUN if grep -Eq 'http://(localhost|127\\.0\\.0\\.1):' .yarnrc.yml; then \
       fi; \
       mv .yarnrc.yml.container .yarnrc.yml; \
     fi
-RUN yarn workspaces focus --all --production
+RUN yarn workspaces focus --all --production && chown -R omuser:omuser node_modules
 
-COPY --from=builder /app/.mercato/next ./.mercato/next
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/src ./src
-COPY --from=builder /app/types ./types
-COPY --from=builder /app/.mercato ./.mercato
-COPY --from=builder /app/next.config.ts ./next.config.ts
-COPY --from=builder /app/postcss.config.mjs ./postcss.config.mjs
-COPY --from=builder /app/components.json ./components.json
-COPY --from=builder /app/tsconfig.json ./tsconfig.json
-COPY --from=builder /app/scripts ./scripts
-COPY docker/scripts/init-or-migrate.sh /app/docker/scripts/init-or-migrate.sh
+# .mercato includes .mercato/next — do not copy .mercato/next separately (duplicates 2 GB)
+COPY --chown=omuser:omuser --from=builder /app/.mercato ./.mercato
+COPY --chown=omuser:omuser --from=builder /app/public ./public
+COPY --chown=omuser:omuser --from=builder /app/src ./src
+COPY --chown=omuser:omuser --from=builder /app/types ./types
+COPY --chown=omuser:omuser --from=builder /app/next.config.ts ./next.config.ts
+COPY --chown=omuser:omuser --from=builder /app/postcss.config.mjs ./postcss.config.mjs
+COPY --chown=omuser:omuser --from=builder /app/components.json ./components.json
+COPY --chown=omuser:omuser --from=builder /app/tsconfig.json ./tsconfig.json
+COPY --chown=omuser:omuser --from=builder /app/scripts ./scripts
+COPY --chown=omuser:omuser docker/scripts/init-or-migrate.sh /app/docker/scripts/init-or-migrate.sh
 # Used by the optional `mcp` service (compose profile `agents`).
-COPY docker/scripts/mcp-entrypoint.sh /app/docker/scripts/mcp-entrypoint.sh
-RUN chmod +x /app/docker/scripts/init-or-migrate.sh
-RUN chmod +x /app/docker/scripts/mcp-entrypoint.sh
-
-RUN adduser -D -u 1001 omuser \
- && chown -R omuser:omuser /app
+COPY --chown=omuser:omuser docker/scripts/mcp-entrypoint.sh /app/docker/scripts/mcp-entrypoint.sh
+RUN chmod +x /app/docker/scripts/init-or-migrate.sh /app/docker/scripts/mcp-entrypoint.sh
 
 USER omuser
 

@@ -1,0 +1,72 @@
+version: 0.2
+
+env:
+  variables:
+    AWS_REGION: ap-south-1
+    ECR_REPO: 767398004313.dkr.ecr.ap-south-1.amazonaws.com/giftory-mercato
+    ECS_CLUSTER: giftory-dev
+    ECS_SERVICE: mercato-dev
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 24
+    commands:
+      - echo "=== Install phase ==="
+      - aws --version
+      - docker --version
+
+  pre_build:
+    commands:
+      - echo "=== Logging in to ECR ==="
+      - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPO
+      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c1-7)
+      - IMAGE_TAG=${COMMIT_HASH:-latest}
+      - echo "Building image tag $IMAGE_TAG"
+
+      - echo "=== Running tests (mercato) ==="
+      - cd apps/mercato
+      - corepack enable
+      - yarn install --frozen-lockfile
+      - yarn test --no-coverage --passWithNoTests
+      - cd $CODEBUILD_SRC_DIR
+
+  build:
+    commands:
+      - echo "=== Building Docker image ==="
+      - cd apps/mercato
+      - |
+        docker build \
+          --target runner \
+          --tag $ECR_REPO:$IMAGE_TAG \
+          --tag $ECR_REPO:latest \
+          --cache-from $ECR_REPO:latest \
+          .
+      - cd $CODEBUILD_SRC_DIR
+
+  post_build:
+    commands:
+      - echo "=== Pushing to ECR ==="
+      - docker push $ECR_REPO:$IMAGE_TAG
+      - docker push $ECR_REPO:latest
+
+      - echo "=== Updating ECS service ==="
+      - |
+        aws ecs update-service \
+          --cluster $ECS_CLUSTER \
+          --service $ECS_SERVICE \
+          --force-new-deployment \
+          --region $AWS_REGION
+      - echo "Deploy triggered. ECS will pull the new image on next task replacement."
+
+      - echo "=== Writing image definitions for reference ==="
+      - printf '[{"name":"mercato","imageUri":"%s"}]' $ECR_REPO:$IMAGE_TAG > imagedefinitions.json
+
+artifacts:
+  files:
+    - imagedefinitions.json
+
+cache:
+  paths:
+    - apps/mercato/.yarn/cache/**/*
+    - /root/.docker/**/*
