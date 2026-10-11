@@ -61,10 +61,10 @@ resource "aws_codebuild_webhook" "mercato" {
       type    = "HEAD_REF"
       pattern = "^refs/heads/main$"
     }
-    # Only build when code or buildspec changes — skip docs/spec/infra-only pushes.
+    # Only build when app code changes — skip docs/spec/infra/buildspec-only pushes.
     filter {
       type    = "FILE_PATH"
-      pattern = "^(apps/|buildspec\\.yml)"
+      pattern = "^apps/"
     }
   }
 
