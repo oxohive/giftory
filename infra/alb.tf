@@ -19,7 +19,7 @@ resource "aws_lb_target_group" "mercato" {
 
   health_check {
     enabled             = true
-    path                = "/health"
+    path                = "/api/healthz"
     interval            = 30
     timeout             = 10
     healthy_threshold   = 2
