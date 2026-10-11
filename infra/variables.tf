@@ -113,9 +113,9 @@ variable "subdomain" {
 }
 
 variable "api_subdomain" {
-  description = "Backend API subdomain served by ALB (e.g. api.giftory.dev)"
+  description = "Backend admin subdomain served by ALB (e.g. admin.giftory.dev)"
   type        = string
-  default     = "api.giftory.dev"
+  default     = "admin.giftory.dev"
 }
 
 variable "porkbun_api_key" {
