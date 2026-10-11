@@ -23,10 +23,7 @@ export interface CartLineRowProps {
 /**
  * One cart line: quantity stepper, gift wrap toggle, gift message field
  * (independently editable per line, per TASK-06's acceptance criteria), and
- * a remove action. `CartLine` (TASK-04's real contract) carries no
- * title/image/display data, so this renders the product/variant id — the
- * richer catalog display data a real storefront row would show isn't part
- * of this contract.
+ * a remove action.
  */
 export function CartLineRow(props: CartLineRowProps): JSX.Element {
   const { line, currencyCode, busy = false, onQuantityChange, onGiftChange, onRemove } = props
@@ -72,8 +69,8 @@ export function CartLineRow(props: CartLineRowProps): JSX.Element {
     <Card style={styles.card}>
       <View style={styles.header}>
         <Text style={[theme.typography.subheading, { color: theme.colors.text, flex: 1 }]} numberOfLines={1}>
-          {line.productId}
-          {line.variantId ? ` · ${line.variantId}` : ''}
+          {line.title}
+          {line.variantName ? ` · ${line.variantName}` : ''}
         </Text>
         <PriceText amountMajor={line.lineTotalMajor} currencyCode={currencyCode} />
       </View>

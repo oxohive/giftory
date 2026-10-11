@@ -43,6 +43,9 @@ export interface CartLine {
   id: string
   productId: string
   variantId?: string
+  title: string
+  variantName?: string
+  imageUrl?: string
   quantity: number
   giftWrap?: boolean
   giftMessage?: string
@@ -84,6 +87,9 @@ const cartLineWireSchema = z
     id: z.string(),
     productId: z.string(),
     variantId: z.string().nullable().optional(),
+    title: z.string().nullable().optional(),
+    variantName: z.string().nullable().optional(),
+    imageUrl: z.string().nullable().optional(),
     quantity: z.number().int(),
     gift: z
       .object({ giftWrap: z.boolean().optional(), giftMessage: z.string().nullable().optional() })
@@ -117,6 +123,9 @@ function toCartLine(wire: z.infer<typeof cartLineWireSchema>): CartLine {
     id: wire.id,
     productId: wire.productId,
     variantId: wire.variantId ?? undefined,
+    title: wire.title ?? 'Item',
+    variantName: wire.variantName ?? undefined,
+    imageUrl: wire.imageUrl ?? undefined,
     quantity: wire.quantity,
     giftWrap: wire.gift?.giftWrap ?? wire.giftWrap ?? undefined,
     giftMessage: wire.gift?.giftMessage ?? wire.giftMessage ?? undefined,

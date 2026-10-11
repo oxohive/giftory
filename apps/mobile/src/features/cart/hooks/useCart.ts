@@ -88,6 +88,9 @@ function optimisticAdd(cart: Cart | undefined, input: CartLineInput): Cart {
           id: `optimistic-${++optimisticSeq}`,
           productId: input.productId,
           variantId: input.variantId,
+          // Real title isn't known until the server responds (CartLineInput carries
+          // no display data); shown briefly, then replaced by the authoritative line.
+          title: 'Adding…',
           quantity: input.quantity,
           giftWrap: input.giftWrap,
           giftMessage: input.giftMessage,
