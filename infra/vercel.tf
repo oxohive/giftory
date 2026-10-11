@@ -1,15 +1,7 @@
 locals {
-  vercel_team   = var.vercel_team_id != "" ? var.vercel_team_id : null
-  api_base_url  = "https://${var.api_subdomain}.${var.domain_name}"
-  site_url      = "https://${var.subdomain}.${var.domain_name}"
-}
-
-# ─── Custom domain ────────────────────────────────────────────────────────────
-
-resource "vercel_project_domain" "storefront" {
-  project_id = var.vercel_project_id
-  team_id    = local.vercel_team
-  domain     = "${var.subdomain}.${var.domain_name}"
+  vercel_team  = var.vercel_team_id != "" ? var.vercel_team_id : null
+  api_base_url = "https://${var.api_subdomain}.${var.domain_name}"
+  site_url     = "https://${var.vercel_project_name}.vercel.app"
 }
 
 # ─── Environment variables ────────────────────────────────────────────────────

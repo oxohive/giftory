@@ -26,7 +26,7 @@ resource "porkbun_dns_record" "acm_validation" {
   ttl     = "600"
 }
 
-# CAA record allowing Amazon ACM to issue certificates for oxohive.com
+# CAA record allowing Amazon ACM to issue certificates for oxohive.com (root)
 resource "porkbun_dns_record" "caa_amazon" {
   domain  = var.domain_name
   type    = "CAA"
@@ -41,15 +41,6 @@ resource "porkbun_dns_record" "api" {
   type    = "CNAME"
   name    = var.api_subdomain
   content = aws_lb.main.dns_name
-  ttl     = "600"
-}
-
-# CNAME: giftory.dev.oxohive.com → Vercel
-resource "porkbun_dns_record" "storefront" {
-  domain  = var.domain_name
-  type    = "CNAME"
-  name    = var.subdomain
-  content = "cname.vercel-dns.com"
   ttl     = "600"
 }
 

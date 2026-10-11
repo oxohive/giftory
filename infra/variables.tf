@@ -94,6 +94,12 @@ variable "vercel_project_id" {
   type        = string
 }
 
+variable "vercel_project_name" {
+  description = "Vercel project name (used for the default .vercel.app URL)"
+  type        = string
+  default     = "giftory-storefront"
+}
+
 variable "vercel_team_id" {
   description = "Vercel team ID (leave empty for personal account)"
   type        = string
