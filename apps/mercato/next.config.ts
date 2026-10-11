@@ -56,6 +56,11 @@ const nextConfig: NextConfig & { agentRules?: boolean } = {
     '@open-mercato/content',
     '@open-mercato/onboarding',
     '@open-mercato/ai-assistant',
+    // workflows' WorkflowGraph component imports this directly (not via a
+    // layout/global CSS file), which Next's default node_modules exclusion
+    // rejects with "Module parse failed: Unexpected token" on the .css file —
+    // transpiling it routes the import through Next's normal CSS pipeline.
+    '@xyflow/react',
   ],
   serverExternalPackages: [
     'esbuild',
