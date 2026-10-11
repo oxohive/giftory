@@ -5,13 +5,13 @@ import { registerCommand } from '@open-mercato/shared/lib/commands'
 import { conflict, notFound, badRequest as badReq } from '@open-mercato/shared/lib/crud/errors'
 import type { DataEngine } from '@open-mercato/shared/lib/data/engine'
 import { resolveTranslations } from '@open-mercato/shared/lib/i18n/server'
-import { DealerOrderAssignment } from '../data/entities.js'
+import { DealerOrderAssignment } from '../data/entities'
 import {
   assignOrderSchema,
   reassignOrderSchema,
   cancelAssignmentSchema,
   updateAssignmentStatusSchema,
-} from '../data/validators.js'
+} from '../data/validators'
 import {
   ACTIVE_STATUSES,
   DEALER_STATUS_TRANSITIONS,
@@ -20,10 +20,10 @@ import {
   DEALER_ORDER_REASSIGN_COMMAND,
   DEALER_ORDER_CANCEL_COMMAND,
   DEALER_ORDER_UPDATE_STATUS_COMMAND,
-} from '../lib/constants.js'
-import type { AssignmentStatus } from '../lib/constants.js'
-import { resolveCommandScope, resolveUndoScope, toIso } from './shared.js'
-import eventsConfig from '../events.js'
+} from '../lib/constants'
+import type { AssignmentStatus } from '../lib/constants'
+import { resolveCommandScope, resolveUndoScope, toIso } from './shared'
+import eventsConfig from '../events'
 
 const systemScopeSchema = z.object({
   tenantId: z.string().uuid().optional(),

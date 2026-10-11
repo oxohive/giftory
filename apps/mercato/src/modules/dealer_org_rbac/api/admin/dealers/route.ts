@@ -2,11 +2,11 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import type { EntityManager } from '@mikro-orm/postgresql'
 import type { OpenApiRouteDoc } from '@open-mercato/shared/lib/openapi'
-import { dealerHandler } from '../../../../lib/http'
-import { DealerCapability } from '../../../../data/entities'
-import { serializeCapabilities } from '../../../../commands/shared'
-import { adminDealerTag, adminDealersListResponseSchema, commonAdminErrors } from '../../../openapi'
-import { serializeDealerProfile } from '../../../../../dealer_onboarding/commands/register'
+import { dealerHandler } from '../../../lib/http'
+import { DealerCapability } from '../../../data/entities'
+import { serializeCapabilities } from '../../../commands/shared'
+import { adminDealerTag, adminDealersListResponseSchema, commonAdminErrors } from '../../openapi'
+import { serializeDealerProfile } from '@/modules/dealer_onboarding/commands/register'
 
 export const metadata = {
   GET: { requireAuth: true, requireFeatures: ['dealer_org.admin'] },
@@ -28,7 +28,7 @@ export const GET = dealerHandler('admin.dealers.list', async ({ req, container, 
   const query = listQuerySchema.parse(Object.fromEntries(searchParams))
   const em = container.resolve<EntityManager>('em')
 
-  const { DealerProfile } = await import('../../../../../dealer_onboarding/data/entities')
+  const { DealerProfile } = await import('@/modules/dealer_onboarding/data/entities')
   const where: Record<string, unknown> = { tenantId: auth.tenantId, kycStatus: 'approved', deletedAt: null }
   if (query.search) {
     where.$or = [

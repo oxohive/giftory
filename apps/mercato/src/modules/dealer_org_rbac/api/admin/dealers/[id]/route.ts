@@ -5,7 +5,7 @@ import { dealerHandler, readParam } from '../../../../lib/http'
 import { DealerCapability } from '../../../../data/entities'
 import { findProfileById, serializeCapabilities } from '../../../../commands/shared'
 import { adminDealerTag, dealerDetailWireSchema, commonAdminErrors } from '../../../openapi'
-import { serializeDealerProfile } from '../../../../../dealer_onboarding/commands/register'
+import { serializeDealerProfile } from '@/modules/dealer_onboarding/commands/register'
 
 export const metadata = {
   GET: { requireAuth: true, requireFeatures: ['dealer_org.admin'] },

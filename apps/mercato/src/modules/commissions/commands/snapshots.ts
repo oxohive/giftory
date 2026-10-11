@@ -6,11 +6,11 @@ import { badRequest } from '@open-mercato/shared/lib/crud/errors'
 import type { DataEngine } from '@open-mercato/shared/lib/data/engine'
 import { resolveTranslations } from '@open-mercato/shared/lib/i18n/server'
 import { createLogger } from '@open-mercato/shared/lib/logger'
-import { OrderCommissionSnapshot } from '../data/entities.js'
-import { COMMISSION_SNAPSHOT_CREATE_COMMAND, COMMISSION_SNAPSHOT_RESOURCE_KIND, DEFAULT_CURRENCY_CODE } from '../lib/constants.js'
-import { resolveCommissionRate, computeCommissionAmount } from '../lib/rateResolver.js'
-import { resolveCommandScope, serializeCommissionSnapshot } from './shared.js'
-import eventsConfig from '../events.js'
+import { OrderCommissionSnapshot } from '../data/entities'
+import { COMMISSION_SNAPSHOT_CREATE_COMMAND, COMMISSION_SNAPSHOT_RESOURCE_KIND, DEFAULT_CURRENCY_CODE } from '../lib/constants'
+import { resolveCommissionRate, computeCommissionAmount } from '../lib/rateResolver'
+import { resolveCommandScope, serializeCommissionSnapshot } from './shared'
+import eventsConfig from '../events'
 
 const logger = createLogger('commissions').child({ component: 'snapshots' })
 

@@ -2,7 +2,7 @@ import type { FilterQuery } from '@mikro-orm/postgresql'
 import { notFound } from '@open-mercato/shared/lib/crud/errors'
 import { resolveTranslations } from '@open-mercato/shared/lib/i18n/server'
 import { DealerCapability } from '../data/entities'
-import type { DealerProfile } from '../../dealer_onboarding/data/entities'
+import type { DealerProfile } from '@/modules/dealer_onboarding/data/entities'
 
 export async function findCapabilityByProfile(
   em: import('@mikro-orm/postgresql').EntityManager,
@@ -21,7 +21,7 @@ export async function findProfileById(
   id: string,
   tenantId: string,
 ): Promise<DealerProfile> {
-  const { DealerProfile } = await import('../../dealer_onboarding/data/entities')
+  const { DealerProfile } = await import('@/modules/dealer_onboarding/data/entities')
   const { translate } = await resolveTranslations()
   const profile = await em.findOne(DealerProfile, {
     id,
@@ -37,7 +37,7 @@ export async function findOwnProfile(
   organizationId: string,
   tenantId: string,
 ): Promise<DealerProfile> {
-  const { DealerProfile } = await import('../../dealer_onboarding/data/entities')
+  const { DealerProfile } = await import('@/modules/dealer_onboarding/data/entities')
   const { translate } = await resolveTranslations()
   const profile = await em.findOne(DealerProfile, {
     organizationId,

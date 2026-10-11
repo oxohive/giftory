@@ -2,11 +2,11 @@ import { NextResponse } from 'next/server'
 import type { EntityManager, FilterQuery } from '@mikro-orm/postgresql'
 import type { OpenApiRouteDoc } from '@open-mercato/shared/lib/openapi'
 import { z } from 'zod'
-import { CommissionRule } from '../../../../../data/entities.js'
-import { COMMISSION_RULE_DEACTIVATE_COMMAND } from '../../../../../lib/constants.js'
-import { adminHandler, runAdminCommand, readRouteParam } from '../../../../../lib/http.js'
-import { serializeCommissionRule } from '../../../../../commands/shared.js'
-import { adminRulesTag, serializedRuleSchema } from '../../../../openapi.js'
+import { CommissionRule } from '../../../../../data/entities'
+import { COMMISSION_RULE_DEACTIVATE_COMMAND } from '../../../../../lib/constants'
+import { adminHandler, runAdminCommand, readRouteParam } from '../../../../../lib/http'
+import { serializeCommissionRule } from '../../../../../commands/shared'
+import { adminRulesTag, serializedRuleSchema } from '../../../../openapi'
 
 export const metadata = {
   GET: { requireAuth: true, requireFeatures: ['commissions.view'] },

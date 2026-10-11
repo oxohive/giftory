@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { MAX_RATE_BPS, MIN_RATE_BPS } from '../lib/constants.js'
+import { MAX_RATE_BPS, MIN_RATE_BPS } from '../lib/constants'
 
 const uuidSchema = z.string().uuid()
 const strippedScope = z.object({ tenantId: z.unknown(), organizationId: z.unknown() }).strip()

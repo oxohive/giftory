@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { ASSIGNMENT_STATUSES } from '../lib/constants.js'
+import { ASSIGNMENT_STATUSES } from '../lib/constants'
 
 export const adminAssignmentTag = 'Dealer Order Assignments (Admin)'
 export const dealerOrderTag = 'Dealer Orders (Portal)'

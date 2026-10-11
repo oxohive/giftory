@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
 import type { OpenApiRouteDoc } from '@open-mercato/shared/lib/openapi'
 import { z } from 'zod'
-import { updateAssignmentStatusSchema } from '../../../../../data/validators.js'
-import { DEALER_ORDER_UPDATE_STATUS_COMMAND } from '../../../../../lib/constants.js'
-import { adminHandler, runAdminCommand, readRouteParam, readJsonBody } from '../../../../../lib/http.js'
-import { dealerOrderTag } from '../../../../openapi.js'
+import { updateAssignmentStatusSchema } from '../../../../../data/validators'
+import { DEALER_ORDER_UPDATE_STATUS_COMMAND } from '../../../../../lib/constants'
+import { adminHandler, runAdminCommand, readRouteParam, readJsonBody } from '../../../../../lib/http'
+import { dealerOrderTag } from '../../../../openapi'
 
 export const metadata = {
   POST: { requireAuth: true, requireFeatures: ['dealer_orders.dealer_access'] },

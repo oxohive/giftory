@@ -5,7 +5,7 @@ import { dealerHandler } from '../../../lib/http'
 import { DealerCapability } from '../../../data/entities'
 import { findOwnProfile, serializeCapabilities } from '../../../commands/shared'
 import { dealerTag, dealerDetailWireSchema, commonDealerErrors } from '../../openapi'
-import { serializeDealerProfile } from '../../../../dealer_onboarding/commands/register'
+import { serializeDealerProfile } from '@/modules/dealer_onboarding/commands/register'
 
 export const metadata = {
   GET: { requireAuth: true, requireFeatures: ['dealer_org.view'] },

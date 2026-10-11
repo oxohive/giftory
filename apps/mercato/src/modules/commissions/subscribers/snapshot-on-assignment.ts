@@ -1,7 +1,7 @@
 import { createLogger } from '@open-mercato/shared/lib/logger'
 import { createRequestContainer } from '@open-mercato/shared/lib/di/container'
 import type { CommandBus, CommandRuntimeContext } from '@open-mercato/shared/lib/commands'
-import { COMMISSION_SNAPSHOT_CREATE_COMMAND } from '../lib/constants.js'
+import { COMMISSION_SNAPSHOT_CREATE_COMMAND } from '../lib/constants'
 
 const logger = createLogger('commissions').child({ component: 'snapshot-on-assignment' })
 

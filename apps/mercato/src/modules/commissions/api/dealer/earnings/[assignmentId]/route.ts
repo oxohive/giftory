@@ -2,10 +2,10 @@ import { NextResponse } from 'next/server'
 import type { EntityManager, FilterQuery } from '@mikro-orm/postgresql'
 import type { OpenApiRouteDoc } from '@open-mercato/shared/lib/openapi'
 import { z } from 'zod'
-import { OrderCommissionSnapshot } from '../../../../data/entities.js'
-import { adminHandler, readRouteParam } from '../../../../lib/http.js'
-import { serializeCommissionSnapshot } from '../../../../commands/shared.js'
-import { dealerEarningsTag, serializedSnapshotSchema } from '../../../openapi.js'
+import { OrderCommissionSnapshot } from '../../../../data/entities'
+import { adminHandler, readRouteParam } from '../../../../lib/http'
+import { serializeCommissionSnapshot } from '../../../../commands/shared'
+import { dealerEarningsTag, serializedSnapshotSchema } from '../../../openapi'
 
 export const metadata = {
   GET: { requireAuth: true, requireFeatures: ['commissions.dealer_access'] },

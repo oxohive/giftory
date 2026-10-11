@@ -2,10 +2,10 @@ import { NextResponse } from 'next/server'
 import type { EntityManager, FilterQuery } from '@mikro-orm/postgresql'
 import type { OpenApiRouteDoc } from '@open-mercato/shared/lib/openapi'
 import { z } from 'zod'
-import { DealerOrderAssignment } from '../../../../data/entities.js'
-import { serializeAssignment } from '../../../../commands/assignments.js'
-import { adminHandler, readRouteParam } from '../../../../lib/http.js'
-import { dealerOrderTag } from '../../../openapi.js'
+import { DealerOrderAssignment } from '../../../../data/entities'
+import { serializeAssignment } from '../../../../commands/assignments'
+import { adminHandler, readRouteParam } from '../../../../lib/http'
+import { dealerOrderTag } from '../../../openapi'
 
 export const metadata = {
   GET: { requireAuth: true, requireFeatures: ['dealer_orders.dealer_access'] },

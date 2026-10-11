@@ -1,6 +1,6 @@
 import type { EntityManager } from '@mikro-orm/postgresql'
-import { CommissionRule } from '../data/entities.js'
-import { MAX_RATE_BPS } from './constants.js'
+import { CommissionRule } from '../data/entities'
+import { MAX_RATE_BPS } from './constants'
 
 export type ResolvedRate = {
   rateBps: number

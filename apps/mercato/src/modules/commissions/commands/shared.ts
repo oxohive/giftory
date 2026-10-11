@@ -1,7 +1,7 @@
 import type { CommandRuntimeContext } from '@open-mercato/shared/lib/commands'
 import { ensureTenantScope } from '@open-mercato/shared/lib/commands/scope'
 import { badRequest } from '@open-mercato/shared/lib/crud/errors'
-import type { CommissionRule, OrderCommissionSnapshot } from '../data/entities.js'
+import type { CommissionRule, OrderCommissionSnapshot } from '../data/entities'
 
 export type CommissionScope = { tenantId: string; organizationId: string }
 

@@ -3,27 +3,27 @@ import type { EntityManager, FilterQuery } from '@mikro-orm/postgresql'
 import type { OpenApiRouteDoc } from '@open-mercato/shared/lib/openapi'
 import { z } from 'zod'
 import { readJsonSafe } from '@open-mercato/shared/lib/http/readJsonSafe'
-import { DealerOrderAssignment } from '../../../../../data/entities.js'
-import { serializeAssignment } from '../../../../../commands/assignments.js'
+import { DealerOrderAssignment } from '../../../../../data/entities'
+import { serializeAssignment } from '../../../../../commands/assignments'
 import {
   assignOrderSchema,
   reassignOrderSchema,
   cancelAssignmentSchema,
-} from '../../../../../data/validators.js'
+} from '../../../../../data/validators'
 import {
   ACTIVE_STATUSES,
   DEALER_ORDER_ASSIGN_COMMAND,
   DEALER_ORDER_REASSIGN_COMMAND,
   DEALER_ORDER_CANCEL_COMMAND,
-} from '../../../../../lib/constants.js'
+} from '../../../../../lib/constants'
 import {
   adminHandler,
   runAdminCommand,
   readRouteParam,
   readJsonBody,
   requireIdempotencyKey,
-} from '../../../../../lib/http.js'
-import { adminAssignmentTag } from '../../../../openapi.js'
+} from '../../../../../lib/http'
+import { adminAssignmentTag } from '../../../../openapi'
 
 export const metadata = {
   GET: { requireAuth: true, requireFeatures: ['dealer_orders.view'] },

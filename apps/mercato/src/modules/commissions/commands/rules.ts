@@ -5,15 +5,15 @@ import { registerCommand } from '@open-mercato/shared/lib/commands'
 import { notFound, badRequest } from '@open-mercato/shared/lib/crud/errors'
 import type { DataEngine } from '@open-mercato/shared/lib/data/engine'
 import { resolveTranslations } from '@open-mercato/shared/lib/i18n/server'
-import { CommissionRule } from '../data/entities.js'
-import { commissionRuleCreateSchema, commissionRuleDeactivateSchema } from '../data/validators.js'
+import { CommissionRule } from '../data/entities'
+import { commissionRuleCreateSchema, commissionRuleDeactivateSchema } from '../data/validators'
 import {
   COMMISSION_RULE_CREATE_COMMAND,
   COMMISSION_RULE_DEACTIVATE_COMMAND,
   COMMISSION_RULE_RESOURCE_KIND,
-} from '../lib/constants.js'
-import { resolveCommandScope, serializeCommissionRule } from './shared.js'
-import eventsConfig from '../events.js'
+} from '../lib/constants'
+import { resolveCommandScope, serializeCommissionRule } from './shared'
+import eventsConfig from '../events'
 import type { FilterQuery } from '@mikro-orm/postgresql'
 
 const systemScopeSchema = z.object({

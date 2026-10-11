@@ -10,4 +10,4 @@ export {
   type DealerHandlerArgs,
   type Translate,
   type RouteContext,
-} from '../../dealer_onboarding/lib/http'
+} from '@/modules/dealer_onboarding/lib/http'

@@ -2,11 +2,11 @@ import { NextResponse } from 'next/server'
 import type { EntityManager, FilterQuery } from '@mikro-orm/postgresql'
 import type { OpenApiRouteDoc } from '@open-mercato/shared/lib/openapi'
 import { z } from 'zod'
-import { OrderCommissionSnapshot } from '../../../data/entities.js'
-import { commissionSnapshotListSchema } from '../../../data/validators.js'
-import { adminHandler } from '../../../lib/http.js'
-import { serializeCommissionSnapshot } from '../../../commands/shared.js'
-import { dealerEarningsTag, pagedSnapshotsSchema } from '../../openapi.js'
+import { OrderCommissionSnapshot } from '../../../data/entities'
+import { commissionSnapshotListSchema } from '../../../data/validators'
+import { adminHandler } from '../../../lib/http'
+import { serializeCommissionSnapshot } from '../../../commands/shared'
+import { dealerEarningsTag, pagedSnapshotsSchema } from '../../openapi'
 
 export const metadata = {
   // FEAT-009: replace requireFeatures with dealer-portal auth once RBAC is complete.
