@@ -29,8 +29,21 @@ def handler(event, context):
         print(f"Task is still starting (pending={service['pendingCount']}) — skipping idle check")
         return {"scaled": False, "reason": "task_starting"}
 
+    now = datetime.now(timezone.utc)
+
+    # Grace period: don't scale down if the task started less than IDLE_MINUTES ago.
+    # Without this, the watchdog kills a freshly-started task before any traffic arrives.
+    tasks = ecs.list_tasks(cluster=ECS_CLUSTER, serviceName=ECS_SERVICE)
+    if tasks.get("taskArns"):
+        task_detail = ecs.describe_tasks(cluster=ECS_CLUSTER, tasks=tasks["taskArns"][:1])
+        started_at = task_detail["tasks"][0].get("startedAt")
+        if started_at:
+            task_age = now - started_at.replace(tzinfo=timezone.utc)
+            if task_age.total_seconds() < IDLE_MINUTES * 60:
+                print(f"Task started {int(task_age.total_seconds())}s ago — within grace period, skipping scale-down")
+                return {"scaled": False, "reason": "grace_period"}
+
     # Sum ALB RequestCount over the idle window
-    now   = datetime.now(timezone.utc)
     start = now - timedelta(minutes=IDLE_MINUTES)
 
     stats = cw.get_metric_statistics(

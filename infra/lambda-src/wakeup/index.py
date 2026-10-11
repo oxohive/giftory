@@ -112,12 +112,15 @@ WARMING_HTML = """<!DOCTYPE html>
 
 
 def is_ecs_healthy():
-    """Return True if at least one ECS target in the ALB target group is healthy."""
-    resp = alb.describe_target_health(TargetGroupArn=ECS_TG_ARN)
-    return any(
-        t["TargetHealth"]["State"] == "healthy"
-        for t in resp["TargetHealthDescriptions"]
-    )
+    """Return True if ECS has at least one running task.
+
+    ALB reports targets as 'unused' (not 'healthy') while the listener points
+    to the Lambda TG, so checking ALB target health always returns False here.
+    ECS runningCount is the correct signal.
+    """
+    resp = ecs.describe_services(cluster=ECS_CLUSTER, services=[ECS_SERVICE])
+    service = resp["services"][0]
+    return service["runningCount"] >= 1
 
 
 def switch_listener(tg_arn):
