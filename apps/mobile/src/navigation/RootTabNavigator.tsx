@@ -33,6 +33,13 @@ export default function RootTabNavigator() {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
+        // The tab navigator has its own header, separate from each tab's inner
+        // stack navigator (which has its own, per-screen headers). Left both
+        // shown, every root screen displayed its title twice, stacked — e.g.
+        // "Products" from this outer header AND "Products" again from the
+        // inner stack's header. Hide this outer one everywhere; each inner
+        // stack navigator is the single source of header UI per screen.
+        headerShown: false,
         tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: theme.colors.textMuted,
         tabBarIcon: ({ focused, color, size }) => {
