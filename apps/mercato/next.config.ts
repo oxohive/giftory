@@ -88,6 +88,19 @@ const nextConfig: NextConfig & { agentRules?: boolean } = {
     '@opentelemetry/otlp-grpc-exporter-base',
     '@grpc/grpc-js',
     '@grpc/proto-loader',
+    // bullmq (wrapped by @open-mercato/queue, which IS in transpilePackages
+    // above) ships dynamic require() patterns for its pluggable Redis client
+    // and sandboxed child-process job runner — "Critical dependency: the
+    // request of a dependency is an expression" warnings that make webpack
+    // try to bundle a huge, essentially-unbundlable dependency tree even for
+    // the legitimate server build. Must run as a real Node module.
+    'bullmq',
+    'ioredis',
+    '@valkey/valkey-glide',
+    // awilix (the DI/IoC library @open-mercato/shared's container is built
+    // on) has the same "Critical dependency: the request of a dependency is
+    // an expression" dynamic-require pattern.
+    'awilix',
   ],
   // `serverExternalPackages` above only covers the Node.js server compilation.
   // The grpc/OTel chain also gets pulled into the CLIENT (browser) bundle via
@@ -106,16 +119,27 @@ const nextConfig: NextConfig & { agentRules?: boolean } = {
     // resolve it to this app's src/di.ts. Next.js's built-in tsconfig-paths
     // support only applies to imports written in the app's own source tree,
     // not to dynamic imports made from inside a third-party node_modules
-    // package -- so this fails to resolve on BOTH the server and client
-    // builds (unlike every other fix above, which was client-only). This is
-    // the actual root cause behind the slow/500 responses on "/" and very
-    // likely the storefront API hang too, since createRequestContainer()
-    // (used by every storefront route) goes through this same container.js.
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      '@/di': path.resolve(__dirname, 'src/di.ts'),
+    // package -- so this never resolved. This genuinely needs to be real on
+    // the SERVER build (createRequestContainer(), used by every storefront
+    // route, needs the real registration). On the CLIENT build it must be
+    // stubbed, not resolved: src/di.ts statically imports the full
+    // bootstrap() chain (events/queue/bullmq/telemetry/grpc), and bullmq's
+    // dynamic require() patterns are essentially unbundlable by webpack --
+    // pointing '@/di' at the real file for the client build (an earlier,
+    // wrong version of this fix) made the homepage compile hang for
+    // minutes trying to trace through BullMQ for a bundle that never
+    // legitimately needs any of it.
+    if (isServer) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        '@/di': path.resolve(__dirname, 'src/di.ts'),
+      }
     }
     if (!isServer) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        '@/di': false,
+      }
       config.resolve.fallback = {
         ...config.resolve.fallback,
         fs: false,
