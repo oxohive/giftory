@@ -53,6 +53,15 @@ resource "porkbun_dns_record" "storefront" {
   ttl     = "600"
 }
 
+# TXT: Vercel domain ownership verification
+resource "porkbun_dns_record" "storefront_verify" {
+  domain  = var.domain_name
+  type    = "TXT"
+  name    = "_vercel"
+  content = "vc-domain-verify=giftory.dev.oxohive.com,9f457768ae5f0ba333b7"
+  ttl     = "600"
+}
+
 # ─── ACM Validation wait ──────────────────────────────────────────────────────
 
 resource "aws_acm_certificate_validation" "mercato" {
