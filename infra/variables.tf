@@ -99,3 +99,27 @@ variable "vercel_team_id" {
   type        = string
   default     = ""
 }
+
+variable "domain_name" {
+  description = "Root domain managed in Porkbun (e.g. oxohive.com)"
+  type        = string
+  default     = "oxohive.com"
+}
+
+variable "subdomain" {
+  description = "Subdomain for this environment (e.g. giftory.dev)"
+  type        = string
+  default     = "giftory.dev"
+}
+
+variable "porkbun_api_key" {
+  description = "Porkbun API key (Account → API Access)"
+  type        = string
+  sensitive   = true
+}
+
+variable "porkbun_secret_key" {
+  description = "Porkbun secret API key"
+  type        = string
+  sensitive   = true
+}

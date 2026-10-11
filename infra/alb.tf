@@ -43,6 +43,26 @@ resource "aws_lb_listener" "http" {
   port              = 80
   protocol          = "HTTP"
 
+  # Always redirect plain HTTP to HTTPS.
+  default_action {
+    type = "redirect"
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
+  }
+
+  tags = local.common_tags
+}
+
+resource "aws_lb_listener" "https" {
+  load_balancer_arn = aws_lb.main.arn
+  port              = 443
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+  certificate_arn   = aws_acm_certificate_validation.mercato.certificate_arn
+
   # Initial default: wakeup Lambda (ECS starts at 0; Lambda switches to ECS TG once healthy).
   # Watchdog and wakeup manage this at runtime — Tofu must not reset it on every apply.
   default_action {

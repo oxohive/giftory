@@ -13,6 +13,10 @@ terraform {
       source  = "vercel/vercel"
       version = "~> 2.0"
     }
+    porkbun = {
+      source  = "kyswtn/porkbun"
+      version = "~> 0.1"
+    }
   }
 
   # Uncomment to use S3 remote state (recommended once team grows):
@@ -31,6 +35,11 @@ provider "aws" {
 
 provider "vercel" {
   api_token = var.vercel_api_token
+}
+
+provider "porkbun" {
+  api_key    = var.porkbun_api_key
+  secret_key = var.porkbun_secret_key
 }
 
 data "aws_caller_identity" "current" {}

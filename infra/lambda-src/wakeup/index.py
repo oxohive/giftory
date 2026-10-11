@@ -157,7 +157,7 @@ def handler(event, context):
 
         return {
             "statusCode": 302,
-            "headers": {"Location": f"http://{host}{path}{qs_str}"},
+            "headers": {"Location": f"https://{host}{path}{qs_str}"},
             "body": "",
         }
 
