@@ -16,35 +16,96 @@ WARMING_HTML = """<!DOCTYPE html>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="refresh" content="20">
-  <title>Giftory — Starting</title>
+  <title>Giftory — Waking up</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      display: flex; align-items: center; justify-content: center;
-      min-height: 100vh; background: #fafafa; color: #333;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #0f0f11;
+      color: #e4e4e7;
+      padding: 1.5rem;
     }
+
+    .wordmark {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: #fff;
+      margin-bottom: 3rem;
+    }
+    .wordmark span { color: #a78bfa; }
+
     .card {
-      text-align: center; padding: 3rem 2rem;
-      background: #fff; border-radius: 12px;
-      box-shadow: 0 2px 16px rgba(0,0,0,0.08);
-      max-width: 380px; width: 90%;
+      background: #18181b;
+      border: 1px solid #27272a;
+      border-radius: 16px;
+      padding: 2.5rem 2rem;
+      text-align: center;
+      max-width: 360px;
+      width: 100%;
     }
-    .spinner {
-      width: 40px; height: 40px; border: 3px solid #e5e7eb;
-      border-top-color: #6366f1; border-radius: 50%;
-      animation: spin 0.8s linear infinite; margin: 0 auto 1.5rem;
+
+    .ring {
+      width: 48px; height: 48px;
+      border: 3px solid #27272a;
+      border-top-color: #a78bfa;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+      margin: 0 auto 1.5rem;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    h1 { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; }
-    p  { font-size: 0.9rem; color: #6b7280; line-height: 1.5; }
+
+    h1 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: #fafafa;
+      margin-bottom: 0.5rem;
+    }
+
+    p {
+      font-size: 0.875rem;
+      color: #71717a;
+      line-height: 1.6;
+    }
+
+    .progress {
+      margin-top: 1.75rem;
+      height: 3px;
+      border-radius: 99px;
+      background: #27272a;
+      overflow: hidden;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #7c3aed, #a78bfa);
+      border-radius: 99px;
+      animation: fill 20s linear forwards;
+    }
+    @keyframes fill { to { width: 95%; } }
+
+    .status {
+      margin-top: 1rem;
+      font-size: 0.75rem;
+      color: #52525b;
+    }
   </style>
 </head>
 <body>
+  <div class="wordmark">Gift<span>ory</span></div>
+
   <div class="card">
-    <div class="spinner"></div>
-    <h1>Starting up…</h1>
-    <p>The service was sleeping. It will be ready in about 30 seconds.<br>This page refreshes automatically.</p>
+    <div class="ring"></div>
+    <h1>Service is waking up</h1>
+    <p>The server was idle and is starting back up.<br>This page refreshes automatically.</p>
+    <div class="progress"><div class="progress-bar"></div></div>
+    <p class="status">Ready in about 30 seconds &mdash; no action needed</p>
   </div>
 </body>
 </html>"""
