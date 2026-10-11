@@ -56,8 +56,12 @@ resource "aws_ecs_task_definition" "mercato" {
     ]
 
     environment = [
-      { name = "NODE_ENV", value = "production" },
-      { name = "PORT",     value = "3000" },
+      { name = "NODE_ENV",     value = "production" },
+      { name = "PORT",         value = "3000" },
+      # Cap V8 old-generation heap per process. Forces GC before memory fills the
+      # container. Two Node processes share the 2048 MB container; 800 MB each
+      # leaves ~450 MB for OS, new-gen heap, native addons, and headroom.
+      { name = "NODE_OPTIONS", value = "--max-old-space-size=800" },
     ]
 
     logConfiguration = {
