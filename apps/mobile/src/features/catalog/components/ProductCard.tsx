@@ -1,9 +1,10 @@
 import React from 'react'
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useTheme } from '../../../theme'
 import { Card } from '../../../components/ui/Card'
 import { PriceText } from '../../../components/ui/PriceText'
 import { Badge } from '../../../components/ui/Badge'
+import { ProductImage } from '../../../components/ui/ProductImage'
 import type { Product } from '../../../lib/api/catalog'
 
 export interface ProductCardProps {
@@ -24,11 +25,7 @@ export function ProductCard(props: ProductCardProps): JSX.Element {
       style={styles.wrapper}
     >
       <Card>
-        <View style={[styles.imageWrap, { backgroundColor: theme.colors.background, borderRadius: theme.radii.md }]}>
-          {product.imageUrl ? (
-            <Image source={{ uri: product.imageUrl }} style={styles.image} resizeMode="cover" />
-          ) : null}
-        </View>
+        <ProductImage uri={product.imageUrl} style={styles.imageWrap} accessibilityLabel={product.title} />
         <Text
           style={[theme.typography.subheading, { color: theme.colors.text, marginTop: theme.spacing(1) }]}
           numberOfLines={2}
@@ -57,11 +54,6 @@ const styles = StyleSheet.create({
   imageWrap: {
     width: '100%',
     height: 120,
-    overflow: 'hidden',
-  },
-  image: {
-    width: '100%',
-    height: '100%',
   },
   footerRow: {
     marginTop: 8,

@@ -3,8 +3,11 @@
  * (src/lib/api/addresses.ts) for validation rather than re-implementing the
  * phone/PIN-code regex rules — this form only adds the UI around it.
  */
-import { useMemo, useState } from 'react'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useState } from 'react'
+import { Controller, useForm } from 'react-hook-form'
 import { FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native'
+import { z } from 'zod'
 import type { Address } from '../../../lib/api/checkout'
 import { addressSchema, INDIAN_STATES } from '../../../lib/api/addresses'
 import { useTheme } from '../../../theme'
@@ -51,6 +54,18 @@ function toFormValues(address?: Address): AddressFormValues {
     postalCode: address.postalCode,
   }
 }
+
+/**
+ * TASK-15: `react-hook-form` + `zodResolver` validate against `addressSchema`
+ * directly (same schema as before, now wired through the resolver instead of
+ * manual `.safeParse()`). `country` is omitted from the form schema (fixed to
+ * 'IN' below, same as before — this form has no country picker) so the form
+ * doesn't need a hidden/default field for it. `FormValues` is inferred from
+ * the schema (not the public `AddressFormValues`) so `line2`'s
+ * optional-after-validation type lines up with the resolver.
+ */
+const formSchema = addressSchema.omit({ country: true })
+type FormValues = z.infer<typeof formSchema>
 
 function StatePicker(props: {
   value: string
@@ -133,99 +148,128 @@ function StatePicker(props: {
 export function AddressForm(props: AddressFormProps): JSX.Element {
   const { initialValue, submitLabel, isSubmitting = false, onSubmit, onCancel } = props
   const theme = useTheme()
-  const [values, setValues] = useState<AddressFormValues>(() => toFormValues(initialValue))
-  const [errors, setErrors] = useState<Partial<Record<keyof AddressFormValues, string>>>({})
 
-  const setField = useMemo(
-    () =>
-      (field: keyof AddressFormValues) =>
-      (next: string) => {
-        setValues((prev) => ({ ...prev, [field]: next }))
-      },
-    [],
-  )
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: toFormValues(initialValue),
+  })
 
-  const handleSubmit = async () => {
-    const candidate = {
-      fullName: values.fullName.trim(),
-      phone: values.phone.trim(),
-      line1: values.line1.trim(),
-      line2: values.line2.trim() || undefined,
-      city: values.city.trim(),
-      state: values.state.trim(),
-      postalCode: values.postalCode.trim(),
-      country: 'IN' as const,
+  const onValid = async (values: FormValues): Promise<void> => {
+    // Preserve the original behavior exactly: a blank-or-whitespace-only
+    // line2 becomes `undefined` rather than `''`, matching the original
+    // `values.line2.trim() || undefined` pre-validation step. `values.line2`
+    // here is already the zod-trimmed output, so trimming it again is a
+    // no-op; the `|| undefined` fallback is what we need to replicate.
+    const line2 = (values.line2 ?? '').trim() || undefined
+    const address: Address = {
+      fullName: values.fullName,
+      phone: values.phone,
+      line1: values.line1,
+      line2,
+      city: values.city,
+      state: values.state,
+      postalCode: values.postalCode,
+      country: 'IN',
     }
-
-    const result = addressSchema.safeParse(candidate)
-    if (!result.success) {
-      const fieldErrors: Partial<Record<keyof AddressFormValues, string>> = {}
-      for (const issue of result.error.issues) {
-        const field = issue.path[0] as keyof AddressFormValues | undefined
-        if (field && !fieldErrors[field]) {
-          fieldErrors[field] = issue.message
-        }
-      }
-      setErrors(fieldErrors)
-      return
-    }
-
-    setErrors({})
-    await onSubmit(result.data)
+    await onSubmit(address)
   }
 
   return (
     <View>
       <View style={styles.fieldSpacing}>
-        <Input
-          label="Full name"
-          value={values.fullName}
-          onChangeText={setField('fullName')}
-          error={errors.fullName}
-          placeholder="Recipient's full name"
+        <Controller
+          control={control}
+          name="fullName"
+          render={({ field }) => (
+            <Input
+              label="Full name"
+              value={field.value}
+              onChangeText={field.onChange}
+              error={errors.fullName?.message}
+              placeholder="Recipient's full name"
+            />
+          )}
         />
       </View>
       <View style={styles.fieldSpacing}>
-        <Input
-          label="Phone"
-          value={values.phone}
-          onChangeText={setField('phone')}
-          error={errors.phone}
-          placeholder="10-digit mobile number"
-          keyboardType="phone-pad"
+        <Controller
+          control={control}
+          name="phone"
+          render={({ field }) => (
+            <Input
+              label="Phone"
+              value={field.value}
+              onChangeText={field.onChange}
+              error={errors.phone?.message}
+              placeholder="10-digit mobile number"
+              keyboardType="phone-pad"
+            />
+          )}
         />
       </View>
       <View style={styles.fieldSpacing}>
-        <Input
-          label="Address line 1"
-          value={values.line1}
-          onChangeText={setField('line1')}
-          error={errors.line1}
-          placeholder="House / flat and street"
+        <Controller
+          control={control}
+          name="line1"
+          render={({ field }) => (
+            <Input
+              label="Address line 1"
+              value={field.value}
+              onChangeText={field.onChange}
+              error={errors.line1?.message}
+              placeholder="House / flat and street"
+            />
+          )}
         />
       </View>
       <View style={styles.fieldSpacing}>
-        <Input
-          label="Address line 2 (optional)"
-          value={values.line2}
-          onChangeText={setField('line2')}
-          error={errors.line2}
-          placeholder="Landmark, area"
+        <Controller
+          control={control}
+          name="line2"
+          render={({ field }) => (
+            <Input
+              label="Address line 2 (optional)"
+              value={field.value ?? ''}
+              onChangeText={field.onChange}
+              error={errors.line2?.message}
+              placeholder="Landmark, area"
+            />
+          )}
         />
       </View>
       <View style={styles.fieldSpacing}>
-        <Input label="City" value={values.city} onChangeText={setField('city')} error={errors.city} placeholder="City" />
+        <Controller
+          control={control}
+          name="city"
+          render={({ field }) => (
+            <Input label="City" value={field.value} onChangeText={field.onChange} error={errors.city?.message} placeholder="City" />
+          )}
+        />
       </View>
-      <StatePicker value={values.state} onChange={(state) => setField('state')(state)} error={errors.state} />
+      <Controller
+        control={control}
+        name="state"
+        render={({ field }) => <StatePicker value={field.value} onChange={field.onChange} error={errors.state?.message} />}
+      />
       <View style={styles.fieldSpacing}>
-        <Input
-          label="PIN code"
-          value={values.postalCode}
-          onChangeText={setField('postalCode')}
-          error={errors.postalCode}
-          placeholder="6-digit PIN code"
-          keyboardType="numeric"
-          maxLength={6}
+        <Controller
+          control={control}
+          name="postalCode"
+          render={({ field }) => (
+            <Input
+              label="PIN code"
+              value={field.value}
+              onChangeText={field.onChange}
+              error={errors.postalCode?.message}
+              placeholder="6-digit PIN code"
+              keyboardType="numeric"
+              maxLength={6}
+            />
+          )}
         />
       </View>
 
@@ -234,7 +278,7 @@ export function AddressForm(props: AddressFormProps): JSX.Element {
           <Button title="Cancel" variant="secondary" onPress={onCancel} disabled={isSubmitting} />
         </View>
         <View style={{ flex: 1 }}>
-          <Button title={submitLabel} onPress={handleSubmit} loading={isSubmitting} />
+          <Button title={submitLabel} onPress={handleSubmit(onValid)} loading={isSubmitting} />
         </View>
       </View>
     </View>

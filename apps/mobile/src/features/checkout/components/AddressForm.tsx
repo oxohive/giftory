@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { Controller, useForm } from 'react-hook-form'
 import { StyleSheet, View } from 'react-native'
 import { z } from 'zod'
 import { Button } from '../../../components/ui/Button'
@@ -20,6 +21,24 @@ const emailSchema = z
   .min(1, 'Enter an email address')
   .email('Enter a valid email address')
 
+/**
+ * TASK-15: combined form schema for `react-hook-form` + `zodResolver`. Reuses
+ * `addressSchema` and `emailSchema` verbatim (no re-implemented validation) —
+ * `country` is fixed to 'IN' below rather than left for the user to pick.
+ */
+const formSchema = z.object({
+  email: emailSchema,
+  fullName: addressSchema.shape.fullName,
+  phone: addressSchema.shape.phone,
+  line1: addressSchema.shape.line1,
+  line2: addressSchema.shape.line2,
+  city: addressSchema.shape.city,
+  state: addressSchema.shape.state,
+  postalCode: addressSchema.shape.postalCode,
+})
+
+type FormValues = z.infer<typeof formSchema>
+
 export interface AddressFormValues {
   email: string
   address: Address
@@ -33,9 +52,6 @@ export interface AddressFormProps {
   onSubmit: (values: AddressFormValues) => void
 }
 
-type FieldKey = 'email' | 'fullName' | 'phone' | 'line1' | 'line2' | 'city' | 'state' | 'postalCode'
-type FieldErrors = Partial<Record<FieldKey, string>>
-
 /**
  * Address entry form for the checkout flow. Reuses TASK-04's `addressSchema`
  * (from `src/lib/api/addresses.ts`) for India phone/PIN validation rather
@@ -46,107 +62,151 @@ export function AddressForm(props: AddressFormProps): JSX.Element {
   const { initialEmail = '', initialAddress = null, submitting = false, submitLabel = 'Continue', onSubmit } = props
   const theme = useTheme()
 
-  const [email, setEmail] = useState(initialEmail)
-  const [fullName, setFullName] = useState(initialAddress?.fullName ?? '')
-  const [phone, setPhone] = useState(initialAddress?.phone ?? '')
-  const [line1, setLine1] = useState(initialAddress?.line1 ?? '')
-  const [line2, setLine2] = useState(initialAddress?.line2 ?? '')
-  const [city, setCity] = useState(initialAddress?.city ?? '')
-  const [state, setState] = useState(initialAddress?.state ?? '')
-  const [postalCode, setPostalCode] = useState(initialAddress?.postalCode ?? '')
-  const [errors, setErrors] = useState<FieldErrors>({})
+  const {
+    control,
+    handleSubmit,
+    getValues,
+    formState: { errors },
+  } = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      email: initialEmail,
+      fullName: initialAddress?.fullName ?? '',
+      phone: initialAddress?.phone ?? '',
+      line1: initialAddress?.line1 ?? '',
+      line2: initialAddress?.line2 ?? '',
+      city: initialAddress?.city ?? '',
+      state: initialAddress?.state ?? '',
+      postalCode: initialAddress?.postalCode ?? '',
+    },
+  })
 
-  function handleSubmit(): void {
-    const emailResult = emailSchema.safeParse(email)
-    const addressResult = addressSchema.safeParse({
-      fullName,
-      phone,
-      line1,
-      line2: line2.length > 0 ? line2 : undefined,
-      city,
-      state,
-      postalCode,
-      country: 'IN',
+  const onValid = (values: FormValues): void => {
+    // Preserve the original behavior exactly: an empty (zero-length, untrimmed)
+    // line2 becomes `undefined` rather than `''`. `values.line2` here is the
+    // zod-validated (and thus already-trimmed) output; `getValues('line2')`
+    // reads the raw, untransformed text the user typed (react-hook-form does
+    // not mutate form state with resolver transforms), matching the original
+    // `line2.length > 0 ? line2 : undefined` pre-validation check.
+    const rawLine2 = getValues('line2') ?? ''
+    onSubmit({
+      email: values.email,
+      address: {
+        fullName: values.fullName,
+        phone: values.phone,
+        line1: values.line1,
+        line2: rawLine2.length > 0 ? values.line2 : undefined,
+        city: values.city,
+        state: values.state,
+        postalCode: values.postalCode,
+        country: 'IN',
+      },
     })
-
-    const nextErrors: FieldErrors = {}
-    if (!emailResult.success) {
-      nextErrors.email = emailResult.error.issues[0]?.message ?? 'Enter a valid email address'
-    }
-    if (!addressResult.success) {
-      for (const issue of addressResult.error.issues) {
-        const key = issue.path[0]
-        if (typeof key === 'string' && isFieldKey(key) && !(key in nextErrors)) {
-          nextErrors[key] = issue.message
-        }
-      }
-    }
-
-    setErrors(nextErrors)
-    if (!emailResult.success || !addressResult.success) return
-
-    onSubmit({ email: emailResult.data, address: addressResult.data })
   }
 
   return (
     <View style={styles.container}>
-      <Input
-        label="Email"
-        value={email}
-        onChangeText={setEmail}
-        error={errors.email}
-        keyboardType="email-address"
-        placeholder="you@example.com"
+      <Controller
+        control={control}
+        name="email"
+        render={({ field }) => (
+          <Input
+            label="Email"
+            value={field.value}
+            onChangeText={field.onChange}
+            error={errors.email?.message}
+            keyboardType="email-address"
+            placeholder="you@example.com"
+          />
+        )}
       />
-      <Input
-        label="Recipient name"
-        value={fullName}
-        onChangeText={setFullName}
-        error={errors.fullName}
-        placeholder="Full name"
+      <Controller
+        control={control}
+        name="fullName"
+        render={({ field }) => (
+          <Input
+            label="Recipient name"
+            value={field.value}
+            onChangeText={field.onChange}
+            error={errors.fullName?.message}
+            placeholder="Full name"
+          />
+        )}
       />
-      <Input
-        label="Mobile number"
-        value={phone}
-        onChangeText={setPhone}
-        error={errors.phone}
-        keyboardType="phone-pad"
-        placeholder="10-digit mobile number"
-        maxLength={13}
+      <Controller
+        control={control}
+        name="phone"
+        render={({ field }) => (
+          <Input
+            label="Mobile number"
+            value={field.value}
+            onChangeText={field.onChange}
+            error={errors.phone?.message}
+            keyboardType="phone-pad"
+            placeholder="10-digit mobile number"
+            maxLength={13}
+          />
+        )}
       />
-      <Input
-        label="Address line 1"
-        value={line1}
-        onChangeText={setLine1}
-        error={errors.line1}
-        placeholder="House / flat, street"
+      <Controller
+        control={control}
+        name="line1"
+        render={({ field }) => (
+          <Input
+            label="Address line 1"
+            value={field.value}
+            onChangeText={field.onChange}
+            error={errors.line1?.message}
+            placeholder="House / flat, street"
+          />
+        )}
       />
-      <Input
-        label="Address line 2 (optional)"
-        value={line2}
-        onChangeText={setLine2}
-        placeholder="Landmark, area"
+      <Controller
+        control={control}
+        name="line2"
+        render={({ field }) => (
+          <Input
+            label="Address line 2 (optional)"
+            value={field.value ?? ''}
+            onChangeText={field.onChange}
+            placeholder="Landmark, area"
+          />
+        )}
       />
-      <Input label="City" value={city} onChangeText={setCity} error={errors.city} placeholder="City" />
-      <Input label="State" value={state} onChangeText={setState} error={errors.state} placeholder="State" />
-      <Input
-        label="PIN code"
-        value={postalCode}
-        onChangeText={setPostalCode}
-        error={errors.postalCode}
-        keyboardType="numeric"
-        placeholder="6-digit PIN code"
-        maxLength={6}
+      <Controller
+        control={control}
+        name="city"
+        render={({ field }) => (
+          <Input label="City" value={field.value} onChangeText={field.onChange} error={errors.city?.message} placeholder="City" />
+        )}
+      />
+      <Controller
+        control={control}
+        name="state"
+        render={({ field }) => (
+          <Input label="State" value={field.value} onChangeText={field.onChange} error={errors.state?.message} placeholder="State" />
+        )}
+      />
+      <Controller
+        control={control}
+        name="postalCode"
+        render={({ field }) => (
+          <Input
+            label="PIN code"
+            value={field.value}
+            onChangeText={field.onChange}
+            error={errors.postalCode?.message}
+            keyboardType="numeric"
+            placeholder="6-digit PIN code"
+            maxLength={6}
+          />
+        )}
       />
       <View style={{ marginTop: theme.spacing(1) }}>
-        <Button title={submitLabel} onPress={handleSubmit} loading={submitting} />
+        <Button title={submitLabel} onPress={handleSubmit(onValid)} loading={submitting} />
       </View>
     </View>
   )
-}
-
-function isFieldKey(key: string): key is FieldKey {
-  return key === 'email' || key === 'fullName' || key === 'phone' || key === 'line1' || key === 'line2' || key === 'city' || key === 'state' || key === 'postalCode'
 }
 
 const styles = StyleSheet.create({

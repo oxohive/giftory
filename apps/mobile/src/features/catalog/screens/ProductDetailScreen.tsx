@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { Image, ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
+import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import type { CatalogStackParamList } from '../../../navigation/types'
 import { useTheme } from '../../../theme'
@@ -10,6 +10,7 @@ import { PriceText } from '../../../components/ui/PriceText'
 import { LoadingState } from '../../../components/ui/LoadingState'
 import { ErrorState } from '../../../components/ui/ErrorState'
 import { EmptyState } from '../../../components/ui/EmptyState'
+import { ProductImage } from '../../../components/ui/ProductImage'
 import { useProductDetail } from '../hooks/useProductDetail'
 import { FilterChip } from '../components/FilterChip'
 import { useCart } from '../../cart/hooks/useCart'
@@ -71,9 +72,7 @@ export default function ProductDetailScreen({ route }: Props): JSX.Element {
 
   return (
     <ScrollView contentContainerStyle={{ padding: theme.spacing(2) }}>
-      {heroImageUrl ? (
-        <Image source={{ uri: heroImageUrl }} style={styles.heroImage} resizeMode="cover" />
-      ) : null}
+      <ProductImage uri={heroImageUrl} style={styles.heroImage} accessibilityLabel={product.title} />
 
       <View style={styles.headerRow}>
         <Text style={[theme.typography.heading, { color: theme.colors.text, flex: 1 }]}>
@@ -185,7 +184,6 @@ export default function ProductDetailScreen({ route }: Props): JSX.Element {
 
 const styles = StyleSheet.create({
   heroImage: {
-    width: '100%',
     height: 240,
     borderRadius: 12,
   },

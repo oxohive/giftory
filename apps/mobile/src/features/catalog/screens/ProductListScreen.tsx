@@ -1,20 +1,25 @@
-import React, { useMemo, useState } from 'react'
-import { FlatList, StyleSheet, Text, View } from 'react-native'
+import React, { useMemo, useRef, useState } from 'react'
+import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
+import type { BottomSheetModal } from '@gorhom/bottom-sheet'
 import type { CatalogStackParamList } from '../../../navigation/types'
 import { useTheme } from '../../../theme'
-import { LoadingState } from '../../../components/ui/LoadingState'
 import { ErrorState } from '../../../components/ui/ErrorState'
 import { EmptyState } from '../../../components/ui/EmptyState'
 import { useProducts } from '../hooks/useProducts'
 import { useCategories } from '../hooks/useCategories'
 import { useOccasions } from '../hooks/useOccasions'
 import { ProductCard } from '../components/ProductCard'
+import { ProductCardSkeleton } from '../components/ProductCardSkeleton'
 import { ProductFilters, type ProductFiltersValue } from '../components/ProductFilters'
+import { ProductFiltersSheet } from '../components/ProductFiltersSheet'
 import { DEFAULT_PAGE_SIZE } from '../constants'
 import type { ProductListParams } from '../../../lib/api/catalog'
 
 type Props = NativeStackScreenProps<CatalogStackParamList, 'ProductList'>
+
+// First-load placeholder grid: enough rows to fill a typical screen.
+const SKELETON_PLACEHOLDERS = ['s1', 's2', 's3', 's4', 's5', 's6']
 
 function parsePrice(raw: string): number | undefined {
   const trimmed = raw.trim()
@@ -66,77 +71,123 @@ export default function ProductListScreen({ navigation, route }: Props): JSX.Ele
     [filters],
   )
 
-  const { data, isLoading, isError, error, refetch } = useProducts(queryParams)
+  const { data, isLoading, isFetching, isError, error, refetch } = useProducts(queryParams)
   const { data: categories } = useCategories()
   const { data: occasions } = useOccasions()
+
+  // Sheet lives once per screen; `ProductFilters`' compact "Filters" button
+  // opens it via this ref (TASK-14 — see ProductFiltersSheet.tsx for why the
+  // ref/present() pattern is used instead of a boolean visible prop).
+  const filterSheetRef = useRef<BottomSheetModal>(null)
+
+  const filtersSheet = (
+    <ProductFiltersSheet
+      ref={filterSheetRef}
+      value={filters}
+      onChange={handleFilterChange}
+      categories={categories ?? []}
+      occasions={occasions ?? []}
+    />
+  )
 
   const header = (
     <View>
       <ProductFilters
         value={filters}
         onChange={handleFilterChange}
-        categories={categories ?? []}
-        occasions={occasions ?? []}
+        onOpenFilters={() => filterSheetRef.current?.present()}
       />
       {data ? (
-        <Text
-          style={[
-            theme.typography.caption,
-            { color: theme.colors.textMuted, paddingHorizontal: theme.spacing(2) },
-          ]}
-        >
-          {data.total} {data.total === 1 ? 'result' : 'results'}
-        </Text>
+        <View style={styles.resultsRow}>
+          <Text
+            style={[
+              theme.typography.caption,
+              { color: theme.colors.textMuted },
+            ]}
+          >
+            {data.total} {data.total === 1 ? 'result' : 'results'}
+          </Text>
+          {isFetching ? (
+            <ActivityIndicator
+              size="small"
+              color={theme.colors.textMuted}
+              style={styles.resultsSpinner}
+              accessibilityLabel="Updating results"
+            />
+          ) : null}
+        </View>
       ) : null}
     </View>
   )
 
   if (isLoading) {
-    return <LoadingState label="Loading products..." />
+    return (
+      <>
+        <FlatList
+          data={SKELETON_PLACEHOLDERS}
+          keyExtractor={(item) => item}
+          numColumns={2}
+          contentContainerStyle={{ padding: theme.spacing(2) }}
+          columnWrapperStyle={styles.row}
+          ListHeaderComponent={header}
+          renderItem={() => <ProductCardSkeleton />}
+        />
+        {filtersSheet}
+      </>
+    )
   }
 
   if (isError) {
     return (
-      <ErrorState
-        message={error?.message ?? 'Failed to load products'}
-        onRetry={() => refetch()}
-      />
+      <>
+        <ErrorState
+          message={error?.message ?? 'Failed to load products'}
+          onRetry={() => refetch()}
+        />
+        {filtersSheet}
+      </>
     )
   }
 
   if (!data || data.items.length === 0) {
     return (
-      <FlatList
-        data={[]}
-        keyExtractor={() => 'empty'}
-        renderItem={() => null}
-        ListHeaderComponent={header}
-        ListEmptyComponent={
-          <EmptyState
-            title="No products match these filters"
-            description="Try adjusting or clearing some filters."
-          />
-        }
-        contentContainerStyle={styles.emptyContainer}
-      />
+      <>
+        <FlatList
+          data={[]}
+          keyExtractor={() => 'empty'}
+          renderItem={() => null}
+          ListHeaderComponent={header}
+          ListEmptyComponent={
+            <EmptyState
+              title="No products match these filters"
+              description="Try adjusting or clearing some filters."
+            />
+          }
+          contentContainerStyle={styles.emptyContainer}
+        />
+        {filtersSheet}
+      </>
     )
   }
 
   return (
-    <FlatList
-      data={data.items}
-      keyExtractor={(item) => item.id}
-      numColumns={2}
-      contentContainerStyle={{ padding: theme.spacing(2) }}
-      columnWrapperStyle={styles.row}
-      ListHeaderComponent={header}
-      renderItem={({ item }) => (
-        <ProductCard
-          product={item}
-          onPress={() => navigation.navigate('ProductDetail', { handle: item.handle })}
-        />
-      )}
-    />
+    <>
+      <FlatList
+        data={data.items}
+        keyExtractor={(item) => item.id}
+        numColumns={2}
+        contentContainerStyle={{ padding: theme.spacing(2) }}
+        columnWrapperStyle={styles.row}
+        ListHeaderComponent={header}
+        renderItem={({ item }) => (
+          <ProductCard
+            product={item}
+            onPress={() => navigation.navigate('ProductDetail', { handle: item.handle })}
+          />
+        )}
+      />
+      {filtersSheet}
+    </>
   )
 }
 
@@ -146,5 +197,13 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     flexGrow: 1,
+  },
+  resultsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  },
+  resultsSpinner: {
+    marginLeft: 8,
   },
 })

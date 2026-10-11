@@ -4,16 +4,33 @@ import type { CompositeScreenProps } from '@react-navigation/native'
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import { Button } from '../../../components/ui/Button'
+import { Card } from '../../../components/ui/Card'
 import { EmptyState } from '../../../components/ui/EmptyState'
 import { ErrorState } from '../../../components/ui/ErrorState'
-import { LoadingState } from '../../../components/ui/LoadingState'
 import { PriceText } from '../../../components/ui/PriceText'
+import { Skeleton } from '../../../components/ui/Skeleton'
 import { useTheme } from '../../../theme'
 import type { CartStackParamList, RootTabParamList } from '../../../navigation/types'
 import type { CartLine } from '../../../lib/api/cart'
 import { useCart } from '../hooks/useCart'
 import { CartLineRow } from '../components/CartLineRow'
 import { cartErrorMessage } from '../lib/cartErrorMessage'
+
+/** Placeholder shaped like `CartLineRow` — title/price header, a couple of detail lines, and an action row. */
+function CartLineRowSkeleton(): JSX.Element {
+  const theme = useTheme()
+  return (
+    <Card style={styles.skeletonCard}>
+      <View style={styles.header}>
+        <Skeleton width="60%" height={18} />
+        <Skeleton width={64} height={18} />
+      </View>
+      <Skeleton width="40%" height={14} style={{ marginTop: theme.spacing(1.5) }} />
+      <Skeleton width={120} height={32} borderRadius={theme.radii.sm} style={{ marginTop: theme.spacing(1.5) }} />
+      <Skeleton width="100%" height={40} borderRadius={theme.radii.sm} style={{ marginTop: theme.spacing(1.5) }} />
+    </Card>
+  )
+}
 
 type Props = CompositeScreenProps<
   NativeStackScreenProps<CartStackParamList, 'Cart'>,
@@ -75,7 +92,16 @@ export default function CartScreen({ navigation }: Props): JSX.Element {
   }, [navigation])
 
   if (isLoading && !cart) {
-    return <LoadingState label="Loading your cart..." />
+    return (
+      <View
+        style={[styles.container, styles.list, { backgroundColor: theme.colors.background }]}
+        accessibilityLabel="Loading your cart"
+      >
+        <CartLineRowSkeleton />
+        <CartLineRowSkeleton />
+        <CartLineRowSkeleton />
+      </View>
+    )
   }
 
   if (error && !cart) {
@@ -146,6 +172,14 @@ const styles = StyleSheet.create({
   },
   list: {
     padding: 16,
+  },
+  skeletonCard: {
+    marginBottom: 12,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   errorBanner: {
     paddingHorizontal: 8,

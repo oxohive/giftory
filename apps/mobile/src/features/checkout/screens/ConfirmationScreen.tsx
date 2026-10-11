@@ -11,6 +11,8 @@ import { Card } from '../../../components/ui/Card'
 import { ErrorState } from '../../../components/ui/ErrorState'
 import { LoadingState } from '../../../components/ui/LoadingState'
 import { PriceText } from '../../../components/ui/PriceText'
+import { useToast } from '../../../components/ui/Toast'
+import { haptics } from '../../../lib/haptics'
 import { useTheme } from '../../../theme'
 import { useCheckoutSession } from '../hooks/useCheckoutSession'
 import { useCart } from '../../cart/hooks/useCart'
@@ -24,6 +26,7 @@ export default function ConfirmationScreen({ route, navigation }: Props) {
   const { orderId } = route.params
   const { clear: clearCart } = useCart()
   const { track: trackOrder } = useLocalOrderHistory()
+  const toast = useToast()
 
   const [order, setOrder] = useState<OrderDetail | null>(null)
   const [loading, setLoading] = useState(true)
@@ -66,6 +69,8 @@ export default function ConfirmationScreen({ route, navigation }: Props) {
       // fetch will still reflect the server's authoritative state — the
       // order itself is already placed and unaffected.
     })
+    toast.show('Order placed!', 'success')
+    haptics.success()
     void trackOrder({
       orderId,
       orderNumber: order?.orderNumber || orderId,

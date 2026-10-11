@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
 } from 'react-native'
 import { useTheme } from '../../theme'
+import { haptics } from '../../lib/haptics'
 
 export interface ButtonProps {
   title: string
@@ -41,9 +42,14 @@ export function Button(props: ButtonProps): JSX.Element {
   const textColor =
     variant === 'primary' ? theme.colors.primaryText : theme.colors.text
 
+  function handlePress(): void {
+    haptics.light()
+    onPress()
+  }
+
   return (
     <TouchableOpacity
-      onPress={onPress}
+      onPress={handlePress}
       disabled={isDisabled}
       accessible
       accessibilityRole="button"

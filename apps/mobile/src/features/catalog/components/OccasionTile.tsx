@@ -1,7 +1,8 @@
 import React from 'react'
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useTheme } from '../../../theme'
 import { Card } from '../../../components/ui/Card'
+import { ProductImage } from '../../../components/ui/ProductImage'
 import type { Occasion } from '../../../lib/api/occasions'
 
 export interface OccasionTileProps {
@@ -22,11 +23,7 @@ export function OccasionTile(props: OccasionTileProps): JSX.Element {
       style={styles.wrapper}
     >
       <Card style={styles.card}>
-        <View style={[styles.imageWrap, { backgroundColor: theme.colors.background, borderRadius: theme.radii.md }]}>
-          {occasion.imageUrl ? (
-            <Image source={{ uri: occasion.imageUrl }} style={styles.image} resizeMode="cover" />
-          ) : null}
-        </View>
+        <ProductImage uri={occasion.imageUrl} style={styles.imageWrap} accessibilityLabel={occasion.label} />
         <Text
           style={[theme.typography.subheading, { color: theme.colors.text, marginTop: theme.spacing(1) }]}
           numberOfLines={1}
@@ -57,10 +54,5 @@ const styles = StyleSheet.create({
   imageWrap: {
     width: '100%',
     height: 96,
-    overflow: 'hidden',
-  },
-  image: {
-    width: '100%',
-    height: '100%',
   },
 })

@@ -12,6 +12,8 @@ import {
 } from '../../../lib/api/cart'
 import { ApiError } from '../../../lib/api/errors'
 import { toMajorUnits, toMinorUnits } from '../../../lib/api/money'
+import { useToast } from '../../../components/ui/Toast'
+import { haptics } from '../../../lib/haptics'
 
 /**
  * Shared cart hook — built on `@tanstack/react-query`, mirroring
@@ -152,6 +154,7 @@ export interface UseCartResult {
 
 export function useCart(): UseCartResult {
   const queryClient = useQueryClient()
+  const toast = useToast()
 
   const query = useQuery({
     queryKey: CART_QUERY_KEY,
@@ -171,9 +174,14 @@ export function useCart(): UseCartResult {
       onError: (_err: unknown, _vars: Vars, context: { previous: Cart | undefined } | undefined) => {
         queryClient.setQueryData(CART_QUERY_KEY, context?.previous)
         void queryClient.invalidateQueries({ queryKey: CART_QUERY_KEY })
+        // Additive: existing rollback behavior above is unchanged, this just
+        // surfaces the failure non-blockingly (whatever error UI a screen
+        // already renders from `error` below keeps working as-is).
+        toast.show('Something went wrong. Please try again.', 'error')
+        haptics.error()
       },
     }),
-    [queryClient],
+    [queryClient, toast],
   )
 
   const addMutation = useMutation({
@@ -183,6 +191,7 @@ export function useCart(): UseCartResult {
       if (queryClient.isMutating({ mutationKey: CART_MUTATION_KEY }) <= 1) {
         queryClient.setQueryData(CART_QUERY_KEY, cart)
       }
+      toast.show('Added to cart', 'success')
     },
   })
 

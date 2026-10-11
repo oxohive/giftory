@@ -4,6 +4,7 @@ import { Button } from '../../../components/ui/Button'
 import { Card } from '../../../components/ui/Card'
 import { Input } from '../../../components/ui/Input'
 import { PriceText } from '../../../components/ui/PriceText'
+import { ProductImage } from '../../../components/ui/ProductImage'
 import { useTheme } from '../../../theme'
 import type { CartLine } from '../../../lib/api/cart'
 import { DEFAULT_GIFT_MESSAGE_MAX_LENGTH } from '../lib/cartErrorMessage'
@@ -68,6 +69,7 @@ export function CartLineRow(props: CartLineRowProps): JSX.Element {
   return (
     <Card style={styles.card}>
       <View style={styles.header}>
+        <ProductImage uri={line.imageUrl} style={styles.thumbnail} accessibilityLabel={line.title} />
         <Text style={[theme.typography.subheading, { color: theme.colors.text, flex: 1 }]} numberOfLines={1}>
           {line.title}
           {line.variantName ? ` · ${line.variantName}` : ''}
@@ -140,6 +142,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 8,
+  },
+  thumbnail: {
+    width: 48,
+    height: 48,
   },
   row: {
     marginTop: 12,
