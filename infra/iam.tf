@@ -176,6 +176,16 @@ resource "aws_iam_role_policy" "codebuild" {
           "codebuild:BatchPutCodeCoverages",
         ]
         Resource = "arn:aws:codebuild:${local.region}:${local.account_id}:report-group/*"
+      },
+      {
+        Sid    = "CancelStaleBuilds"
+        Effect = "Allow"
+        Action = [
+          "codebuild:ListBuildsForProject",
+          "codebuild:BatchGetBuilds",
+          "codebuild:StopBuild",
+        ]
+        Resource = "*"
       }
     ]
   })

@@ -18,6 +18,24 @@ phases:
 
   pre_build:
     commands:
+      - echo "=== Cancelling any older in-progress builds ==="
+      - |
+        PROJECT=$(echo "$CODEBUILD_BUILD_ID" | cut -d: -f1)
+        aws codebuild list-builds-for-project \
+          --project-name "$PROJECT" \
+          --sort-order DESCENDING \
+          --query "ids" --output text \
+        | tr '\t' '\n' \
+        | while read -r bid; do
+            [ "$bid" = "$CODEBUILD_BUILD_ID" ] && continue
+            STATUS=$(aws codebuild batch-get-builds --ids "$bid" \
+              --query "builds[0].buildStatus" --output text 2>/dev/null)
+            if [ "$STATUS" = "IN_PROGRESS" ]; then
+              echo "  Stopping stale build: $bid"
+              aws codebuild stop-build --id "$bid" 2>/dev/null || true
+            fi
+          done
+
       - echo "=== Logging in to ECR ==="
       - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPO
       - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c1-7)
