@@ -1,0 +1,20 @@
+{
+  "payouts": {
+    "errors": {
+      "entryNotFound": "Ledger entry not found",
+      "insufficientBalance": "Payout amount exceeds dealer balance",
+      "noteMandatory": "A note is required for adjustment entries",
+      "invalidAmount": "Amount must be a positive integer",
+      "unauthorized": "Authentication required",
+      "orgScopeRequired": "Organization scope required",
+      "invalidRequest": "Invalid request",
+      "requestFailed": "Request failed",
+      "internal": "Something went wrong"
+    },
+    "audit": {
+      "creditCommission": "Credit commission earned",
+      "recordPayout": "Record payout disbursement",
+      "createAdjustment": "Create ledger adjustment"
+    }
+  }
+}

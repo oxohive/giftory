@@ -181,6 +181,8 @@ enabledModules.push({ id: 'dealer_onboarding', from: '@app' })
 enabledModules.push({ id: 'dealer_org_rbac', from: '@app' })
 // Gift App Phase 2: commission rules + per-order commission snapshots (FEAT-012)
 enabledModules.push({ id: 'commissions', from: '@app' })
+// Gift App Phase 2: append-only payout ledger, dealer balances (FEAT-013)
+enabledModules.push({ id: 'payouts', from: '@app' })
 
 if (enabledModules.some((entry) => entry.id === 'example')) {
   enabledModules.push({ id: 'example_customers_sync', from: '@app' })
