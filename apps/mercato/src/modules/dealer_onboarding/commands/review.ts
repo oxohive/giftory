@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { EntityManager } from '@mikro-orm/postgresql'
-import type { CommandHandler } from '@open-mercato/shared/lib/commands'
+import type { CommandHandler, CommandRuntimeContext } from '@open-mercato/shared/lib/commands'
 import { registerCommand } from '@open-mercato/shared/lib/commands'
 import { badRequest } from '@open-mercato/shared/lib/crud/errors'
 import { resolveTranslations } from '@open-mercato/shared/lib/i18n/server'
@@ -23,47 +23,49 @@ const rejectSchema = z.object({
   organizationId: z.string().uuid().optional(),
 })
 
+export async function executeApprove(rawInput: unknown, ctx: CommandRuntimeContext): Promise<DealerProfile> {
+  const parsed = approveSchema.parse(rawInput)
+  const scope = resolveCommandScope(ctx, parsed)
+  const { translate } = await resolveTranslations()
+  const em = ctx.container.resolve<EntityManager>('em')
+
+  const profile = await findProfileById(em, parsed.id, scope.tenantId)
+
+  if (profile.kycStatus === 'approved') {
+    throw badRequest(translate('dealer_onboarding.errors.alreadyApproved', 'This dealer is already approved'))
+  }
+  if (profile.kycStatus !== 'under_review') {
+    throw badRequest(
+      translate('dealer_onboarding.errors.cannotApproveInStatus', 'Only applications under review can be approved'),
+    )
+  }
+
+  // Activate the OM organization.
+  await executeOmCommand(
+    ctx.container,
+    'directory.organizations.update',
+    { id: profile.organizationId, tenantId: scope.tenantId, isActive: true },
+    { ...ctx, auth: { ...ctx.auth, tenantId: scope.tenantId, isSuperAdmin: true, sub: 'system' } as typeof ctx.auth, systemActor: true },
+  )
+
+  // Scope the dealer:owner role to this organization only.
+  await scopeDealerRoleToOrg(ctx.container, scope.tenantId, profile.organizationId, ctx)
+
+  const reviewerId = ctx.auth?.sub ?? null
+  profile.kycStatus = 'approved'
+  profile.reviewedBy = reviewerId
+  profile.reviewedAt = new Date()
+  profile.approvedAt = new Date()
+  profile.rejectionReason = null
+  profile.updatedAt = new Date()
+  await em.flush()
+
+  return profile
+}
+
 const approveCommand: CommandHandler<Record<string, unknown>, DealerProfile> = {
   id: DEALER_APPROVE_COMMAND,
-  async execute(rawInput, ctx) {
-    const parsed = approveSchema.parse(rawInput)
-    const scope = resolveCommandScope(ctx, parsed)
-    const { translate } = await resolveTranslations()
-    const em = ctx.container.resolve<EntityManager>('em')
-
-    const profile = await findProfileById(em, parsed.id, scope.tenantId)
-
-    if (profile.kycStatus === 'approved') {
-      throw badRequest(translate('dealer_onboarding.errors.alreadyApproved', 'This dealer is already approved'))
-    }
-    if (profile.kycStatus !== 'under_review') {
-      throw badRequest(
-        translate('dealer_onboarding.errors.cannotApproveInStatus', 'Only applications under review can be approved'),
-      )
-    }
-
-    // Activate the OM organization.
-    await executeOmCommand(
-      ctx.container,
-      'directory.organizations.update',
-      { id: profile.organizationId, tenantId: scope.tenantId, isActive: true },
-      { ...ctx, auth: { ...ctx.auth, tenantId: scope.tenantId, isSuperAdmin: true, sub: 'system' } as typeof ctx.auth, systemActor: true },
-    )
-
-    // Scope the dealer:owner role to this organization only.
-    await scopeDealerRoleToOrg(ctx.container, scope.tenantId, profile.organizationId, ctx)
-
-    const reviewerId = ctx.auth?.sub ?? null
-    profile.kycStatus = 'approved'
-    profile.reviewedBy = reviewerId
-    profile.reviewedAt = new Date()
-    profile.approvedAt = new Date()
-    profile.rejectionReason = null
-    profile.updatedAt = new Date()
-    await em.flush()
-
-    return profile
-  },
+  execute: executeApprove,
   buildLog: async ({ result }) => {
     const { translate } = await resolveTranslations()
     return {
@@ -77,33 +79,35 @@ const approveCommand: CommandHandler<Record<string, unknown>, DealerProfile> = {
   },
 }
 
+export async function executeReject(rawInput: unknown, ctx: CommandRuntimeContext): Promise<DealerProfile> {
+  const parsed = rejectSchema.parse(rawInput)
+  const scope = resolveCommandScope(ctx, parsed)
+  const { translate } = await resolveTranslations()
+  const em = ctx.container.resolve<EntityManager>('em')
+
+  const profile = await findProfileById(em, parsed.id, scope.tenantId)
+
+  if (profile.kycStatus === 'rejected') {
+    throw badRequest(translate('dealer_onboarding.errors.alreadyRejected', 'This dealer is already rejected'))
+  }
+  if (profile.kycStatus === 'approved') {
+    throw badRequest(translate('dealer_onboarding.errors.cannotRejectApproved', 'An approved dealer cannot be rejected'))
+  }
+
+  const reviewerId = ctx.auth?.sub ?? null
+  profile.kycStatus = 'rejected'
+  profile.rejectionReason = parsed.reason
+  profile.reviewedBy = reviewerId
+  profile.reviewedAt = new Date()
+  profile.updatedAt = new Date()
+  await em.flush()
+
+  return profile
+}
+
 const rejectCommand: CommandHandler<Record<string, unknown>, DealerProfile> = {
   id: DEALER_REJECT_COMMAND,
-  async execute(rawInput, ctx) {
-    const parsed = rejectSchema.parse(rawInput)
-    const scope = resolveCommandScope(ctx, parsed)
-    const { translate } = await resolveTranslations()
-    const em = ctx.container.resolve<EntityManager>('em')
-
-    const profile = await findProfileById(em, parsed.id, scope.tenantId)
-
-    if (profile.kycStatus === 'rejected') {
-      throw badRequest(translate('dealer_onboarding.errors.alreadyRejected', 'This dealer is already rejected'))
-    }
-    if (profile.kycStatus === 'approved') {
-      throw badRequest(translate('dealer_onboarding.errors.cannotRejectApproved', 'An approved dealer cannot be rejected'))
-    }
-
-    const reviewerId = ctx.auth?.sub ?? null
-    profile.kycStatus = 'rejected'
-    profile.rejectionReason = parsed.reason
-    profile.reviewedBy = reviewerId
-    profile.reviewedAt = new Date()
-    profile.updatedAt = new Date()
-    await em.flush()
-
-    return profile
-  },
+  execute: executeReject,
   buildLog: async ({ result, input }) => {
     const { translate } = await resolveTranslations()
     const snap = serializeDealerProfile(result)

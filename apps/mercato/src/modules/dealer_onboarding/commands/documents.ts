@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { EntityManager } from '@mikro-orm/postgresql'
-import type { CommandHandler } from '@open-mercato/shared/lib/commands'
+import type { CommandHandler, CommandRuntimeContext } from '@open-mercato/shared/lib/commands'
 import { registerCommand } from '@open-mercato/shared/lib/commands'
 import type { DataEngine } from '@open-mercato/shared/lib/data/engine'
 import { badRequest, notFound } from '@open-mercato/shared/lib/crud/errors'
@@ -42,61 +42,63 @@ export function serializeDealerDocument(doc: DealerKycDocument): SerializedDeale
   }
 }
 
+export async function executeUploadDocument(rawInput: unknown, ctx: CommandRuntimeContext): Promise<DealerKycDocument> {
+  const parsed = uploadCommandSchema.parse(rawInput)
+  const scope = resolveCommandScope(ctx, parsed)
+  const { translate } = await resolveTranslations()
+  const em = ctx.container.resolve<EntityManager>('em')
+  const de = ctx.container.resolve<DataEngine>('dataEngine')
+
+  // Verify the dealer profile belongs to this org and is in an uploadable state.
+  const profile = await em.findOne(DealerProfile, {
+    organizationId: scope.organizationId,
+    tenantId: scope.tenantId,
+    deletedAt: null,
+  })
+  if (!profile) throw notFound(translate('dealer_onboarding.errors.profileNotFound', 'Dealer profile not found'))
+
+  if (profile.kycStatus !== 'pending_verification' && profile.kycStatus !== 'under_review') {
+    throw badRequest(
+      translate('dealer_onboarding.errors.cannotUploadInStatus', 'Documents can only be uploaded while the application is pending or under review'),
+    )
+  }
+
+  // Soft-delete any existing document of the same type so only one active copy per type exists.
+  const existing = await em.findOne(DealerKycDocument, {
+    dealerProfileId: profile.id,
+    documentType: parsed.documentType,
+    deletedAt: null,
+  })
+  if (existing) {
+    existing.deletedAt = new Date()
+    await em.flush()
+  }
+
+  const document = await de.createOrmEntity({
+    entity: DealerKycDocument,
+    data: {
+      dealerProfileId: profile.id,
+      tenantId: scope.tenantId,
+      documentType: parsed.documentType,
+      storageKey: parsed.storageKey,
+      fileName: parsed.fileName,
+      fileSizeBytes: parsed.fileSizeBytes,
+      mimeType: parsed.mimeType,
+    },
+  })
+
+  // Advance to under_review once documents start arriving.
+  if (profile.kycStatus === 'pending_verification') {
+    profile.kycStatus = 'under_review'
+    await em.flush()
+  }
+
+  return document
+}
+
 const uploadDocumentCommand: CommandHandler<Record<string, unknown>, DealerKycDocument> = {
   id: DEALER_UPLOAD_DOCUMENT_COMMAND,
-  async execute(rawInput, ctx) {
-    const parsed = uploadCommandSchema.parse(rawInput)
-    const scope = resolveCommandScope(ctx, parsed)
-    const { translate } = await resolveTranslations()
-    const em = ctx.container.resolve<EntityManager>('em')
-    const de = ctx.container.resolve<DataEngine>('dataEngine')
-
-    // Verify the dealer profile belongs to this org and is in an uploadable state.
-    const profile = await em.findOne(DealerProfile, {
-      organizationId: scope.organizationId,
-      tenantId: scope.tenantId,
-      deletedAt: null,
-    })
-    if (!profile) throw notFound(translate('dealer_onboarding.errors.profileNotFound', 'Dealer profile not found'))
-
-    if (profile.kycStatus !== 'pending_verification' && profile.kycStatus !== 'under_review') {
-      throw badRequest(
-        translate('dealer_onboarding.errors.cannotUploadInStatus', 'Documents can only be uploaded while the application is pending or under review'),
-      )
-    }
-
-    // Soft-delete any existing document of the same type so only one active copy per type exists.
-    const existing = await em.findOne(DealerKycDocument, {
-      dealerProfileId: profile.id,
-      documentType: parsed.documentType,
-      deletedAt: null,
-    })
-    if (existing) {
-      existing.deletedAt = new Date()
-      await em.flush()
-    }
-
-    const document = await de.createOrmEntity({
-      entity: DealerKycDocument,
-      data: {
-        dealerProfileId: profile.id,
-        tenantId: scope.tenantId,
-        documentType: parsed.documentType,
-        storageKey: parsed.storageKey,
-        fileName: parsed.fileName,
-        fileSizeBytes: parsed.fileSizeBytes,
-        mimeType: parsed.mimeType,
-      },
-    })
-
-    // Advance to under_review once documents start arriving.
-    if (profile.kycStatus === 'pending_verification') {
-      profile.kycStatus = 'under_review'
-      await em.flush()
-    }
-
-    return document
-  },
+  execute: executeUploadDocument,
   buildLog: async ({ result }) => {
     const { translate } = await resolveTranslations()
     return {

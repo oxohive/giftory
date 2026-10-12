@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { EntityManager } from '@mikro-orm/postgresql'
-import type { CommandHandler } from '@open-mercato/shared/lib/commands'
+import type { CommandHandler, CommandRuntimeContext } from '@open-mercato/shared/lib/commands'
 import { registerCommand } from '@open-mercato/shared/lib/commands'
 import { badRequest } from '@open-mercato/shared/lib/crud/errors'
 import { resolveTranslations } from '@open-mercato/shared/lib/i18n/server'
@@ -16,39 +16,41 @@ const systemScopeSchema = z.object({
 })
 const resubmitCommandSchema = dealerResubmitSchema.merge(systemScopeSchema)
 
+export async function executeResubmit(rawInput: unknown, ctx: CommandRuntimeContext): Promise<DealerProfile> {
+  const parsed = resubmitCommandSchema.parse(rawInput)
+  const scope = resolveCommandScope(ctx, parsed)
+  const { translate } = await resolveTranslations()
+  const em = ctx.container.resolve<EntityManager>('em')
+
+  const profile = await findOwnProfile(em, scope.organizationId, scope.tenantId)
+
+  if (profile.kycStatus !== 'rejected') {
+    throw badRequest(
+      translate('dealer_onboarding.errors.cannotResubmitInStatus', 'Only rejected applications can be resubmitted'),
+    )
+  }
+
+  if (parsed.businessName !== undefined) profile.businessName = parsed.businessName
+  if (parsed.contactEmail !== undefined) profile.contactEmail = parsed.contactEmail
+  if (parsed.phone !== undefined) profile.phone = parsed.phone
+  if (parsed.gstin !== undefined) profile.gstin = parsed.gstin
+  if (parsed.pan !== undefined) profile.pan = parsed.pan
+  if (parsed.businessType !== undefined) profile.businessType = parsed.businessType
+  if (parsed.city !== undefined) profile.city = parsed.city
+  if (parsed.state !== undefined) profile.state = parsed.state
+  if (parsed.pincode !== undefined) profile.pincode = parsed.pincode
+
+  profile.kycStatus = 'under_review'
+  profile.rejectionReason = null
+  profile.updatedAt = new Date()
+  await em.flush()
+
+  return profile
+}
+
 const resubmitCommand: CommandHandler<Record<string, unknown>, DealerProfile> = {
   id: DEALER_RESUBMIT_COMMAND,
-  async execute(rawInput, ctx) {
-    const parsed = resubmitCommandSchema.parse(rawInput)
-    const scope = resolveCommandScope(ctx, parsed)
-    const { translate } = await resolveTranslations()
-    const em = ctx.container.resolve<EntityManager>('em')
-
-    const profile = await findOwnProfile(em, scope.organizationId, scope.tenantId)
-
-    if (profile.kycStatus !== 'rejected') {
-      throw badRequest(
-        translate('dealer_onboarding.errors.cannotResubmitInStatus', 'Only rejected applications can be resubmitted'),
-      )
-    }
-
-    if (parsed.businessName !== undefined) profile.businessName = parsed.businessName
-    if (parsed.contactEmail !== undefined) profile.contactEmail = parsed.contactEmail
-    if (parsed.phone !== undefined) profile.phone = parsed.phone
-    if (parsed.gstin !== undefined) profile.gstin = parsed.gstin
-    if (parsed.pan !== undefined) profile.pan = parsed.pan
-    if (parsed.businessType !== undefined) profile.businessType = parsed.businessType
-    if (parsed.city !== undefined) profile.city = parsed.city
-    if (parsed.state !== undefined) profile.state = parsed.state
-    if (parsed.pincode !== undefined) profile.pincode = parsed.pincode
-
-    profile.kycStatus = 'under_review'
-    profile.rejectionReason = null
-    profile.updatedAt = new Date()
-    await em.flush()
-
-    return profile
-  },
+  execute: executeResubmit,
   buildLog: async ({ result }) => {
     const { translate } = await resolveTranslations()
     return {
