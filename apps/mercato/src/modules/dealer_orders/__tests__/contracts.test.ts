@@ -7,6 +7,8 @@ import {
   assignmentListQuerySchema,
 } from '../data/validators'
 import { ASSIGNMENT_STATUSES, DEALER_STATUS_TRANSITIONS, ACTIVE_STATUSES } from '../lib/constants'
+import { serializeAssignment } from '../commands/assignments'
+import type { DealerOrderAssignment } from '../data/entities'
 
 const VALID_UUID = 'a1b2c3d4-e5f6-4789-8abc-def012345678'
 const FUTURE_DATE = '2099-12-31'
@@ -117,5 +119,216 @@ describe('assignmentListQuerySchema', () => {
 
   it('rejects pageSize above 100', () => {
     expect(assignmentListQuerySchema.safeParse({ pageSize: '101' }).success).toBe(false)
+  })
+})
+
+// ── Additional coverage ───────────────────────────────────────────────────────
+
+const ASSIGN_DATE = new Date('2026-10-11T10:00:00.000Z')
+
+function makeAssignment(overrides: Partial<DealerOrderAssignment> = {}): DealerOrderAssignment {
+  return {
+    id: 'assign-uuid-1',
+    orderId: 'order-uuid-1',
+    dealerProfileId: 'dealer-uuid-1',
+    tenantId: 'tenant-uuid-1',
+    organizationId: 'org-uuid-1',
+    assignedBy: 'user-uuid-1',
+    assignedAt: ASSIGN_DATE,
+    requiredBy: '2099-12-31',
+    status: 'assigned',
+    statusUpdatedAt: ASSIGN_DATE,
+    statusNote: null,
+    cancelledReason: null,
+    createdAt: ASSIGN_DATE,
+    updatedAt: ASSIGN_DATE,
+    deletedAt: null,
+    ...overrides,
+  } as DealerOrderAssignment
+}
+
+describe('reassignOrderSchema', () => {
+  it('accepts a valid payload without reason', () => {
+    const result = reassignOrderSchema.parse({
+      orderId: VALID_UUID,
+      dealerProfileId: VALID_UUID,
+      requiredBy: FUTURE_DATE,
+    })
+    expect(result.orderId).toBe(VALID_UUID)
+    expect(result.dealerProfileId).toBe(VALID_UUID)
+    expect(result.requiredBy).toBe(FUTURE_DATE)
+    expect(result.reason).toBeUndefined()
+  })
+
+  it('accepts a valid payload with an optional reason', () => {
+    const result = reassignOrderSchema.parse({
+      orderId: VALID_UUID,
+      dealerProfileId: VALID_UUID,
+      requiredBy: FUTURE_DATE,
+      reason: 'Dealer is unavailable',
+    })
+    expect(result.reason).toBe('Dealer is unavailable')
+  })
+
+  it('strips tenantId and organizationId from payload', () => {
+    const result = reassignOrderSchema.parse({
+      orderId: VALID_UUID,
+      dealerProfileId: VALID_UUID,
+      requiredBy: FUTURE_DATE,
+      tenantId: VALID_UUID,
+      organizationId: VALID_UUID,
+    }) as Record<string, unknown>
+    expect(result.tenantId).toBeUndefined()
+    expect(result.organizationId).toBeUndefined()
+  })
+
+  it('rejects a past requiredBy date', () => {
+    expect(
+      reassignOrderSchema.safeParse({
+        orderId: VALID_UUID,
+        dealerProfileId: VALID_UUID,
+        requiredBy: PAST_DATE,
+      }).success,
+    ).toBe(false)
+  })
+
+  it('rejects an invalid date format', () => {
+    expect(
+      reassignOrderSchema.safeParse({
+        orderId: VALID_UUID,
+        dealerProfileId: VALID_UUID,
+        requiredBy: '31/12/2099',
+      }).success,
+    ).toBe(false)
+  })
+})
+
+describe('updateAssignmentStatusSchema — note field', () => {
+  it('accepts a string note alongside a valid status', () => {
+    const result = updateAssignmentStatusSchema.safeParse({
+      assignmentId: VALID_UUID,
+      status: 'acknowledged',
+      note: 'Order confirmed with supplier',
+    })
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data.note).toBe('Order confirmed with supplier')
+  })
+
+  it('accepts null for note', () => {
+    const result = updateAssignmentStatusSchema.safeParse({
+      assignmentId: VALID_UUID,
+      status: 'acknowledged',
+      note: null,
+    })
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data.note).toBeNull()
+  })
+
+  it('accepts an absent note field', () => {
+    const result = updateAssignmentStatusSchema.safeParse({
+      assignmentId: VALID_UUID,
+      status: 'in_production',
+    })
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data.note).toBeUndefined()
+  })
+})
+
+describe('DEALER_STATUS_TRANSITIONS — complete coverage', () => {
+  it('in_production only allows ready_for_dispatch', () => {
+    expect(DEALER_STATUS_TRANSITIONS.in_production).toEqual(['ready_for_dispatch'])
+  })
+
+  it('ready_for_dispatch only allows dispatched', () => {
+    expect(DEALER_STATUS_TRANSITIONS.ready_for_dispatch).toEqual(['dispatched'])
+  })
+
+  it('dispatched is terminal — no allowed transitions', () => {
+    expect(DEALER_STATUS_TRANSITIONS.dispatched).toEqual([])
+  })
+
+  it('cancelled is terminal — no allowed transitions', () => {
+    expect(DEALER_STATUS_TRANSITIONS.cancelled).toEqual([])
+  })
+
+  it('every status key is present in the map', () => {
+    for (const s of ASSIGNMENT_STATUSES) {
+      expect(Object.prototype.hasOwnProperty.call(DEALER_STATUS_TRANSITIONS, s)).toBe(true)
+    }
+  })
+})
+
+describe('serializeAssignment', () => {
+  it('serializes all scalar fields correctly', () => {
+    const assignment = makeAssignment()
+    const result = serializeAssignment(assignment)
+
+    expect(result.id).toBe('assign-uuid-1')
+    expect(result.orderId).toBe('order-uuid-1')
+    expect(result.dealerProfileId).toBe('dealer-uuid-1')
+    expect(result.tenantId).toBe('tenant-uuid-1')
+    expect(result.organizationId).toBe('org-uuid-1')
+    expect(result.assignedBy).toBe('user-uuid-1')
+    expect(result.requiredBy).toBe('2099-12-31')
+    expect(result.status).toBe('assigned')
+  })
+
+  it('converts Date fields to ISO strings', () => {
+    const assignment = makeAssignment({
+      assignedAt: ASSIGN_DATE,
+      statusUpdatedAt: ASSIGN_DATE,
+      updatedAt: ASSIGN_DATE,
+    })
+    const result = serializeAssignment(assignment)
+    expect(result.assignedAt).toBe('2026-10-11T10:00:00.000Z')
+    expect(result.statusUpdatedAt).toBe('2026-10-11T10:00:00.000Z')
+    expect(result.updatedAt).toBe('2026-10-11T10:00:00.000Z')
+  })
+
+  it('returns null for nullable fields when they are null', () => {
+    const assignment = makeAssignment({ statusNote: null, cancelledReason: null })
+    const result = serializeAssignment(assignment)
+    expect(result.statusNote).toBeNull()
+    expect(result.cancelledReason).toBeNull()
+  })
+
+  it('includes statusNote and cancelledReason when set', () => {
+    const assignment = makeAssignment({
+      status: 'cancelled',
+      statusNote: 'Production started',
+      cancelledReason: 'Dealer unavailable',
+    })
+    const result = serializeAssignment(assignment)
+    expect(result.statusNote).toBe('Production started')
+    expect(result.cancelledReason).toBe('Dealer unavailable')
+    expect(result.status).toBe('cancelled')
+  })
+
+  it('returns null for date fields when the value is absent', () => {
+    const assignment = makeAssignment({
+      assignedAt: undefined as unknown as Date,
+      updatedAt: undefined as unknown as Date,
+    })
+    const result = serializeAssignment(assignment)
+    expect(result.assignedAt).toBeNull()
+    expect(result.updatedAt).toBeNull()
+  })
+})
+
+describe('assignmentListQuerySchema — status filter', () => {
+  it('accepts each valid assignment status', () => {
+    for (const status of ASSIGNMENT_STATUSES) {
+      expect(assignmentListQuerySchema.safeParse({ status }).success).toBe(true)
+    }
+  })
+
+  it('rejects an unknown status value', () => {
+    expect(assignmentListQuerySchema.safeParse({ status: 'pending' }).success).toBe(false)
+    expect(assignmentListQuerySchema.safeParse({ status: 'completed' }).success).toBe(false)
+  })
+
+  it('allows an omitted status field (optional)', () => {
+    const result = assignmentListQuerySchema.parse({})
+    expect(result.status).toBeUndefined()
   })
 })
