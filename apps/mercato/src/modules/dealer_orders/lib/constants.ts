@@ -42,3 +42,12 @@ export const DEALER_ORDER_ASSIGN_COMMAND = 'dealer_orders.assignments.assign' as
 export const DEALER_ORDER_REASSIGN_COMMAND = 'dealer_orders.assignments.reassign' as const
 export const DEALER_ORDER_CANCEL_COMMAND = 'dealer_orders.assignments.cancel' as const
 export const DEALER_ORDER_UPDATE_STATUS_COMMAND = 'dealer_orders.assignments.update_status' as const
+
+/**
+ * Dealer role names, created by `dealer_onboarding`'s setup. Redeclared
+ * locally per the module-isolation convention (see
+ * `dealer_org_rbac/lib/constants.ts` for the existing precedent) — do not
+ * import role names across module boundaries.
+ */
+export const DEALER_OWNER_ROLE = 'dealer:owner' as const
+export const DEALER_STAFF_ROLE = 'dealer:staff' as const

@@ -9,7 +9,8 @@
       "dealerNotApproved": "Dealer is not approved to receive orders",
       "invalidStatusTransition": "Invalid status transition: {{from}} → {{to}}",
       "assignmentCancelled": "Assignment is cancelled and cannot be updated",
-      "idempotencyKeyRequired": "Idempotency-Key header is required for this operation"
+      "idempotencyKeyRequired": "Idempotency-Key header is required for this operation",
+      "assignmentVersionMismatch": "This order was updated by someone else; reload and try again"
     },
     "audit": {
       "assign": "Assign order to dealer",
@@ -29,6 +30,13 @@
       "orderAssigned": {
         "title": "New order assigned",
         "body": "You have been assigned a new order. Log in to the dealer portal to view it."
+      }
+    },
+    "email": {
+      "assigned": {
+        "subject": "You have a new order to fulfil",
+        "body": "A new order has been assigned to you. Production is required by {requiredBy}.",
+        "cta": "View order"
       }
     }
   }

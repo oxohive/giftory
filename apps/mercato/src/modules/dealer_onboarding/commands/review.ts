@@ -5,10 +5,16 @@ import { registerCommand } from '@open-mercato/shared/lib/commands'
 import { badRequest } from '@open-mercato/shared/lib/crud/errors'
 import { resolveTranslations } from '@open-mercato/shared/lib/i18n/server'
 import { DealerProfile } from '../data/entities'
-import { DEALER_APPROVE_COMMAND, DEALER_REJECT_COMMAND, DEALER_OWNER_ROLE } from '../lib/constants'
+import {
+  DEALER_APPROVE_COMMAND,
+  DEALER_REJECT_COMMAND,
+  DEALER_OWNER_ROLE,
+  DEALER_OWNER_APPROVAL_FEATURES,
+} from '../lib/constants'
 import { resolveCommandScope } from '../lib/scope'
 import { findProfileById, serializeDealerProfile, executeOmCommand } from './shared'
 import type { SerializedDealerProfile } from './register'
+import eventsConfig from '../events'
 
 const approveSchema = z.object({
   id: z.string().uuid(),
@@ -60,6 +66,15 @@ export async function executeApprove(rawInput: unknown, ctx: CommandRuntimeConte
   profile.updatedAt = new Date()
   await em.flush()
 
+  // Notifies the dealer by email (see `subscribers/notify-dealer-on-approval.ts`)
+  // that they can now log in. Persistent — retried on failure, not swallowed.
+  await eventsConfig.emit('dealer_onboarding.profile.approved', {
+    id: profile.id,
+    tenantId: profile.tenantId,
+    organizationId: profile.organizationId,
+    contactEmail: profile.contactEmail,
+  })
+
   return profile
 }
 
@@ -102,6 +117,16 @@ export async function executeReject(rawInput: unknown, ctx: CommandRuntimeContex
   profile.updatedAt = new Date()
   await em.flush()
 
+  // Notifies the dealer by email (see `subscribers/notify-dealer-on-rejection.ts`)
+  // with the reason and a link to log in and resubmit.
+  await eventsConfig.emit('dealer_onboarding.profile.rejected', {
+    id: profile.id,
+    tenantId: profile.tenantId,
+    organizationId: profile.organizationId,
+    contactEmail: profile.contactEmail,
+    reason: parsed.reason,
+  })
+
   return profile
 }
 
@@ -126,6 +151,18 @@ const rejectCommand: CommandHandler<Record<string, unknown>, DealerProfile> = {
  * Scope the dealer:owner role to the given organization via auth.role-acl.update.
  * After this, the role's permissions only fire when the request is scoped to the
  * dealer's org (ADR-003).
+ *
+ * `dealer:owner` is a single, tenant-wide role shared by every dealer owner in
+ * the tenant — `auth.role-acl.update`'s `persist` does a straight REPLACE of
+ * `featuresJson`/`organizationsJson`, not a merge. Calling it with a hardcoded
+ * feature list (as this used to) would silently wipe every other grant the
+ * role already holds (e.g. `dealer_org.view`/`.manage_capabilities`/
+ * `.manage_staff`, seeded at tenant creation) for EVERY dealer owner in the
+ * tenant, and would lock out any still-pending dealer the moment their org is
+ * no longer included in `organizationsJson`. To stay safe against that, this
+ * function always reads the role's CURRENT `featuresJson`/`organizationsJson`
+ * first and unions the required values into them — it never sends a feature
+ * or organization list that could drop something already granted.
  */
 async function scopeDealerRoleToOrg(
   container: import('awilix').AwilixContainer,
@@ -143,20 +180,30 @@ async function scopeDealerRoleToOrg(
   const existingOrgs: string[] = Array.isArray((acl as { organizationsJson?: string[] } | null)?.organizationsJson)
     ? ((acl as { organizationsJson: string[] }).organizationsJson as string[])
     : []
+  const existingFeatures: string[] = Array.isArray((acl as { featuresJson?: string[] } | null)?.featuresJson)
+    ? ((acl as { featuresJson: string[] }).featuresJson as string[])
+    : []
 
-  if (!existingOrgs.includes(organizationId)) {
-    await executeOmCommand(
-      container,
-      'auth.role-acl.update',
-      {
-        roleId: role.id,
-        tenantId,
-        organizations: [...existingOrgs, organizationId],
-        features: ['dealer_onboarding.view_own', 'dealer_onboarding.submit'],
-      },
-      { ...ctx, auth: { ...ctx.auth, tenantId, isSuperAdmin: true, sub: 'system' } as typeof ctx.auth, systemActor: true },
-    )
-  }
+  const needsOrgUpdate = !existingOrgs.includes(organizationId)
+  const needsFeatureUpdate = DEALER_OWNER_APPROVAL_FEATURES.some((f) => !existingFeatures.includes(f))
+
+  if (!needsOrgUpdate && !needsFeatureUpdate) return
+
+  await executeOmCommand(
+    container,
+    'auth.role-acl.update',
+    {
+      roleId: role.id,
+      tenantId,
+      // Merge, never replace: keep every org already scoped in, plus this one.
+      organizations: needsOrgUpdate ? [...existingOrgs, organizationId] : existingOrgs,
+      // Merge, never replace: keep every feature already granted, plus the
+      // ones this approval flow requires (onboarding + the three
+      // *.dealer_access grants — Gap 1/2 fix).
+      features: Array.from(new Set([...existingFeatures, ...DEALER_OWNER_APPROVAL_FEATURES])),
+    },
+    { ...ctx, auth: { ...ctx.auth, tenantId, isSuperAdmin: true, sub: 'system' } as typeof ctx.auth, systemActor: true },
+  )
 }
 
 registerCommand(approveCommand)
