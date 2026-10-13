@@ -73,6 +73,76 @@
         "title": "Application rejected",
         "body": "Your dealer application has been rejected. Please review the reason and resubmit."
       }
+    },
+    "admin": {
+      "title": "Dealer applications",
+      "nav": {
+        "group": "Dealer Applications"
+      },
+      "businessName": "Business name",
+      "contactEmail": "Contact email",
+      "phone": "Phone",
+      "businessType": "Business type",
+      "city": "City",
+      "state": "State",
+      "pincode": "Pincode",
+      "gstin": "GSTIN",
+      "pan": "PAN",
+      "kycStatus": "KYC status",
+      "searchPlaceholder": "Search business name or contact email",
+      "empty": "No applications match these filters.",
+      "review": "Review application",
+      "loading": "Loading application…",
+      "loadError": "Unable to load this record. Check your access and try again.",
+      "retry": "Retry",
+      "notFound": "Application not found",
+      "forbidden": "You don't have permission to review applications.",
+      "conflict": "This application was already reviewed by someone else — showing the latest status.",
+      "entityTypeLabel": "Dealer application",
+      "rejectionReasonLabel": "Rejection reason",
+      "resubmittedNotice": "This application was previously reviewed and has been resubmitted since its last rejection.",
+      "detail": {
+        "page": {
+          "title": "Dealer application review"
+        }
+      },
+      "sections": {
+        "businessDetails": "Business details",
+        "documents": "KYC documents"
+      },
+      "documents": {
+        "empty": "No documents uploaded yet.",
+        "download": "Download",
+        "errorForbidden": "You don't have permission to download this document.",
+        "errorNotFound": "Document not found",
+        "errorGeneric": "Could not download this document"
+      },
+      "actions": {
+        "approve": "Approve",
+        "approving": "Approving…",
+        "reject": "Reject",
+        "rejecting": "Rejecting…",
+        "cancel": "Cancel"
+      },
+      "approveDialog": {
+        "title": "Approve this application?",
+        "text": "The dealer will be able to log in to the dealer portal and manage their profile, staff and orders.",
+        "submit": "Approve",
+        "success": "Application approved",
+        "error": "Could not approve this application"
+      },
+      "rejectDialog": {
+        "title": "Reject this application",
+        "description": "The dealer will receive an email with this reason and can log in to review and resubmit their application.",
+        "reasonLabel": "Reason",
+        "reasonPlaceholder": "Why is this application being rejected?",
+        "submit": "Reject application",
+        "success": "Application rejected",
+        "error": {
+          "generic": "Could not reject this application",
+          "missingReason": "A reason is required"
+        }
+      }
     }
   }
 }
