@@ -9,6 +9,7 @@ import React, {
 } from 'react'
 import { Animated, StyleSheet, Text } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import Ionicons from '@expo/vector-icons/Ionicons'
 import { useTheme } from '../../theme'
 
 export type ToastVariant = 'success' | 'error' | 'info'
@@ -85,29 +86,44 @@ export function ToastProvider(props: { children: React.ReactNode }): JSX.Element
       ? theme.colors.success
       : toast?.variant === 'error'
       ? theme.colors.danger
-      : theme.colors.text
+      : theme.colors.primary
+
+  const toneIcon =
+    toast?.variant === 'success'
+      ? 'checkmark-circle'
+      : toast?.variant === 'error'
+      ? 'alert-circle'
+      : 'information-circle'
 
   return (
     <ToastContext.Provider value={value}>
       {children}
       {toast ? (
+        // Anchored to the TOP of the screen, not the bottom. Every screen
+        // in this app has something different sitting at the bottom — a
+        // CTA button, the floating tab bar, a sticky footer — and a
+        // bottom-anchored toast kept landing on top of whichever one was
+        // there (confirmed on-device: it rendered directly over the "Add to
+        // cart" button). Nothing occupies this top strip on any screen, so
+        // it can't collide with anything, on any screen, ever.
         <Animated.View
           pointerEvents="none"
           style={[
             styles.container,
             {
-              bottom: insets.bottom + theme.spacing(3),
+              top: insets.top + theme.spacing(1.5),
               backgroundColor: theme.colors.surface,
-              borderRadius: theme.radii.md,
-              borderColor: toneColor,
-              paddingVertical: theme.spacing(1.5),
+              borderRadius: theme.radii.pill,
+              ...theme.elevation.md,
+              paddingVertical: theme.spacing(1.25),
               paddingHorizontal: theme.spacing(2),
               opacity,
             },
           ]}
         >
+          <Ionicons name={toneIcon} size={20} color={toneColor} />
           <Text
-            style={[theme.typography.body, { color: theme.colors.text }]}
+            style={[theme.typography.body, { color: theme.colors.text, fontWeight: '600' }]}
             accessibilityLiveRegion="polite"
           >
             {toast.message}
@@ -132,12 +148,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 16,
     right: 16,
-    borderWidth: 1,
+    flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 4,
+    justifyContent: 'center',
+    gap: 8,
   },
 })
