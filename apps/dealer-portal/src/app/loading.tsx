@@ -1,0 +1,1 @@
+export default function Loading() { return <main id="main" className="page" aria-busy="true"><p role="status">Loading your workspace?</p></main> }

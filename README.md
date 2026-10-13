@@ -1,8 +1,8 @@
 # Gift App
 
-Gift marketplace with 3D customization. Product plan: [docs/Gift_Marketplace_Complete_Phased_Plan.docx](docs/Gift_Marketplace_Complete_Phased_Plan.docx). Architecture: [docs/architecture.md](docs/architecture.md).
+Gift marketplace with 3D customization. Product plan: [docs/Gift_Marketplace_Complete_Phased_Plan.docx](docs/Gift_Marketplace_Complete_Phased_Plan.docx). Architecture: [docs/architecture.md](docs/architecture.md). Current state: [docs/phase-2-status.md](docs/phase-2-status.md).
 
-**Status:** Phase 1 (Commerce Foundation) implemented.
+**Status:** Phase 1 (Commerce Foundation) implemented. Phase 2 dealer marketplace backend implemented (267 unit tests passing); dealer portal and admin UI in progress.
 
 ## Layout
 
@@ -10,6 +10,8 @@ Gift marketplace with 3D customization. Product plan: [docs/Gift_Marketplace_Com
 |---|---|---|
 | `apps/mercato` | Backend + admin: Open Mercato 0.8.0 with the Gift App modules | 3000 |
 | `apps/storefront` | Customer storefront (Next.js) | 3100 |
+| `apps/dealer-portal` | Dealer portal (Next.js) — scaffold only, see [tasks/phase-2-ui](tasks/phase-2-ui/README.md) | 3200 |
+| `packages/` | Shared `api-client` and `ui` packages used by the portal apps | — |
 
 Gift App modules live in `apps/mercato/src/modules/`:
 
@@ -18,6 +20,13 @@ Gift App modules live in `apps/mercato/src/modules/`:
 | `gift_catalog` | Gift occasions and per-product gift profiles (occasions, recipients, customizable, proof required, gift wrap, message length); admin pages + product-form widget |
 | `storefront` | Public catalog, server-side cart, checkout/order placement, payment sessions, customer order history, address book |
 | `gateway_razorpay` | Razorpay payment gateway (UPI, cards, netbanking) next to the native Stripe gateway |
+| `dealer_onboarding` | Dealer self-registration, KYC documents, admin approve/reject, resubmission (FEAT-008) |
+| `dealer_org_rbac` | Dealer organization access control, production capabilities, staff invitations, admin dealer directory (FEAT-009) |
+| `dealer_orders` | Manual order assignment/reassignment/cancellation and dealer production status transitions (FEAT-011) |
+| `commissions` | Commission rules, immutable per-order snapshots, dealer earnings (FEAT-012) |
+| `payouts` | Append-only dealer ledger, balances, manual payout recording, adjustments (FEAT-013) |
+
+Dealer marketplace endpoints are documented in [docs/dealer-marketplace-api.md](docs/dealer-marketplace-api.md).
 
 ## Prerequisites
 
@@ -35,6 +44,11 @@ yarn dev:classic
 
 # Storefront: http://localhost:3100
 cd apps/storefront
+npm install
+npm run dev
+
+# Dealer portal (scaffold): http://localhost:3200
+cd apps/dealer-portal
 npm install
 npm run dev
 ```
@@ -59,6 +73,10 @@ yarn mercato gift_catalog seed-demo      --tenant <tenantId> --org <orgId>
 | Document | Contents |
 |---|---|
 | [docs/architecture.md](docs/architecture.md) | Full system architecture, tech stack, data model, roadmap |
+| [docs/phase-2-status.md](docs/phase-2-status.md) | Current project status: what is done, what is in progress, what is left |
+| [docs/dealer-marketplace-api.md](docs/dealer-marketplace-api.md) | Phase 2 dealer API reference, money flow and known gaps |
+| [docs/phase-2-testing-guide.md](docs/phase-2-testing-guide.md) | Live end-to-end checklist for the dealer flows (not yet executed) |
+| [tasks/phase-2-ui/](tasks/phase-2-ui/README.md) | 19-task plan for the dealer portal and admin UI |
 | [docs/features/](docs/features/) | Per-feature specifications (status, requirements, acceptance criteria) |
 | [tasks/](tasks/) | User stories and engineering tasks |
 | [apps/storefront/__integration__/storefront-and-admin.spec.ts](apps/storefront/__integration__/storefront-and-admin.spec.ts) | Phase 1 Playwright end-to-end test suite (storefront + admin) |
