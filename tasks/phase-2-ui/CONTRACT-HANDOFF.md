@@ -181,3 +181,13 @@ Time:        12.392 s
 Matches `docs/phase-2-status.md`'s recorded baseline exactly — no drift since that document was written. **No new test failures were introduced by this audit** (no application code was touched). The 267 passing tests do not exercise Gap 1 or Gap 2 — both are integration-level ACL interactions across `dealer_onboarding`'s command and the shared `@open-mercato/core` auth commands, invisible to unit tests that mock the command bus. This is noted explicitly so TASK-02 does not mistake "267/267 green" for "the ACL wiring is correct" — it is exactly the gap this audit found.
 
 `git status` at the start of this audit: clean except pre-existing untracked `apps/mobile/` (unrelated to Phase 2 UI, not touched by this task).
+
+---
+
+## Known limitation: the shared BFF proxy cannot carry binary payloads
+
+`apps/dealer-portal/src/app/api/om/[...path]/route.ts` (P2-UI-01/04's shared proxy, used by every allowlisted JSON API call in this app) forwards request bodies via `req.text()` — this decodes the body as UTF-8 text, which corrupts arbitrary binary data (confirmed by P2-UI-05: a 17-byte JPEG header round-tripped through it lost 10 bytes). This is fine for the proxy's actual current job — every allowlisted route is JSON-bodied — but it means **this proxy must never be used for multipart/binary uploads or downloads**.
+
+P2-UI-05 hit this building KYC document upload/download and worked around it correctly: it added two dedicated routes inside its own owned path (`apps/dealer-portal/src/app/(onboarding)/api/onboarding/documents/`) that forward `FormData`/stream responses directly, bypassing the shared proxy entirely, rather than modifying the shared proxy (outside its owned paths) or accepting corrupted uploads.
+
+**If any future task needs another binary passthrough** (a different file type, a different route), mirror P2-UI-05's pattern — a dedicated route in your own owned path — rather than routing it through the shared proxy. Fixing the shared proxy itself to support binary (e.g. switching to `arrayBuffer()`/streaming based on content-type) is a real option too, but is deliberately not done here: it's a shared file every other task's JSON calls already depend on working exactly as-is, mid-session, with multiple agents concurrently active — not something to change without a dedicated pass and full regression coverage.
