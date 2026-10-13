@@ -14,12 +14,14 @@ import { ScreenHeader } from '../../../components/ui/ScreenHeader'
 import { useTheme } from '../../../theme'
 import { useCheckoutSession } from '../hooks/useCheckoutSession'
 import { useCart } from '../../cart/hooks/useCart'
+import { useSingleTapNavigation } from '../../../lib/useSingleTapNavigation'
 
 type Props = NativeStackScreenProps<CheckoutStackParamList, 'Shipping'>
 
 export default function ShippingScreen({ navigation }: Props) {
   const theme = useTheme()
   const session = useCheckoutSession()
+  const { guard } = useSingleTapNavigation()
   const postalCode = session.address?.postalCode
 
   const [methods, setMethods] = useState<ShippingMethod[] | null>(null)
@@ -64,7 +66,7 @@ export default function ShippingScreen({ navigation }: Props) {
     load()
   }, [load])
 
-  const screenHeader = <ScreenHeader title="Shipping" onBack={navigation.goBack} />
+  const screenHeader = <ScreenHeader title="Shipping" onBack={guard(navigation.goBack)} />
 
   if (loading) {
     return (
@@ -134,10 +136,10 @@ export default function ShippingScreen({ navigation }: Props) {
 
       <Button
         title="Continue to payment"
-        onPress={() => {
+        onPress={guard(() => {
           session.setShippingMethod(selected)
           navigation.navigate('Payment')
-        }}
+        })}
       />
       </ScrollView>
     </View>

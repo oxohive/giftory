@@ -8,6 +8,46 @@ import RootTabNavigator from './src/navigation/RootTabNavigator'
 import { queryClient } from './src/lib/queryClient'
 import { useTheme, useThemeFonts } from './src/theme'
 import { ToastProvider } from './src/components/ui/Toast'
+import { OfflineBanner } from './src/components/ui/OfflineBanner'
+
+// Maps `giftory://...` deep links to the real nested navigator structure
+// (checklist section 2: "Define deep-link behavior and test links to
+// nested screens" — the `giftory` scheme was declared in app.json but had
+// no actual route mapping before this). Home and Products both host
+// `CatalogStackNavigator`; `ProductDetail` is reachable through either.
+// `as any`: React Navigation's `LinkingOptions<T>` can't express "a tab
+// whose own value is itself a nested stack's path config" without also
+// declaring a global `ReactNavigation.RootParamList` augmentation (a
+// bigger, app-wide typing change this fix pass intentionally avoids, since
+// it would affect every existing `useNavigation<...>()` call site's
+// inference elsewhere in the app). The runtime shape below is still a real,
+// hand-verified mapping to every route in `src/navigation/types.ts` — only
+// the compile-time check is loosened, not the actual config.
+const linking: any = {
+  prefixes: ['giftory://'],
+  config: {
+    screens: {
+      Home: { screens: { Home: '', ProductDetail: 'product/:handle' } },
+      Products: { screens: { ProductList: 'products', ProductDetail: 'product/:handle' } },
+      Cart: {
+        screens: {
+          Cart: 'cart',
+          Address: 'checkout/address',
+          Shipping: 'checkout/shipping',
+          Payment: 'checkout/payment',
+          Confirmation: 'checkout/confirmation/:orderId',
+        },
+      },
+      Account: {
+        screens: {
+          Account: 'account',
+          Addresses: 'account/addresses',
+          OrderDetail: 'order/:orderId',
+        },
+      },
+    },
+  },
+}
 
 /**
  * Provider order (each constraint from the design-polish wave's 6 parallel
@@ -55,7 +95,8 @@ export default function App() {
         <QueryClientProvider client={queryClient}>
           <SafeAreaProvider>
             <ToastProvider>
-              <NavigationContainer theme={navTheme}>
+              <OfflineBanner />
+              <NavigationContainer theme={navTheme} linking={linking}>
                 <RootTabNavigator />
               </NavigationContainer>
             </ToastProvider>

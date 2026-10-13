@@ -1,6 +1,5 @@
 import React from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import type { CatalogStackParamList } from '../../../navigation/types'
@@ -13,9 +12,12 @@ import { Card } from '../../../components/ui/Card'
 import { Badge } from '../../../components/ui/Badge'
 import { PriceText } from '../../../components/ui/PriceText'
 import { ProductImage } from '../../../components/ui/ProductImage'
+import { ScreenHeader } from '../../../components/ui/ScreenHeader'
+import { IconButton } from '../../../components/ui/IconButton'
 import { useOccasions } from '../hooks/useOccasions'
 import { useProducts } from '../hooks/useProducts'
 import { useCart } from '../../cart/hooks/useCart'
+import { useSingleTapNavigation } from '../../../lib/useSingleTapNavigation'
 import { OccasionChip } from '../components/OccasionChip'
 import { ProductCard } from '../components/ProductCard'
 import type { Occasion } from '../../../lib/api/occasions'
@@ -42,23 +44,25 @@ const COLLECTION_QUERY = { pageSize: 7, sort: 'newest' as const }
  */
 export default function HomeScreen({ navigation }: Props): JSX.Element {
   const theme = useTheme()
-  const insets = useSafeAreaInsets()
+  const { guard } = useSingleTapNavigation()
   const { data: occasions, isLoading: occasionsLoading, isError: occasionsError, error, refetch } = useOccasions()
   const { data: hero, isLoading: heroLoading } = useProducts(HERO_QUERY)
   const { data: collection, isLoading: collectionLoading } = useProducts(COLLECTION_QUERY)
   const { cart } = useCart()
 
-  const goToOccasion = (occasion: Occasion) => {
+  const goToOccasion = guard((occasion: Occasion) => {
     navigation.navigate('ProductList', { occasion: occasion.code })
-  }
+  })
 
-  const goToAllProducts = () => {
+  const goToAllProducts = guard(() => {
     navigation.navigate('ProductList', undefined)
-  }
+  })
 
-  const goToProduct = (handle: string) => {
+  const goToProduct = guard((handle: string) => {
     navigation.navigate('ProductDetail', { handle })
-  }
+  })
+
+  const goToCart = guard(() => navigation.getParent()?.navigate('Cart'))
 
   if (occasionsLoading) {
     return <LoadingState label="Loading Giftory..." />
@@ -89,45 +93,24 @@ export default function HomeScreen({ navigation }: Props): JSX.Element {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      {/* Fixed region — deliberately OUTSIDE the ScrollView below. Putting the
-          safe-area top padding on the ScrollView's own contentContainerStyle
-          (as an earlier version of this screen did) scrolls that padding away
-          with the rest of the content, so the masthead ends up scrolling up
-          underneath the phone's status bar instead of staying put — confirmed
-          on-device. Keeping it in its own non-scrolling View, the way
-          AccountScreen already does, is what makes it behave like a sticky
-          header. */}
-      <View style={[styles.masthead, { paddingTop: insets.top + theme.spacing(1.5) }]}>
-        <View style={styles.wordmarkRow}>
-          <Ionicons name="gift" size={theme.sizes.icon.md} color={theme.colors.primary} />
-          <Text style={[theme.typography.heading, { color: theme.colors.text }]}>Giftory</Text>
-        </View>
-        <View style={styles.headerActions}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Search products"
-            onPress={goToAllProducts}
-            style={[pressableStyles.icon, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-          >
-            <Ionicons name="search" size={theme.sizes.icon.sm} color={theme.colors.text} />
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Cart, ${cartCount} item${cartCount === 1 ? '' : 's'}`}
-            onPress={() => navigation.getParent()?.navigate('Cart')}
-            style={[pressableStyles.icon, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-          >
-            <Ionicons name="bag-handle-outline" size={theme.sizes.icon.sm} color={theme.colors.text} />
-            {cartCount > 0 ? (
-              <View style={[styles.cartBadge, { backgroundColor: theme.colors.primary }]}>
-                <Text style={[theme.typography.small, { color: theme.colors.primaryText, fontWeight: '700' }]}>
-                  {cartCount}
-                </Text>
-              </View>
-            ) : null}
-          </Pressable>
-        </View>
-      </View>
+      {/* The shared header every other screen uses too — see ScreenHeader's
+          own doc comment for why this replaced a one-off masthead here. */}
+      <ScreenHeader
+        title="Giftory"
+        titleIcon="gift"
+        rightAction={
+          <>
+            <IconButton icon="search" size="sm" accessibilityLabel="Search products" onPress={goToAllProducts} />
+            <IconButton
+              icon="bag-handle-outline"
+              size="sm"
+              accessibilityLabel={`Cart, ${cartCount} item${cartCount === 1 ? '' : 's'}`}
+              onPress={goToCart}
+              badgeCount={cartCount}
+            />
+          </>
+        }
+      />
 
       <Text
         style={[
@@ -204,14 +187,13 @@ export default function HomeScreen({ navigation }: Props): JSX.Element {
                   />
                 </View>
               </View>
-              <Pressable
-                accessibilityRole="button"
+              <IconButton
+                icon="arrow-forward"
+                size="sm"
+                variant="primary"
                 accessibilityLabel={`View ${heroProduct.title}`}
                 onPress={() => goToProduct(heroProduct.handle)}
-                style={[pressableStyles.icon, { backgroundColor: theme.colors.primary, marginLeft: 0 }]}
-              >
-                <Ionicons name="arrow-forward" size={theme.sizes.icon.sm} color={theme.colors.primaryText} />
-              </Pressable>
+              />
             </View>
           </Card>
         </View>
@@ -259,14 +241,6 @@ export default function HomeScreen({ navigation }: Props): JSX.Element {
 }
 
 const pressableStyles = StyleSheet.create({
-  icon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 8,
-  },
   full: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -281,32 +255,6 @@ const styles = StyleSheet.create({
   scroll: {
     padding: 16,
     paddingBottom: 32,
-  },
-  masthead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-  },
-  wordmarkRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  cartBadge: {
-    position: 'absolute',
-    top: -2,
-    right: -2,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 3,
   },
   chipRow: {
     paddingRight: 16,

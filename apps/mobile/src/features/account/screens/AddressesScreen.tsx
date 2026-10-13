@@ -11,7 +11,7 @@
  * is already the real thing.
  */
 import { useCallback, useEffect, useState } from 'react'
-import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Alert, FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import type { AccountStackParamList } from '../../../navigation/types'
 import {
@@ -31,6 +31,8 @@ import { EmptyState } from '../../../components/ui/EmptyState'
 import { ErrorState } from '../../../components/ui/ErrorState'
 import { LoadingState } from '../../../components/ui/LoadingState'
 import { ScreenHeader } from '../../../components/ui/ScreenHeader'
+import { KeyboardAwareScreen } from '../../../components/ui/KeyboardAwareScreen'
+import { confirmDestructive } from '../../../lib/confirm'
 import { AddressForm } from '../components/AddressForm'
 
 type FormMode = { kind: 'create' } | { kind: 'edit'; address: StoredAddress }
@@ -99,22 +101,20 @@ export default function AddressesScreen({ navigation }: Props): JSX.Element {
   }
 
   const handleDelete = (address: StoredAddress) => {
-    Alert.alert('Remove address', `Remove the address for ${address.fullName}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteAddress(address.id)
-            await load()
-          } catch (err) {
-            const message = err instanceof ApiError ? err.message : 'Could not remove this address.'
-            Alert.alert('Could not remove address', message)
-          }
-        },
+    confirmDestructive({
+      title: 'Remove address',
+      message: `Remove the address for ${address.fullName}?`,
+      confirmLabel: 'Remove',
+      onConfirm: async () => {
+        try {
+          await deleteAddress(address.id)
+          await load()
+        } catch (err) {
+          const message = err instanceof ApiError ? err.message : 'Could not remove this address.'
+          Alert.alert('Could not remove address', message)
+        }
       },
-    ])
+    })
   }
 
   const screenHeader = <ScreenHeader title="Addresses" onBack={navigation.goBack} />
@@ -160,23 +160,25 @@ export default function AddressesScreen({ navigation }: Props): JSX.Element {
   if (formMode) {
     const initialValue = formMode.kind === 'edit' ? formMode.address : undefined
     return (
-      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <ScreenHeader
-          title={formMode.kind === 'create' ? 'Add address' : 'Edit address'}
-          onBack={() => setFormMode(null)}
-        />
-        <View style={{ padding: theme.spacing(2) }}>
-          <AddressForm
-            initialValue={initialValue}
-            submitLabel={formMode.kind === 'create' ? 'Save address' : 'Save changes'}
-            isSubmitting={isSubmitting}
-            onCancel={() => setFormMode(null)}
-            onSubmit={(value) =>
-              formMode.kind === 'create' ? handleCreate(value) : handleUpdate(formMode.address.id, value)
-            }
+      <KeyboardAwareScreen style={{ backgroundColor: theme.colors.background }}>
+        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+          <ScreenHeader
+            title={formMode.kind === 'create' ? 'Add address' : 'Edit address'}
+            onBack={() => setFormMode(null)}
           />
+          <ScrollView contentContainerStyle={{ padding: theme.spacing(2) }} keyboardShouldPersistTaps="handled">
+            <AddressForm
+              initialValue={initialValue}
+              submitLabel={formMode.kind === 'create' ? 'Save address' : 'Save changes'}
+              isSubmitting={isSubmitting}
+              onCancel={() => setFormMode(null)}
+              onSubmit={(value) =>
+                formMode.kind === 'create' ? handleCreate(value) : handleUpdate(formMode.address.id, value)
+              }
+            />
+          </ScrollView>
         </View>
-      </View>
+      </KeyboardAwareScreen>
     )
   }
 

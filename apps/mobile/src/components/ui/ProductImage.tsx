@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Image } from 'expo-image'
 import type { ImageStyle } from 'expo-image'
 import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native'
@@ -16,19 +16,32 @@ export interface ProductImageProps {
 /**
  * Shared product/occasion image. Every image in the app goes through this
  * component rather than a raw `expo-image`/RN `Image` call, so caching,
- * fade-in, and the missing-image fallback stay consistent everywhere.
+ * fade-in, and the missing/failed-image fallback stay consistent everywhere.
  *
  * - Has a `uri`: renders via `expo-image` with disk caching and a fade-in
  *   transition, backed by a themed placeholder color while it loads.
- * - No `uri` (missing/null/empty): renders a themed box with a centered
- *   icon glyph — a flat color box with nothing in it read as a rendering
- *   glitch on-device (confirmed: occasion pills and the Home hero both
- *   looked broken before this), so every size uses the same icon rather
- *   than an empty fill.
+ * - No `uri` (missing/null/empty), OR a `uri` that fails to load at runtime
+ *   (404, decode failure, dropped connection): renders a themed box with a
+ *   centered icon glyph — a flat color box with nothing in it read as a
+ *   rendering glitch on-device (confirmed: occasion pills and the Home hero
+ *   both looked broken before this), so every size uses the same icon
+ *   rather than an empty fill, for both the missing-uri and failed-load
+ *   cases.
  */
 export function ProductImage(props: ProductImageProps): JSX.Element {
   const { uri, style, aspectRatio = 1, accessibilityLabel } = props
   const theme = useTheme()
+  const [failed, setFailed] = useState(false)
+
+  // Reset the failure flag if a new `uri` comes in (e.g. list item reused
+  // by a virtualized list for a different product) — otherwise a prior
+  // image's load failure would permanently show the fallback for every
+  // subsequent uri rendered through this same component instance.
+  const [lastUri, setLastUri] = useState(uri)
+  if (uri !== lastUri) {
+    setLastUri(uri)
+    if (failed) setFailed(false)
+  }
 
   const sharedStyle = {
     aspectRatio,
@@ -36,7 +49,7 @@ export function ProductImage(props: ProductImageProps): JSX.Element {
     borderRadius: theme.radii.lg,
   }
 
-  if (!uri) {
+  if (!uri || failed) {
     return (
       <View
         style={[styles.base, styles.placeholder, sharedStyle, style as StyleProp<ViewStyle>]}
@@ -58,6 +71,7 @@ export function ProductImage(props: ProductImageProps): JSX.Element {
       transition={200}
       contentFit="cover"
       accessibilityLabel={accessibilityLabel}
+      onError={() => setFailed(true)}
     />
   )
 }

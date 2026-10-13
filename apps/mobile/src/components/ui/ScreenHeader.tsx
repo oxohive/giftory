@@ -1,11 +1,17 @@
 import React from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Ionicons from '@expo/vector-icons/Ionicons'
+import type { ComponentProps } from 'react'
 import { useTheme } from '../../theme'
+import { IconButton } from './IconButton'
+
+type IoniconName = ComponentProps<typeof Ionicons>['name']
 
 export interface ScreenHeaderProps {
   title: string
+  /** Optional glyph shown before the title — e.g. the "gift" wordmark icon on Home. */
+  titleIcon?: IoniconName
   onBack?: () => void
   rightAction?: React.ReactNode
 }
@@ -20,7 +26,8 @@ export interface ScreenHeaderProps {
  * as Home/Account, only color-adjacent. This component is the real fix:
  * every stack now sets `headerShown: false` globally and renders this
  * instead, so "Products"/"Cart"/"Order"/etc. share Home's exact structure,
- * not just its palette.
+ * not just its palette. Home itself now also renders this (via `titleIcon`
+ * for its wordmark glyph) instead of a separate hand-rolled masthead.
  *
  * Render this as a fixed sibling ABOVE a screen's ScrollView/FlatList, never
  * inside its contentContainerStyle — putting safe-area padding inside
@@ -29,7 +36,7 @@ export interface ScreenHeaderProps {
  * mistake from being repeated screen by screen).
  */
 export function ScreenHeader(props: ScreenHeaderProps): JSX.Element {
-  const { title, onBack, rightAction } = props
+  const { title, titleIcon, onBack, rightAction } = props
   const theme = useTheme()
   const insets = useSafeAreaInsets()
 
@@ -41,16 +48,8 @@ export function ScreenHeader(props: ScreenHeaderProps): JSX.Element {
       ]}
     >
       <View style={styles.left}>
-        {onBack ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-            onPress={onBack}
-            style={[styles.iconButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-          >
-            <Ionicons name="chevron-back" size={theme.sizes.icon.sm} color={theme.colors.text} />
-          </Pressable>
-        ) : null}
+        {onBack ? <IconButton icon="chevron-back" size="sm" accessibilityLabel="Go back" onPress={onBack} /> : null}
+        {titleIcon ? <Ionicons name={titleIcon} size={theme.sizes.icon.md} color={theme.colors.primary} /> : null}
         <Text
           style={[theme.typography.heading, { color: theme.colors.text, flexShrink: 1 }]}
           numberOfLines={1}
@@ -80,13 +79,6 @@ const styles = StyleSheet.create({
   right: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    gap: 8,
   },
 })

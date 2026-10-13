@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
-import { FlatList, StyleSheet, Text, View } from 'react-native'
+import { FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native'
+import { useQueryClient } from '@tanstack/react-query'
 import type { CompositeScreenProps } from '@react-navigation/native'
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
@@ -11,9 +12,11 @@ import { PriceText } from '../../../components/ui/PriceText'
 import { Skeleton } from '../../../components/ui/Skeleton'
 import { ScreenHeader } from '../../../components/ui/ScreenHeader'
 import { useTheme } from '../../../theme'
+import { confirmDestructive } from '../../../lib/confirm'
+import { useSingleTapNavigation } from '../../../lib/useSingleTapNavigation'
 import type { CartStackParamList, RootTabParamList } from '../../../navigation/types'
 import type { CartLine } from '../../../lib/api/cart'
-import { useCart } from '../hooks/useCart'
+import { CART_QUERY_KEY, useCart } from '../hooks/useCart'
 import { CartLineRow } from '../components/CartLineRow'
 import { cartErrorMessage } from '../lib/cartErrorMessage'
 
@@ -44,15 +47,27 @@ type Props = CompositeScreenProps<
  */
 export default function CartScreen({ navigation }: Props): JSX.Element {
   const theme = useTheme()
+  const queryClient = useQueryClient()
+  const { guard } = useSingleTapNavigation()
   const { cart, isLoading, error, setQuantity, updateGift, removeLine, clear } = useCart()
   const [busyLineId, setBusyLineId] = useState<string | null>(null)
   const [isClearing, setIsClearing] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
 
-  const goToCatalog = useCallback(() => {
+  const goToCatalog = guard(() => {
     // CartScreen's own stack (`CartStackParamList`) only hosts Cart + checkout; the catalog lives in
     // the sibling "Products" tab, so this reaches up to the parent bottom-tab navigator for it.
     navigation.getParent()?.navigate('Products', { screen: 'ProductList' })
-  }, [navigation])
+  })
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true)
+    try {
+      await queryClient.refetchQueries({ queryKey: CART_QUERY_KEY })
+    } finally {
+      setRefreshing(false)
+    }
+  }, [queryClient])
 
   const handleQuantityChange = useCallback(
     (line: CartLine, quantity: number) => {
@@ -84,13 +99,20 @@ export default function CartScreen({ navigation }: Props): JSX.Element {
   )
 
   const handleClear = useCallback(() => {
-    setIsClearing(true)
-    void clear().finally(() => setIsClearing(false))
+    confirmDestructive({
+      title: 'Clear cart?',
+      message: 'This removes all items from your cart. This can’t be undone.',
+      confirmLabel: 'Clear cart',
+      onConfirm: () => {
+        setIsClearing(true)
+        void clear().finally(() => setIsClearing(false))
+      },
+    })
   }, [clear])
 
-  const goToCheckout = useCallback(() => {
+  const goToCheckout = guard(() => {
     navigation.navigate('Address')
-  }, [navigation])
+  })
 
   // Cart is always the "Cart" tab's own root — never pushed onto — so,
   // like Home/Account, it never needs a back button.
@@ -146,6 +168,9 @@ export default function CartScreen({ navigation }: Props): JSX.Element {
         data={lines}
         keyExtractor={(line) => line.id}
         contentContainerStyle={styles.list}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />
+        }
         renderItem={({ item }) => (
           <CartLineRow
             line={item}
@@ -170,7 +195,7 @@ export default function CartScreen({ navigation }: Props): JSX.Element {
           />
         </View>
         <View style={styles.footerActions}>
-          <Button title="Clear cart" variant="ghost" loading={isClearing} onPress={handleClear} />
+          <Button title="Clear cart" variant="destructive" loading={isClearing} onPress={handleClear} />
           <Button title="Checkout" onPress={goToCheckout} />
         </View>
       </View>

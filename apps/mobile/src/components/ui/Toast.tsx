@@ -7,21 +7,31 @@ import React, {
   useRef,
   useState,
 } from 'react'
-import { Animated, StyleSheet, Text } from 'react-native'
+import { Animated, Pressable, StyleSheet, Text } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { useTheme } from '../../theme'
+import { useReducedMotion } from '../../lib/useReducedMotion'
 
 export type ToastVariant = 'success' | 'error' | 'info'
+
+export interface ToastAction {
+  label: string
+  onPress: () => void
+}
 
 interface ToastState {
   id: number
   message: string
   variant: ToastVariant
+  action?: ToastAction
 }
 
 interface ToastContextValue {
-  show: (message: string, variant?: ToastVariant) => void
+  /** `options.action` adds a tappable action (e.g. "Undo") alongside the
+   * message — checklist section 4: "Use a Snackbar action such as Undo when
+   * an undo operation is available." Tapping it also dismisses the toast. */
+  show: (message: string, variant?: ToastVariant, options?: { action?: ToastAction }) => void
 }
 
 const ToastContext = createContext<ToastContextValue | null>(null)
@@ -37,6 +47,7 @@ export function ToastProvider(props: { children: React.ReactNode }): JSX.Element
   const { children } = props
   const theme = useTheme()
   const insets = useSafeAreaInsets()
+  const reducedMotion = useReducedMotion()
   const [toast, setToast] = useState<ToastState | null>(null)
   const opacity = useRef(new Animated.Value(0)).current
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -53,17 +64,17 @@ export function ToastProvider(props: { children: React.ReactNode }): JSX.Element
   }, [opacity])
 
   const show = useCallback(
-    (message: string, variant: ToastVariant = 'info') => {
+    (message: string, variant: ToastVariant = 'info', options?: { action?: ToastAction }) => {
       if (timerRef.current) {
         clearTimeout(timerRef.current)
         timerRef.current = null
       }
       seqRef.current += 1
-      setToast({ id: seqRef.current, message, variant })
+      setToast({ id: seqRef.current, message, variant, action: options?.action })
       opacity.setValue(0)
       Animated.timing(opacity, {
         toValue: 1,
-        duration: 150,
+        duration: reducedMotion ? 0 : theme.motion.fast,
         useNativeDriver: true,
       }).start()
       timerRef.current = setTimeout(() => {
@@ -107,7 +118,10 @@ export function ToastProvider(props: { children: React.ReactNode }): JSX.Element
         // cart" button). Nothing occupies this top strip on any screen, so
         // it can't collide with anything, on any screen, ever.
         <Animated.View
-          pointerEvents="none"
+          // `box-none` when there's a tappable action (so it reaches through
+          // to the action button but not the background), `none` otherwise —
+          // a plain confirmation toast must stay non-blocking.
+          pointerEvents={toast.action ? 'box-none' : 'none'}
           style={[
             styles.container,
             {
@@ -121,13 +135,28 @@ export function ToastProvider(props: { children: React.ReactNode }): JSX.Element
             },
           ]}
         >
-          <Ionicons name={toneIcon} size={20} color={toneColor} />
+          <Ionicons name={toneIcon} size={theme.sizes.icon.sm} color={toneColor} />
           <Text
-            style={[theme.typography.body, { color: theme.colors.text, fontWeight: '600' }]}
+            style={[theme.typography.body, styles.message, { color: theme.colors.text, fontWeight: '600' }]}
             accessibilityLiveRegion="polite"
           >
             {toast.message}
           </Text>
+          {toast.action ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={toast.action.label}
+              onPress={() => {
+                toast.action?.onPress()
+                dismiss()
+              }}
+              hitSlop={8}
+            >
+              <Text style={[theme.typography.label, { color: theme.colors.primary, textTransform: 'uppercase' }]}>
+                {toast.action.label}
+              </Text>
+            </Pressable>
+          ) : null}
         </Animated.View>
       ) : null}
     </ToastContext.Provider>
@@ -152,5 +181,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+  },
+  message: {
+    flexShrink: 1,
   },
 })

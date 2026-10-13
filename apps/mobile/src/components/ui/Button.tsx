@@ -11,7 +11,15 @@ import { haptics } from '../../lib/haptics'
 export interface ButtonProps {
   title: string
   onPress: () => void
-  variant?: 'primary' | 'secondary' | 'ghost'
+  /**
+   * `'ghost'` is this app's tertiary variant (transparent background, text
+   * only) — there's no separately-named `'tertiary'`, `'ghost'` fills that
+   * role. `'destructive'` is for actions that delete/remove something
+   * (remove item, clear cart, delete address). For an icon-only control,
+   * use `IconButton` instead of `Button` — this component always renders a
+   * text label.
+   */
+  variant?: 'primary' | 'secondary' | 'ghost' | 'destructive'
   loading?: boolean
   disabled?: boolean
   accessibilityLabel?: string
@@ -25,6 +33,7 @@ export function Button(props: ButtonProps): JSX.Element {
   const containerStyle = [
     styles.base,
     {
+      minHeight: theme.touchTarget.min,
       borderRadius: theme.radii.pill,
       paddingVertical: theme.spacing(1.75),
       paddingHorizontal: theme.spacing(3),
@@ -36,11 +45,20 @@ export function Button(props: ButtonProps): JSX.Element {
       borderColor: theme.colors.border,
     },
     variant === 'ghost' && { backgroundColor: 'transparent' },
-    isDisabled && styles.disabled,
+    variant === 'destructive' && { backgroundColor: theme.colors.destructive, ...theme.elevation.sm },
+    // Disabled (not merely loading) gets its own token-driven look — loading
+    // keeps the variant's normal color with a spinner on top, since it's a
+    // transient "working" state, not an inert one.
+    disabled && !loading && { backgroundColor: theme.colors.disabledBackground, borderWidth: 0 },
   ]
 
-  const textColor =
-    variant === 'primary' ? theme.colors.primaryText : theme.colors.text
+  const textColor = disabled && !loading
+    ? theme.colors.disabledText
+    : variant === 'primary'
+    ? theme.colors.primaryText
+    : variant === 'destructive'
+    ? theme.colors.destructiveText
+    : theme.colors.text
 
   function handlePress(): void {
     haptics.light()
@@ -61,9 +79,7 @@ export function Button(props: ButtonProps): JSX.Element {
       {loading ? (
         <ActivityIndicator color={textColor} size="small" />
       ) : (
-        <Text style={[theme.typography.body, styles.text, { color: textColor, letterSpacing: 0.2 }]}>
-          {title}
-        </Text>
+        <Text style={[theme.typography.button, { color: textColor }]}>{title}</Text>
       )}
     </TouchableOpacity>
   )
@@ -74,11 +90,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-  },
-  text: {
-    fontWeight: '700',
-  },
-  disabled: {
-    opacity: 0.5,
   },
 })

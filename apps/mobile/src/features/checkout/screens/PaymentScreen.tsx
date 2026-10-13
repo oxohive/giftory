@@ -1,5 +1,5 @@
-import { useCallback, useState } from 'react'
-import { ScrollView, StyleSheet, Text, View } from 'react-native'
+import { useCallback, useEffect, useState } from 'react'
+import { BackHandler, ScrollView, StyleSheet, Text, View } from 'react-native'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import RazorpayCheckout from 'react-native-razorpay'
 import type { RazorpayCheckoutSuccess } from 'react-native-razorpay'
@@ -18,6 +18,7 @@ import { PriceText } from '../../../components/ui/PriceText'
 import { ScreenHeader } from '../../../components/ui/ScreenHeader'
 import { useTheme } from '../../../theme'
 import { useCheckoutSession } from '../hooks/useCheckoutSession'
+import { useSingleTapNavigation } from '../../../lib/useSingleTapNavigation'
 
 type Props = NativeStackScreenProps<CheckoutStackParamList, 'Payment'>
 
@@ -112,8 +113,21 @@ function describeRazorpayRejection(err: unknown): string {
 export default function PaymentScreen({ navigation }: Props) {
   const theme = useTheme()
   const session = useCheckoutSession()
+  const { guard } = useSingleTapNavigation()
   const [working, setWorking] = useState(false)
   const [error, setError] = useState<PaymentError | null>(null)
+
+  // A payment request is in flight (order placement, Razorpay modal, or the
+  // backend confirm/HMAC-verify step) — don't let the Android hardware back
+  // button interrupt it. Once `working` goes back to false (success, decline,
+  // or an ambiguous/retryable error) back behaves normally again.
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (working) return true
+      return false
+    })
+    return () => sub.remove()
+  }, [working])
 
   const address = session.address
   const shippingMethod = session.shippingMethod
@@ -209,7 +223,7 @@ export default function PaymentScreen({ navigation }: Props) {
     }
   }, [session, payWithRazorpay, handlePlaceOrderAndPay])
 
-  const screenHeader = <ScreenHeader title="Review & pay" onBack={navigation.goBack} />
+  const screenHeader = <ScreenHeader title="Review & pay" onBack={guard(navigation.goBack)} />
 
   if (!address || !shippingMethod) {
     return (
@@ -217,14 +231,14 @@ export default function PaymentScreen({ navigation }: Props) {
         {screenHeader}
         <ErrorState
           message="We need your address and shipping method before payment."
-          onRetry={() => navigation.replace('Address')}
+          onRetry={guard(() => navigation.replace('Address'))}
         />
       </View>
     )
   }
 
   const hasOpenOrder = Boolean(session.order)
-  const payAction = hasOpenOrder ? handleRetryPaymentOnSameOrder : handlePlaceOrderAndPay
+  const payAction = guard(hasOpenOrder ? handleRetryPaymentOnSameOrder : handlePlaceOrderAndPay)
   const payLabel = hasOpenOrder ? 'Retry payment' : 'Pay now'
 
   return (

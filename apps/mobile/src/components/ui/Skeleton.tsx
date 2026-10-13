@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react'
 import { Animated, StyleProp, ViewStyle } from 'react-native'
 import { useTheme } from '../../theme'
+import { useReducedMotion } from '../../lib/useReducedMotion'
 
 export interface SkeletonProps {
   width?: number | `${number}%`
@@ -17,9 +18,17 @@ export interface SkeletonProps {
 export function Skeleton(props: SkeletonProps): JSX.Element {
   const { width, height, style, borderRadius } = props
   const theme = useTheme()
-  const opacity = useRef(new Animated.Value(0.4)).current
+  const reducedMotion = useReducedMotion()
+  // Static mid-tone when motion is reduced — still reads as "loading" via
+  // shape alone, just without the pulse (checklist: "respect reduced-motion
+  // preferences").
+  const opacity = useRef(new Animated.Value(reducedMotion ? 0.7 : 0.4)).current
 
   useEffect(() => {
+    if (reducedMotion) {
+      opacity.setValue(0.7)
+      return
+    }
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(opacity, {
@@ -36,7 +45,7 @@ export function Skeleton(props: SkeletonProps): JSX.Element {
     )
     loop.start()
     return () => loop.stop()
-  }, [opacity])
+  }, [opacity, reducedMotion])
 
   return (
     <Animated.View

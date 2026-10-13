@@ -4,9 +4,9 @@
  * phone/PIN-code regex rules — this form only adds the UI around it.
  */
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
-import { FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native'
+import { FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { z } from 'zod'
 import type { Address } from '../../../lib/api/checkout'
 import { addressSchema, INDIAN_STATES } from '../../../lib/api/addresses'
@@ -71,8 +71,9 @@ function StatePicker(props: {
   value: string
   onChange: (state: string) => void
   error?: string
+  required?: boolean
 }): JSX.Element {
-  const { value, onChange, error } = props
+  const { value, onChange, error, required = false } = props
   const theme = useTheme()
   const [open, setOpen] = useState(false)
 
@@ -80,14 +81,16 @@ function StatePicker(props: {
     <View style={styles.fieldSpacing}>
       <Text style={[theme.typography.caption, { color: theme.colors.textMuted, marginBottom: theme.spacing(0.5) }]}>
         State
+        {required ? <Text style={{ color: theme.colors.danger }}> *</Text> : null}
       </Text>
       <Pressable
         onPress={() => setOpen(true)}
         accessibilityRole="button"
-        accessibilityLabel={`State${error ? `, error: ${error}` : ''}`}
+        accessibilityLabel={`State${required ? ', required' : ''}${error ? `, error: ${error}` : ''}`}
         style={[
           styles.pickerTrigger,
           {
+            minHeight: theme.touchTarget.min,
             borderColor: error ? theme.colors.danger : theme.colors.border,
             borderRadius: theme.radii.sm,
             backgroundColor: theme.colors.surface,
@@ -107,7 +110,7 @@ function StatePicker(props: {
       ) : null}
 
       <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
-        <View style={styles.modalOverlay}>
+        <View style={[styles.modalOverlay, { backgroundColor: theme.colors.overlay }]}>
           <View
             style={[
               styles.modalSheet,
@@ -129,7 +132,7 @@ function StatePicker(props: {
                   }}
                   accessibilityRole="button"
                   accessibilityLabel={item}
-                  style={{ paddingVertical: theme.spacing(1.25) }}
+                  style={{ paddingVertical: theme.spacing(1.25), minHeight: theme.touchTarget.min, justifyContent: 'center' }}
                 >
                   <Text style={[theme.typography.body, { color: theme.colors.text }]}>{item}</Text>
                 </Pressable>
@@ -152,11 +155,27 @@ export function AddressForm(props: AddressFormProps): JSX.Element {
   const {
     control,
     handleSubmit,
-    formState: { errors },
+    trigger,
+    formState: { errors, isValid },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
+    mode: 'onChange',
     defaultValues: toFormValues(initialValue),
   })
+
+  // See checkout/components/AddressForm.tsx's identical effect for why this
+  // is needed: without it, editing an already-valid saved address would
+  // show the submit button disabled until the user touched a field.
+  useEffect(() => {
+    trigger()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const phoneRef = useRef<TextInput>(null)
+  const line1Ref = useRef<TextInput>(null)
+  const line2Ref = useRef<TextInput>(null)
+  const cityRef = useRef<TextInput>(null)
+  const postalCodeRef = useRef<TextInput>(null)
 
   const onValid = async (values: FormValues): Promise<void> => {
     // Preserve the original behavior exactly: a blank-or-whitespace-only
@@ -178,6 +197,8 @@ export function AddressForm(props: AddressFormProps): JSX.Element {
     await onSubmit(address)
   }
 
+  const submit = handleSubmit(onValid)
+
   return (
     <View>
       <View style={styles.fieldSpacing}>
@@ -187,10 +208,13 @@ export function AddressForm(props: AddressFormProps): JSX.Element {
           render={({ field }) => (
             <Input
               label="Full name"
+              required
               value={field.value}
               onChangeText={field.onChange}
               error={errors.fullName?.message}
               placeholder="Recipient's full name"
+              returnKeyType="next"
+              onSubmitEditing={() => phoneRef.current?.focus()}
             />
           )}
         />
@@ -201,12 +225,16 @@ export function AddressForm(props: AddressFormProps): JSX.Element {
           name="phone"
           render={({ field }) => (
             <Input
+              ref={phoneRef}
               label="Phone"
+              required
               value={field.value}
               onChangeText={field.onChange}
               error={errors.phone?.message}
               placeholder="10-digit mobile number"
               keyboardType="phone-pad"
+              returnKeyType="next"
+              onSubmitEditing={() => line1Ref.current?.focus()}
             />
           )}
         />
@@ -217,11 +245,15 @@ export function AddressForm(props: AddressFormProps): JSX.Element {
           name="line1"
           render={({ field }) => (
             <Input
+              ref={line1Ref}
               label="Address line 1"
+              required
               value={field.value}
               onChangeText={field.onChange}
               error={errors.line1?.message}
               placeholder="House / flat and street"
+              returnKeyType="next"
+              onSubmitEditing={() => line2Ref.current?.focus()}
             />
           )}
         />
@@ -232,11 +264,14 @@ export function AddressForm(props: AddressFormProps): JSX.Element {
           name="line2"
           render={({ field }) => (
             <Input
+              ref={line2Ref}
               label="Address line 2 (optional)"
               value={field.value ?? ''}
               onChangeText={field.onChange}
               error={errors.line2?.message}
               placeholder="Landmark, area"
+              returnKeyType="next"
+              onSubmitEditing={() => cityRef.current?.focus()}
             />
           )}
         />
@@ -246,14 +281,26 @@ export function AddressForm(props: AddressFormProps): JSX.Element {
           control={control}
           name="city"
           render={({ field }) => (
-            <Input label="City" value={field.value} onChangeText={field.onChange} error={errors.city?.message} placeholder="City" />
+            <Input
+              ref={cityRef}
+              label="City"
+              required
+              value={field.value}
+              onChangeText={field.onChange}
+              error={errors.city?.message}
+              placeholder="City"
+              returnKeyType="next"
+              onSubmitEditing={() => postalCodeRef.current?.focus()}
+            />
           )}
         />
       </View>
       <Controller
         control={control}
         name="state"
-        render={({ field }) => <StatePicker value={field.value} onChange={field.onChange} error={errors.state?.message} />}
+        render={({ field }) => (
+          <StatePicker value={field.value} onChange={field.onChange} error={errors.state?.message} required />
+        )}
       />
       <View style={styles.fieldSpacing}>
         <Controller
@@ -261,13 +308,17 @@ export function AddressForm(props: AddressFormProps): JSX.Element {
           name="postalCode"
           render={({ field }) => (
             <Input
+              ref={postalCodeRef}
               label="PIN code"
+              required
               value={field.value}
               onChangeText={field.onChange}
               error={errors.postalCode?.message}
               placeholder="6-digit PIN code"
               keyboardType="numeric"
               maxLength={6}
+              returnKeyType="done"
+              onSubmitEditing={() => submit()}
             />
           )}
         />
@@ -278,7 +329,7 @@ export function AddressForm(props: AddressFormProps): JSX.Element {
           <Button title="Cancel" variant="secondary" onPress={onCancel} disabled={isSubmitting} />
         </View>
         <View style={{ flex: 1 }}>
-          <Button title={submitLabel} onPress={handleSubmit(onValid)} loading={isSubmitting} />
+          <Button title={submitLabel} onPress={submit} loading={isSubmitting} disabled={!isValid} />
         </View>
       </View>
     </View>
@@ -295,7 +346,6 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.4)',
   },
   modalSheet: {
     maxHeight: '80%',

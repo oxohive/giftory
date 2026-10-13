@@ -11,7 +11,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import type { AccountStackParamList } from '../../../navigation/types'
 import { getOrder, type OrderDetail } from '../../../lib/api/orders'
-import { ApiError } from '../../../lib/api/errors'
+import { classifyApiError } from '../../../lib/api/errors'
 import { useTheme } from '../../../theme'
 import { Badge } from '../../../components/ui/Badge'
 import { Card } from '../../../components/ui/Card'
@@ -22,15 +22,37 @@ import { ScreenHeader } from '../../../components/ui/ScreenHeader'
 
 type Props = NativeStackScreenProps<AccountStackParamList, 'OrderDetail'>
 
-function badgeToneForStatus(status: string): 'info' | 'success' | 'warning' {
+/**
+ * `status` is a free-form backend string (no fixed enum — see `Order`'s
+ * `status: string` in `lib/api/orders.ts`), so tone is inferred heuristically
+ * by keyword rather than switched on a known set of values.
+ */
+function badgeToneForStatus(status: string): 'info' | 'success' | 'warning' | 'danger' {
   const normalized = status.toLowerCase()
-  if (normalized.includes('paid') || normalized.includes('delivered') || normalized.includes('complete')) {
+  if (normalized.includes('cancel') || normalized.includes('fail') || normalized.includes('refund')) {
+    return 'danger'
+  }
+  if (
+    normalized.includes('deliver') ||
+    normalized.includes('paid') ||
+    normalized.includes('complete') ||
+    normalized.includes('confirm')
+  ) {
     return 'success'
   }
-  if (normalized.includes('fail') || normalized.includes('cancel') || normalized.includes('pending')) {
+  if (normalized.includes('pending') || normalized.includes('processing') || normalized.includes('ship')) {
     return 'warning'
   }
   return 'info'
+}
+
+/** Title-cases a free-form status string for display (e.g. "partially_refunded" -> "Partially Refunded"). */
+function titleCaseStatus(status: string): string {
+  return status
+    .split(/[\s_-]+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ')
 }
 
 function formatPlacedAt(iso: string): string {
@@ -44,7 +66,7 @@ export default function OrderDetailScreen({ route, navigation }: Props): JSX.Ele
   const { orderId } = route.params
   const theme = useTheme()
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<unknown>(null)
   const [order, setOrder] = useState<OrderDetail | null>(null)
 
   const load = useCallback(async () => {
@@ -54,7 +76,7 @@ export default function OrderDetailScreen({ route, navigation }: Props): JSX.Ele
       const detail = await getOrder(orderId)
       setOrder(detail)
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not load this order.')
+      setError(err)
     } finally {
       setIsLoading(false)
     }
@@ -81,7 +103,7 @@ export default function OrderDetailScreen({ route, navigation }: Props): JSX.Ele
     return (
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         {screenHeader}
-        <ErrorState message={error ?? 'Order not found.'} onRetry={load} />
+        <ErrorState message={error ? classifyApiError(error).message : 'Order not found.'} onRetry={load} />
       </View>
     )
   }
@@ -98,10 +120,15 @@ export default function OrderDetailScreen({ route, navigation }: Props): JSX.Ele
       </Text>
 
       <View style={[styles.row, { marginTop: theme.spacing(1.5) }]}>
-        {order.status ? <Badge label={order.status} tone={badgeToneForStatus(order.status)} /> : null}
+        {order.status ? (
+          <Badge label={titleCaseStatus(order.status)} tone={badgeToneForStatus(order.status)} />
+        ) : null}
         {order.payment.status ? (
           <View style={{ marginLeft: theme.spacing(1) }}>
-            <Badge label={`Payment: ${order.payment.status}`} tone={badgeToneForStatus(order.payment.status)} />
+            <Badge
+              label={`Payment: ${titleCaseStatus(order.payment.status)}`}
+              tone={badgeToneForStatus(order.payment.status)}
+            />
           </View>
         ) : null}
       </View>

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
+import { Dimensions, FlatList, ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import type { CatalogStackParamList } from '../../../navigation/types'
 import { useTheme } from '../../../theme'
@@ -12,9 +12,12 @@ import { ErrorState } from '../../../components/ui/ErrorState'
 import { EmptyState } from '../../../components/ui/EmptyState'
 import { ProductImage } from '../../../components/ui/ProductImage'
 import { ScreenHeader } from '../../../components/ui/ScreenHeader'
+import { KeyboardAwareScreen } from '../../../components/ui/KeyboardAwareScreen'
 import { useProductDetail } from '../hooks/useProductDetail'
 import { FilterChip } from '../components/FilterChip'
 import { useCart } from '../../cart/hooks/useCart'
+import { classifyApiError } from '../../../lib/api/errors'
+import { useSingleTapNavigation } from '../../../lib/useSingleTapNavigation'
 
 type Props = NativeStackScreenProps<CatalogStackParamList, 'ProductDetail'>
 
@@ -28,11 +31,17 @@ export default function ProductDetailScreen({ route, navigation }: Props): JSX.E
   const { handle } = route.params
   const { data: product, isLoading, isError, error, refetch } = useProductDetail(handle)
   const { addLine } = useCart()
+  const { guard } = useSingleTapNavigation()
 
   const [selectedVariantId, setSelectedVariantId] = useState<string | undefined>(undefined)
   const [giftWrap, setGiftWrap] = useState(false)
   const [giftMessage, setGiftMessage] = useState('')
   const [isAdding, setIsAdding] = useState(false)
+  const [activeImageIndex, setActiveImageIndex] = useState(0)
+
+  // Matches the ScrollView's `padding: theme.spacing(2)` on each side below,
+  // so each carousel page is exactly as wide as the old single hero image was.
+  const carouselWidth = Dimensions.get('window').width - theme.spacing(4)
 
   const variants = product?.variants ?? []
 
@@ -43,7 +52,7 @@ export default function ProductDetailScreen({ route, navigation }: Props): JSX.E
 
   // Generic title, not the product's own name — the body below already
   // shows that prominently as its own heading right under the hero image.
-  const screenHeader = <ScreenHeader title="Product" onBack={navigation.goBack} />
+  const screenHeader = <ScreenHeader title="Product" onBack={guard(navigation.goBack)} />
 
   if (isLoading) {
     return (
@@ -59,7 +68,7 @@ export default function ProductDetailScreen({ route, navigation }: Props): JSX.E
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         {screenHeader}
         <ErrorState
-          message={error?.message ?? 'Failed to load product'}
+          message={error ? classifyApiError(error).message : 'Failed to load product'}
           onRetry={() => refetch()}
         />
       </View>
@@ -85,16 +94,57 @@ export default function ProductDetailScreen({ route, navigation }: Props): JSX.E
       : undefined
 
   const heroImageUrl = product.media[0]?.url ?? product.imageUrl
+  const hasMediaGallery = product.media.length > 0
 
   return (
+    <KeyboardAwareScreen style={{ backgroundColor: theme.colors.background }}>
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {screenHeader}
-      <ScrollView contentContainerStyle={{ padding: theme.spacing(2) }}>
-      <ProductImage
-        uri={heroImageUrl}
-        style={[styles.heroImage, { borderRadius: theme.radii.xl }]}
-        accessibilityLabel={product.title}
-      />
+      <ScrollView contentContainerStyle={{ padding: theme.spacing(2) }} keyboardShouldPersistTaps="handled">
+      {hasMediaGallery ? (
+        <View>
+          <FlatList
+            data={product.media}
+            keyExtractor={(item) => item.id}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={(e) => {
+              const page = Math.round(e.nativeEvent.contentOffset.x / carouselWidth)
+              setActiveImageIndex(page)
+            }}
+            renderItem={({ item }) => (
+              <ProductImage
+                uri={item.url}
+                style={[styles.heroImage, { width: carouselWidth, borderRadius: theme.radii.xl }]}
+                accessibilityLabel={item.alt ?? product.title}
+              />
+            )}
+          />
+          {product.media.length > 1 ? (
+            <View style={styles.dotsRow}>
+              {product.media.map((item, index) => (
+                <View
+                  key={item.id}
+                  style={[
+                    styles.dot,
+                    {
+                      backgroundColor:
+                        index === activeImageIndex ? theme.colors.primary : theme.colors.border,
+                    },
+                  ]}
+                />
+              ))}
+            </View>
+          ) : null}
+        </View>
+      ) : (
+        <ProductImage
+          uri={heroImageUrl}
+          style={[styles.heroImage, { borderRadius: theme.radii.xl }]}
+          accessibilityLabel={product.title}
+        />
+      )}
 
       <View style={styles.headerRow}>
         <Text style={[theme.typography.heading, { color: theme.colors.text, flex: 1 }]}>
@@ -156,12 +206,16 @@ export default function ProductDetailScreen({ route, navigation }: Props): JSX.E
 
       <View style={{ marginTop: theme.spacing(2) }}>
         <Input
-          label={`Gift message (${giftMessage.length}/${giftMessageMax})`}
+          label="Gift message"
           value={giftMessage}
           onChangeText={setGiftMessage}
           placeholder="Add a personal note (optional)"
           error={giftMessageError}
           accessibilityLabel="Gift message"
+          maxLength={giftMessageMax}
+          showCharacterCount
+          returnKeyType="done"
+          blurOnSubmit
         />
       </View>
 
@@ -192,6 +246,7 @@ export default function ProductDetailScreen({ route, navigation }: Props): JSX.E
       </View>
       </ScrollView>
     </View>
+    </KeyboardAwareScreen>
   )
 }
 
@@ -201,6 +256,18 @@ const styles = StyleSheet.create({
   },
   heroImage: {
     height: 240,
+  },
+  dotsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+    gap: 6,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   headerRow: {
     flexDirection: 'row',

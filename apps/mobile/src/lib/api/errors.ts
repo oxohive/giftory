@@ -30,3 +30,33 @@ export class ApiError extends Error {
     Object.setPrototypeOf(this, ApiError.prototype)
   }
 }
+
+export interface ClassifiedError {
+  kind: 'validation' | 'server' | 'network'
+  message: string
+}
+
+const SERVER_ERROR_MESSAGE = 'Something went wrong on our end. Please try again in a moment.'
+const NETWORK_ERROR_MESSAGE = 'Could not reach the server. Check your connection and try again.'
+
+/**
+ * Shared network/server/validation classification (checklist section 7:
+ * "Define network-failure state" / "Define server/API-error state" as
+ * DISTINCT states, not one generic error message). Previously only
+ * `PaymentScreen`'s local `describeOrderError` made this distinction —
+ * every other screen's `ErrorState` collapsed all failures into one
+ * message. Screens should pass `classifyApiError(error).message` to
+ * `ErrorState` instead of `error?.message` directly.
+ */
+export function classifyApiError(err: unknown): ClassifiedError {
+  if (err instanceof ApiError) {
+    if (err.status >= 500 || err.status === 0) {
+      return { kind: 'server', message: SERVER_ERROR_MESSAGE }
+    }
+    return { kind: 'validation', message: err.message }
+  }
+  if (err instanceof Error) {
+    return { kind: 'network', message: NETWORK_ERROR_MESSAGE }
+  }
+  return { kind: 'network', message: NETWORK_ERROR_MESSAGE }
+}

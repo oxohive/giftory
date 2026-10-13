@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { ScrollView, StyleSheet, Text, View } from 'react-native'
+import { useCallback, useEffect, useState } from 'react'
+import { BackHandler, ScrollView, StyleSheet, Text, View } from 'react-native'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import type { CheckoutStackParamList } from '../../../navigation/types'
 import { ApiError } from '../../../lib/api/errors'
@@ -14,6 +14,7 @@ import { PriceText } from '../../../components/ui/PriceText'
 import { ScreenHeader } from '../../../components/ui/ScreenHeader'
 import { useToast } from '../../../components/ui/Toast'
 import { haptics } from '../../../lib/haptics'
+import { useSingleTapNavigation } from '../../../lib/useSingleTapNavigation'
 import { useTheme } from '../../../theme'
 import { useCheckoutSession } from '../hooks/useCheckoutSession'
 import { useCart } from '../../cart/hooks/useCart'
@@ -24,6 +25,7 @@ type Props = NativeStackScreenProps<CheckoutStackParamList, 'Confirmation'>
 export default function ConfirmationScreen({ route, navigation }: Props) {
   const theme = useTheme()
   const session = useCheckoutSession()
+  const { guard } = useSingleTapNavigation()
   const { orderId } = route.params
   const { clear: clearCart } = useCart()
   const { track: trackOrder } = useLocalOrderHistory()
@@ -84,7 +86,7 @@ export default function ConfirmationScreen({ route, navigation }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId])
 
-  function handleContinueShopping(): void {
+  const handleContinueShopping = useCallback((): void => {
     // The attempt is complete — rotate the idempotency key so any future
     // checkout starts a brand-new attempt rather than reusing this one's key.
     session.restart()
@@ -92,10 +94,23 @@ export default function ConfirmationScreen({ route, navigation }: Props) {
     // referencing it by name across param lists (this screen is only typed
     // against CheckoutStackParamList, which doesn't include 'Cart').
     navigation.popToTop()
-  }
+  }, [session, navigation])
 
-  // Deliberately no `onBack` — after a successful payment, navigating back
-  // into the payment/review screens isn't a state this app should offer.
+  const guardedContinueShopping = guard(handleContinueShopping)
+
+  // Deliberately no `onBack` on the header — after a successful payment,
+  // navigating back into the payment/review screens isn't a state this app
+  // should offer. For the same reason, intercept the Android hardware back
+  // button here and send the user down the same "Continue shopping" path
+  // instead of letting it pop back into the now-stale checkout stack.
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      guardedContinueShopping()
+      return true
+    })
+    return () => sub.remove()
+  }, [guardedContinueShopping])
+
   const screenHeader = <ScreenHeader title="Order confirmed" />
 
   if (loading) {
@@ -165,7 +180,7 @@ export default function ConfirmationScreen({ route, navigation }: Props) {
         </>
       ) : null}
 
-      <Button title="Continue shopping" onPress={handleContinueShopping} />
+      <Button title="Continue shopping" onPress={guardedContinueShopping} />
       </ScrollView>
     </View>
   )

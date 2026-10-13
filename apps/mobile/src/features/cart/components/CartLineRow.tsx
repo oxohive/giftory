@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import { Button } from '../../../components/ui/Button'
 import { Card } from '../../../components/ui/Card'
+import { IconButton } from '../../../components/ui/IconButton'
 import { Input } from '../../../components/ui/Input'
 import { PriceText } from '../../../components/ui/PriceText'
 import { ProductImage } from '../../../components/ui/ProductImage'
 import { useTheme } from '../../../theme'
+import { confirmDestructive } from '../../../lib/confirm'
 import type { CartLine } from '../../../lib/api/cart'
 import { DEFAULT_GIFT_MESSAGE_MAX_LENGTH } from '../lib/cartErrorMessage'
 
@@ -66,6 +68,15 @@ export function CartLineRow(props: CartLineRowProps): JSX.Element {
   const decrementDisabled = busy || line.quantity <= 1
   const incrementDisabled = busy
 
+  function handleRemovePress(): void {
+    confirmDestructive({
+      title: 'Remove item?',
+      message: `Remove "${line.title}" from your cart?`,
+      confirmLabel: 'Remove',
+      onConfirm: onRemove,
+    })
+  }
+
   return (
     <Card style={styles.card}>
       <View style={styles.header}>
@@ -84,9 +95,9 @@ export function CartLineRow(props: CartLineRowProps): JSX.Element {
       </View>
 
       <View style={[styles.row, styles.stepper]}>
-        <Button
-          title="-"
-          variant="secondary"
+        <IconButton
+          icon="remove-circle-outline"
+          variant="surface"
           disabled={decrementDisabled}
           accessibilityLabel="Decrease quantity"
           onPress={() => onQuantityChange(line.quantity - 1)}
@@ -97,9 +108,9 @@ export function CartLineRow(props: CartLineRowProps): JSX.Element {
         >
           {line.quantity}
         </Text>
-        <Button
-          title="+"
-          variant="secondary"
+        <IconButton
+          icon="add-circle-outline"
+          variant="surface"
           disabled={incrementDisabled}
           accessibilityLabel="Increase quantity"
           onPress={() => onQuantityChange(line.quantity + 1)}
@@ -124,11 +135,19 @@ export function CartLineRow(props: CartLineRowProps): JSX.Element {
           error={messageError ?? undefined}
           placeholder="Add a gift message (optional)"
           accessibilityLabel="Gift message"
+          maxLength={DEFAULT_GIFT_MESSAGE_MAX_LENGTH}
+          showCharacterCount
         />
       </View>
 
       <View style={[styles.row, styles.footer]}>
-        <Button title="Remove" variant="ghost" disabled={busy} onPress={onRemove} accessibilityLabel="Remove item" />
+        <Button
+          title="Remove"
+          variant="destructive"
+          disabled={busy}
+          onPress={handleRemovePress}
+          accessibilityLabel="Remove item"
+        />
       </View>
     </Card>
   )

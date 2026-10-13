@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import type { BottomSheetModal } from '@gorhom/bottom-sheet'
 import type { CatalogStackParamList } from '../../../navigation/types'
@@ -16,6 +16,8 @@ import { ProductFilters, type ProductFiltersValue } from '../components/ProductF
 import { ProductFiltersSheet } from '../components/ProductFiltersSheet'
 import { DEFAULT_PAGE_SIZE } from '../constants'
 import type { ProductListParams } from '../../../lib/api/catalog'
+import { classifyApiError } from '../../../lib/api/errors'
+import { useSingleTapNavigation } from '../../../lib/useSingleTapNavigation'
 
 type Props = NativeStackScreenProps<CatalogStackParamList, 'ProductList'>
 
@@ -75,6 +77,7 @@ export default function ProductListScreen({ navigation, route }: Props): JSX.Ele
   const { data, isLoading, isFetching, isError, error, refetch } = useProducts(queryParams)
   const { data: categories } = useCategories()
   const { data: occasions } = useOccasions()
+  const { guard } = useSingleTapNavigation()
 
   // Sheet lives once per screen; `ProductFilters`' compact "Filters" button
   // opens it via this ref (TASK-14 — see ProductFiltersSheet.tsx for why the
@@ -94,7 +97,9 @@ export default function ProductListScreen({ navigation, route }: Props): JSX.Ele
   // Products is reachable two ways: as the "Products" tab's own root (no
   // back needed) or pushed from Home via an occasion tile (back needed) —
   // `canGoBack()` reflects which is true at runtime for THIS instance.
-  const screenHeader = <ScreenHeader title="Products" onBack={navigation.canGoBack() ? navigation.goBack : undefined} />
+  const screenHeader = (
+    <ScreenHeader title="Products" onBack={navigation.canGoBack() ? guard(navigation.goBack) : undefined} />
+  )
 
   const header = (
     <View>
@@ -149,7 +154,7 @@ export default function ProductListScreen({ navigation, route }: Props): JSX.Ele
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         {screenHeader}
         <ErrorState
-          message={error?.message ?? 'Failed to load products'}
+          message={error ? classifyApiError(error).message : 'Failed to load products'}
           onRetry={() => refetch()}
         />
         {filtersSheet}
@@ -173,6 +178,9 @@ export default function ProductListScreen({ navigation, route }: Props): JSX.Ele
             />
           }
           contentContainerStyle={styles.emptyContainer}
+          refreshControl={
+            <RefreshControl refreshing={isFetching} onRefresh={() => refetch()} tintColor={theme.colors.primary} />
+          }
         />
         {filtersSheet}
       </View>
@@ -189,10 +197,13 @@ export default function ProductListScreen({ navigation, route }: Props): JSX.Ele
         contentContainerStyle={{ padding: theme.spacing(2) }}
         columnWrapperStyle={styles.row}
         ListHeaderComponent={header}
+        refreshControl={
+          <RefreshControl refreshing={isFetching} onRefresh={() => refetch()} tintColor={theme.colors.primary} />
+        }
         renderItem={({ item }) => (
           <ProductCard
             product={item}
-            onPress={() => navigation.navigate('ProductDetail', { handle: item.handle })}
+            onPress={guard(() => navigation.navigate('ProductDetail', { handle: item.handle }))}
           />
         )}
       />

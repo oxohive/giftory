@@ -51,22 +51,24 @@ function ProductsTab() {
  */
 export default function RootTabNavigator() {
   const theme = useTheme()
-  const barColor = theme.isDark ? '#2E1C22' : '#201218'
 
   return (
     <Tab.Navigator
       appearance={{
         floating: true,
-        tabBarBackground: barColor,
-        activeTabBackgrounds: '#FFFFFF',
+        tabBarBackground: theme.colors.navBarBackground,
+        activeTabBackgrounds: theme.colors.navBarActiveDot,
         dotCornerRadius: 999,
-        whenActiveShow: TabElementDisplayOptions.ICON_ONLY,
-        whenInactiveShow: TabElementDisplayOptions.ICON_ONLY,
+        // Both states now show icon + label (checklist section 2: "keep tab
+        // order, icons, labels and selected states consistent" — the bar
+        // was icon-only, with no labels at all, before this).
+        whenActiveShow: TabElementDisplayOptions.BOTH,
+        whenInactiveShow: TabElementDisplayOptions.BOTH,
         shadow: true,
       }}
       tabBarOptions={{
-        activeTintColor: barColor,
-        inactiveTintColor: 'rgba(255,255,255,0.55)',
+        activeTintColor: theme.colors.navBarBackground,
+        inactiveTintColor: theme.colors.navBarInactive,
       }}
     >
       <Tab.Screen name="Home" component={HomeTab} options={{ tabBarIcon: tabIcon('Home') }} />

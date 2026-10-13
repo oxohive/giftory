@@ -2,7 +2,7 @@ import React from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import { useTheme } from '../../theme'
 
-export function Badge(props: { label: string; tone?: 'info' | 'success' | 'warning' }): JSX.Element {
+export function Badge(props: { label: string; tone?: 'info' | 'success' | 'warning' | 'danger' }): JSX.Element {
   const { label, tone = 'info' } = props
   const theme = useTheme()
 
@@ -11,6 +11,8 @@ export function Badge(props: { label: string; tone?: 'info' | 'success' | 'warni
       ? theme.colors.success
       : tone === 'warning'
       ? theme.colors.warning
+      : tone === 'danger'
+      ? theme.colors.danger
       : theme.colors.primary
 
   return (
