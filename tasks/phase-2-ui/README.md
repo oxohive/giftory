@@ -59,7 +59,7 @@ Dependency numbers below refer to P2-UI task IDs.
 | [P2-UI-02](TASK-02-dealer-authorization-and-data-isolation-prerequisite.md) | Dealer authorization and data isolation prerequisite | A | 00 | Review |
 | [P2-UI-03](TASK-03-missing-ui-data-and-lifecycle-apis.md) | Missing UI data and lifecycle APIs | A | 00, 02 | Review |
 | [P2-UI-04](TASK-04-dealer-authentication-and-access-states.md) | Dealer authentication and access states | B | 00, 01, 02, 03 | Review |
-| [P2-UI-05](TASK-05-dealer-registration-and-kyc-screens.md) | Dealer registration and KYC screens | B | 01, 03, 04 | Planned |
+| [P2-UI-05](TASK-05-dealer-registration-and-kyc-screens.md) | Dealer registration and KYC screens | B | 01, 03, 04 | Review |
 | [P2-UI-06](TASK-06-dealer-profile-and-capabilities-screens.md) | Dealer profile and capabilities screens | B | 01, 03, 04 | Planned |
 | [P2-UI-07](TASK-07-dealer-staff-management-screens.md) | Dealer staff management screens | B | 01, 03, 04 | Planned |
 | [P2-UI-08](TASK-08-dealer-dashboard.md) | Dealer dashboard | C | 01, 03, 04 | Review |
