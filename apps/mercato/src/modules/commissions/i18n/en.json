@@ -19,6 +19,170 @@
     },
     "warnings": {
       "noRuleFound": "No commission rule found for dealer {{dealerProfileId}} — recording commission as 0"
+    },
+    "admin": {
+      "nav": { "group": "Dealers" },
+      "rules": {
+        "page": {
+          "title": "Commission rules",
+          "description": "Platform, dealer, and product-type commission rates. When more than one rule could apply to an order, the most specific scope wins (dealer + product type, then dealer default, then platform default); within the same scope the rule with the latest effective-from date wins. Deactivating a rule only affects orders assigned from today onward — it never changes the commission already frozen on an existing order."
+        },
+        "bpsHelp": "Rates are entered in basis points (bps): 100 bps = 1%, and the maximum is 10,000 bps (100%). A commission amount is always rounded to the nearest paise: amount = round(order subtotal in paise × rate bps ÷ 10,000).",
+        "tier": {
+          "dealerProductType": "Dealer + product type",
+          "dealerDefault": "Dealer default",
+          "platform": "Platform default",
+          "unreachable": "Unreachable (no dealer set)"
+        },
+        "scope": {
+          "platformWide": "Platform-wide (all dealers)"
+        },
+        "status": {
+          "active": "Active",
+          "inactive": "Deactivated"
+        },
+        "table": {
+          "title": "Rules",
+          "empty": "No commission rules yet. Create one to set a platform, dealer, or product-type rate.",
+          "column": {
+            "scope": "Scope",
+            "rate": "Rate",
+            "effective": "Effective",
+            "status": "Status",
+            "createdAt": "Created"
+          },
+          "window": {
+            "range": "{{from}} – {{to}}",
+            "ongoing": "{{from}} – ongoing"
+          },
+          "filters": {
+            "dealer": "Dealer",
+            "productType": "Product type code",
+            "includeDeactivated": "Show deactivated rules too"
+          }
+        },
+        "actions": {
+          "create": "Create rule",
+          "deactivate": "Deactivate",
+          "refresh": "Refresh",
+          "viewDealerHistory": "Dealer commission history",
+          "viewHistoryForDealer": "View this dealer's commission history"
+        },
+        "confirmDeactivate": {
+          "title": "Deactivate commission rule",
+          "text": "This stops the rule from applying to any order assigned from today onward. It never changes the frozen rate on orders already assigned — commission snapshots are immutable."
+        },
+        "flash": {
+          "created": "Commission rule created",
+          "deactivated": "Commission rule deactivated"
+        },
+        "errors": {
+          "load": "Failed to load commission rules",
+          "deactivate": "Failed to deactivate rule",
+          "forbidden": "You don't have permission to view commission rules."
+        },
+        "form": {
+          "create": {
+            "title": "Create commission rule",
+            "submit": "Create rule"
+          },
+          "groups": {
+            "scope": "Rule scope and rate",
+            "preview": "Preview"
+          },
+          "fields": {
+            "dealer": "Dealer",
+            "dealer.help": "Leave empty to create a platform-wide default that applies to every dealer with no more specific rule.",
+            "productType": "Product type code",
+            "productType.help": "Optional. Scopes the rule to one product type for the selected dealer. Requires a dealer — a product-type rule cannot apply to \"all dealers\".",
+            "rateBps": "Rate (basis points)",
+            "rateBps.help": "Between 1 and 10,000 bps. 100 bps = 1%; 10,000 bps = 100%.",
+            "effectiveFrom": "Effective from",
+            "effectiveFrom.help": "The rule applies to orders assigned on or after this date. When more than one rule in the same scope could match, the one with the latest effective-from date wins."
+          },
+          "errors": {
+            "unreachableScope": "A product-type rule needs a dealer selected — it can never match \"all dealers\". Either pick a dealer, or clear the product type."
+          },
+          "preview": {
+            "rateTitle": "Rate preview",
+            "rateBody": "{{bps}} — on an example ₹10,000 order subtotal, that is a {{example}} commission.",
+            "rateEmpty": "Enter a rate between 1 and 10,000 bps to see the equivalent percentage and an example commission amount.",
+            "unreachableWarning": "A product-type rule with no dealer selected can never win: the commission engine only checks product-type rules for a specific dealer, never for \"all dealers\". Either pick a dealer, or clear the product type to create a platform-wide default.",
+            "overlapTitle": "Existing rules for this exact scope",
+            "overlapLoading": "Checking for existing rules…",
+            "overlapNone": "No existing rule matches this exact dealer + product-type combination yet.",
+            "overlapHint": "There is no server-side overlap guard. The new rule you are creating will win over these only once its effective-from date is the latest among matching rules as of a given order's assignment date.",
+            "currentlyWins": "currently wins",
+            "ongoing": "ongoing"
+          }
+        }
+      },
+      "dealerHistory": {
+        "title": "Commission history",
+        "titleWithDealer": "Commission history — {{dealer}}",
+        "description": "Every commission snapshot ever frozen for this dealer's assigned orders, newest first. Each row is immutable: it shows exactly the rate and amount recorded at assignment time, even if the underlying rule has since been edited or deactivated.",
+        "immutabilityNotice": "These rows never change after the fact. Deactivating or editing a commission rule only affects orders assigned from that point onward — it cannot rewrite a snapshot already recorded here.",
+        "pageTotal": {
+          "label": "Commission total (this page only)",
+          "hint": "Sums only the rows currently shown — there is no lifetime-total endpoint for commissions."
+        },
+        "table": {
+          "title": "Commission snapshots",
+          "empty": "No commission has been recorded for this dealer yet.",
+          "noRule": "No rule matched (₹0)",
+          "column": {
+            "date": "Frozen at",
+            "order": "Order",
+            "rate": "Rate (frozen)",
+            "subtotal": "Order subtotal",
+            "amount": "Commission (frozen)",
+            "rule": "Rule applied"
+          }
+        },
+        "actions": { "refresh": "Refresh" },
+        "error": {
+          "dealer": "Failed to load dealer",
+          "dealerNotFound": "Dealer not found or not approved"
+        },
+        "picker": {
+          "title": "Dealer commission history",
+          "description": "Pick a dealer to see every commission snapshot ever frozen for their orders — the recorded rate and amount never changes once an order is assigned, even if the rule is later edited or deactivated.",
+          "notice": "Only approved dealers appear here.",
+          "searchPlaceholder": "Search by business name or email",
+          "actions": { "refresh": "Refresh" },
+          "table": {
+            "title": "Approved dealers",
+            "empty": "No approved dealers yet.",
+            "column": {
+              "name": "Dealer",
+              "email": "Contact email",
+              "location": "Location"
+            }
+          }
+        }
+      },
+      "orderTab": {
+        "tabLabel": "Commission",
+        "loading": "Loading commission…",
+        "immutableNotice": "This is the rate and amount frozen when the order was assigned to this dealer. It never changes afterward — even if the commission rule that produced it is later edited or deactivated.",
+        "ruleIdHint": "Applied rule id: {{ruleId}}",
+        "noRuleHint": "No commission rule matched this dealer/product type at assignment time — the commission was recorded as 0.",
+        "field": {
+          "rate": "Commission rate (frozen)",
+          "subtotal": "Order subtotal",
+          "amount": "Commission amount (frozen)",
+          "snapshottedAt": "Frozen at"
+        },
+        "empty": {
+          "title": "No commission recorded",
+          "description": "This order has not been assigned to a dealer, or no commission snapshot exists for it yet. A snapshot is created automatically the moment an order is assigned to a dealer."
+        },
+        "errors": {
+          "load": "Failed to load commission for this order",
+          "forbidden": "You don't have permission to view this order's commission."
+        },
+        "actions": { "retry": "Retry" }
+      }
     }
   }
 }
