@@ -7,15 +7,17 @@ Gift marketplace built on Open Mercato 0.8.0. See [docs/architecture.md](docs/ar
 ```
 apps/mercato/     # Backend + admin (Open Mercato), port 3000
 apps/storefront/  # Customer storefront (Next.js), port 3100
+apps/mobile/      # Customer storefront (Expo/React Native), Phase 1 port — guest-only, Razorpay only, verified live on a physical device (catalog/cart/nav); Razorpay payment itself not yet verified (see apps/mobile/README.md)
 infra/            # OpenTofu (Terraform) — AWS ECS Fargate + CodeBuild CI/CD
 docs/             # Architecture and decision documents
 spec/             # Feature specs, user stories, ADRs (spec-driven development)
   phase-1/        # Phase 1 — Commerce Foundation (implemented)
   phase-2/        # Phase 2 — Dealer Marketplace (implemented)
+  mobile/         # Mobile app task breakdown + implementation notes
   decisions/      # Architecture Decision Records (ADR-XXX)
 ```
 
-Each app has its own `AGENTS.md` with detailed rules — read those before editing.
+Each app has its own `AGENTS.md` with detailed rules — read those before editing. `apps/mobile` has no `AGENTS.md` yet (it's a standalone app outside the Open Mercato module system this file otherwise governs) — its own `README.md` is the entry point.
 
 ## Setup
 
