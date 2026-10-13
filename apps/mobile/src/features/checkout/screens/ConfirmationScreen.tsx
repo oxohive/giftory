@@ -11,6 +11,7 @@ import { Card } from '../../../components/ui/Card'
 import { ErrorState } from '../../../components/ui/ErrorState'
 import { LoadingState } from '../../../components/ui/LoadingState'
 import { PriceText } from '../../../components/ui/PriceText'
+import { ScreenHeader } from '../../../components/ui/ScreenHeader'
 import { useToast } from '../../../components/ui/Toast'
 import { haptics } from '../../../lib/haptics'
 import { useTheme } from '../../../theme'
@@ -93,10 +94,23 @@ export default function ConfirmationScreen({ route, navigation }: Props) {
     navigation.popToTop()
   }
 
-  if (loading) return <LoadingState label="Loading your order..." />
+  // Deliberately no `onBack` — after a successful payment, navigating back
+  // into the payment/review screens isn't a state this app should offer.
+  const screenHeader = <ScreenHeader title="Order confirmed" />
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        {screenHeader}
+        <LoadingState label="Loading your order..." />
+      </View>
+    )
+  }
 
   return (
-    <ScrollView contentContainerStyle={{ padding: theme.spacing(2), gap: theme.spacing(1.5) }}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      {screenHeader}
+      <ScrollView contentContainerStyle={{ padding: theme.spacing(2), gap: theme.spacing(1.5) }}>
       <Badge label="Order placed" tone="success" />
       <Text style={[theme.typography.heading, { color: theme.colors.text }]}>Thank you!</Text>
 
@@ -152,11 +166,13 @@ export default function ConfirmationScreen({ route, navigation }: Props) {
       ) : null}
 
       <Button title="Continue shopping" onPress={handleContinueShopping} />
-    </ScrollView>
+      </ScrollView>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
+  container: { flex: 1 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   lineRow: {
     flexDirection: 'row',

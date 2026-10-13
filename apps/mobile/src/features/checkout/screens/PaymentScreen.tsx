@@ -15,6 +15,7 @@ import { Button } from '../../../components/ui/Button'
 import { Card } from '../../../components/ui/Card'
 import { ErrorState } from '../../../components/ui/ErrorState'
 import { PriceText } from '../../../components/ui/PriceText'
+import { ScreenHeader } from '../../../components/ui/ScreenHeader'
 import { useTheme } from '../../../theme'
 import { useCheckoutSession } from '../hooks/useCheckoutSession'
 
@@ -208,12 +209,17 @@ export default function PaymentScreen({ navigation }: Props) {
     }
   }, [session, payWithRazorpay, handlePlaceOrderAndPay])
 
+  const screenHeader = <ScreenHeader title="Review & pay" onBack={navigation.goBack} />
+
   if (!address || !shippingMethod) {
     return (
-      <ErrorState
-        message="We need your address and shipping method before payment."
-        onRetry={() => navigation.replace('Address')}
-      />
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        {screenHeader}
+        <ErrorState
+          message="We need your address and shipping method before payment."
+          onRetry={() => navigation.replace('Address')}
+        />
+      </View>
     )
   }
 
@@ -222,9 +228,9 @@ export default function PaymentScreen({ navigation }: Props) {
   const payLabel = hasOpenOrder ? 'Retry payment' : 'Pay now'
 
   return (
-    <ScrollView contentContainerStyle={{ padding: theme.spacing(2), gap: theme.spacing(1.5) }}>
-      <Text style={[theme.typography.heading, { color: theme.colors.text }]}>Review & pay</Text>
-
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      {screenHeader}
+      <ScrollView contentContainerStyle={{ padding: theme.spacing(2), gap: theme.spacing(1.5) }}>
       <Card>
         <Text style={[theme.typography.subheading, { color: theme.colors.text }]}>Deliver to</Text>
         <Text style={[theme.typography.body, { color: theme.colors.text, marginTop: 4 }]}>{address.fullName}</Text>
@@ -262,10 +268,12 @@ export default function PaymentScreen({ navigation }: Props) {
       ) : (
         <Button title={payLabel} onPress={payAction} loading={working} disabled={working} />
       )}
-    </ScrollView>
+      </ScrollView>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
+  container: { flex: 1 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
 })

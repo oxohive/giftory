@@ -18,6 +18,7 @@ import { Card } from '../../../components/ui/Card'
 import { ErrorState } from '../../../components/ui/ErrorState'
 import { LoadingState } from '../../../components/ui/LoadingState'
 import { PriceText } from '../../../components/ui/PriceText'
+import { ScreenHeader } from '../../../components/ui/ScreenHeader'
 
 type Props = NativeStackScreenProps<AccountStackParamList, 'OrderDetail'>
 
@@ -39,7 +40,7 @@ function formatPlacedAt(iso: string): string {
   return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
-export default function OrderDetailScreen({ route }: Props): JSX.Element {
+export default function OrderDetailScreen({ route, navigation }: Props): JSX.Element {
   const { orderId } = route.params
   const theme = useTheme()
   const [isLoading, setIsLoading] = useState(true)
@@ -63,21 +64,34 @@ export default function OrderDetailScreen({ route }: Props): JSX.Element {
     load()
   }, [load])
 
+  // Generic title — the body below already shows the real order number
+  // prominently as its own heading.
+  const screenHeader = <ScreenHeader title="Order" onBack={navigation.goBack} />
+
   if (isLoading) {
-    return <LoadingState label="Loading order" />
+    return (
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        {screenHeader}
+        <LoadingState label="Loading order" />
+      </View>
+    )
   }
 
   if (error || !order) {
-    return <ErrorState message={error ?? 'Order not found.'} onRetry={load} />
+    return (
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        {screenHeader}
+        <ErrorState message={error ?? 'Order not found.'} onRetry={load} />
+      </View>
+    )
   }
 
   const address = order.shippingAddress
 
   return (
-    <ScrollView
-      style={{ backgroundColor: theme.colors.background }}
-      contentContainerStyle={{ padding: theme.spacing(2) }}
-    >
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      {screenHeader}
+      <ScrollView contentContainerStyle={{ padding: theme.spacing(2) }}>
       <Text style={[theme.typography.heading, { color: theme.colors.text }]}>{order.orderNumber}</Text>
       <Text style={[theme.typography.caption, { color: theme.colors.textMuted, marginTop: theme.spacing(0.5) }]}>
         Placed {formatPlacedAt(order.placedAt)}
@@ -152,11 +166,15 @@ export default function OrderDetailScreen({ route }: Props): JSX.Element {
           <PriceText amountMajor={order.grandTotalGrossMajor} currencyCode={order.currencyCode} />
         </View>
       </Card>
-    </ScrollView>
+      </ScrollView>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

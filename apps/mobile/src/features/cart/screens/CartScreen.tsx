@@ -9,6 +9,7 @@ import { EmptyState } from '../../../components/ui/EmptyState'
 import { ErrorState } from '../../../components/ui/ErrorState'
 import { PriceText } from '../../../components/ui/PriceText'
 import { Skeleton } from '../../../components/ui/Skeleton'
+import { ScreenHeader } from '../../../components/ui/ScreenHeader'
 import { useTheme } from '../../../theme'
 import type { CartStackParamList, RootTabParamList } from '../../../navigation/types'
 import type { CartLine } from '../../../lib/api/cart'
@@ -91,21 +92,30 @@ export default function CartScreen({ navigation }: Props): JSX.Element {
     navigation.navigate('Address')
   }, [navigation])
 
+  // Cart is always the "Cart" tab's own root — never pushed onto — so,
+  // like Home/Account, it never needs a back button.
+  const screenHeader = <ScreenHeader title="Cart" />
+
   if (isLoading && !cart) {
     return (
-      <View
-        style={[styles.container, styles.list, { backgroundColor: theme.colors.background }]}
-        accessibilityLabel="Loading your cart"
-      >
-        <CartLineRowSkeleton />
-        <CartLineRowSkeleton />
-        <CartLineRowSkeleton />
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        {screenHeader}
+        <View style={styles.list} accessibilityLabel="Loading your cart">
+          <CartLineRowSkeleton />
+          <CartLineRowSkeleton />
+          <CartLineRowSkeleton />
+        </View>
       </View>
     )
   }
 
   if (error && !cart) {
-    return <ErrorState message={cartErrorMessage(error)} />
+    return (
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        {screenHeader}
+        <ErrorState message={cartErrorMessage(error)} />
+      </View>
+    )
   }
 
   const lines = cart?.lines ?? []
@@ -113,6 +123,7 @@ export default function CartScreen({ navigation }: Props): JSX.Element {
   if (lines.length === 0) {
     return (
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        {screenHeader}
         <EmptyState
           title="Your cart is empty"
           description="Browse the catalog to find the perfect gift."
@@ -124,6 +135,7 @@ export default function CartScreen({ navigation }: Props): JSX.Element {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      {screenHeader}
       {error ? (
         <View style={styles.errorBanner}>
           <ErrorState message={cartErrorMessage(error)} />

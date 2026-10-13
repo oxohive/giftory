@@ -6,6 +6,7 @@ import type { CatalogStackParamList } from '../../../navigation/types'
 import { useTheme } from '../../../theme'
 import { ErrorState } from '../../../components/ui/ErrorState'
 import { EmptyState } from '../../../components/ui/EmptyState'
+import { ScreenHeader } from '../../../components/ui/ScreenHeader'
 import { useProducts } from '../hooks/useProducts'
 import { useCategories } from '../hooks/useCategories'
 import { useOccasions } from '../hooks/useOccasions'
@@ -90,6 +91,11 @@ export default function ProductListScreen({ navigation, route }: Props): JSX.Ele
     />
   )
 
+  // Products is reachable two ways: as the "Products" tab's own root (no
+  // back needed) or pushed from Home via an occasion tile (back needed) —
+  // `canGoBack()` reflects which is true at runtime for THIS instance.
+  const screenHeader = <ScreenHeader title="Products" onBack={navigation.canGoBack() ? navigation.goBack : undefined} />
+
   const header = (
     <View>
       <ProductFilters
@@ -122,7 +128,8 @@ export default function ProductListScreen({ navigation, route }: Props): JSX.Ele
 
   if (isLoading) {
     return (
-      <>
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        {screenHeader}
         <FlatList
           data={SKELETON_PLACEHOLDERS}
           keyExtractor={(item) => item}
@@ -133,25 +140,27 @@ export default function ProductListScreen({ navigation, route }: Props): JSX.Ele
           renderItem={() => <ProductCardSkeleton />}
         />
         {filtersSheet}
-      </>
+      </View>
     )
   }
 
   if (isError) {
     return (
-      <>
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        {screenHeader}
         <ErrorState
           message={error?.message ?? 'Failed to load products'}
           onRetry={() => refetch()}
         />
         {filtersSheet}
-      </>
+      </View>
     )
   }
 
   if (!data || data.items.length === 0) {
     return (
-      <>
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        {screenHeader}
         <FlatList
           data={[]}
           keyExtractor={() => 'empty'}
@@ -166,12 +175,13 @@ export default function ProductListScreen({ navigation, route }: Props): JSX.Ele
           contentContainerStyle={styles.emptyContainer}
         />
         {filtersSheet}
-      </>
+      </View>
     )
   }
 
   return (
-    <>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      {screenHeader}
       <FlatList
         data={data.items}
         keyExtractor={(item) => item.id}
@@ -187,11 +197,14 @@ export default function ProductListScreen({ navigation, route }: Props): JSX.Ele
         )}
       />
       {filtersSheet}
-    </>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   row: {
     justifyContent: 'space-between',
   },

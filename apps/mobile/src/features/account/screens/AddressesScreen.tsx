@@ -12,6 +12,8 @@
  */
 import { useCallback, useEffect, useState } from 'react'
 import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native'
+import type { NativeStackScreenProps } from '@react-navigation/native-stack'
+import type { AccountStackParamList } from '../../../navigation/types'
 import {
   createAddress,
   deleteAddress,
@@ -28,11 +30,14 @@ import { Card } from '../../../components/ui/Card'
 import { EmptyState } from '../../../components/ui/EmptyState'
 import { ErrorState } from '../../../components/ui/ErrorState'
 import { LoadingState } from '../../../components/ui/LoadingState'
+import { ScreenHeader } from '../../../components/ui/ScreenHeader'
 import { AddressForm } from '../components/AddressForm'
 
 type FormMode = { kind: 'create' } | { kind: 'edit'; address: StoredAddress }
 
-export default function AddressesScreen(): JSX.Element {
+type Props = NativeStackScreenProps<AccountStackParamList, 'Addresses'>
+
+export default function AddressesScreen({ navigation }: Props): JSX.Element {
   const theme = useTheme()
   const [isLoading, setIsLoading] = useState(true)
   const [isGated, setIsGated] = useState(false)
@@ -112,56 +117,72 @@ export default function AddressesScreen(): JSX.Element {
     ])
   }
 
+  const screenHeader = <ScreenHeader title="Addresses" onBack={navigation.goBack} />
+
   if (isLoading) {
-    return <LoadingState label="Loading addresses" />
+    return (
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        {screenHeader}
+        <LoadingState label="Loading addresses" />
+      </View>
+    )
   }
 
   if (isGated) {
     return (
-      <View style={[styles.container, { backgroundColor: theme.colors.background, padding: theme.spacing(2) }]}>
-        <Card>
-          <Badge label="Sign-in required" tone="warning" />
-          <Text style={[theme.typography.subheading, { color: theme.colors.text, marginTop: theme.spacing(1) }]}>
-            Sign in to manage saved addresses
-          </Text>
-          <Text style={[theme.typography.body, { color: theme.colors.textMuted, marginTop: theme.spacing(1) }]}>
-            Saved addresses are tied to an account. Sign-in isn't available yet in this app — once it is, your
-            address book will show up here automatically.
-          </Text>
-        </Card>
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        {screenHeader}
+        <View style={{ padding: theme.spacing(2) }}>
+          <Card>
+            <Badge label="Sign-in required" tone="warning" />
+            <Text style={[theme.typography.subheading, { color: theme.colors.text, marginTop: theme.spacing(1) }]}>
+              Sign in to manage saved addresses
+            </Text>
+            <Text style={[theme.typography.body, { color: theme.colors.textMuted, marginTop: theme.spacing(1) }]}>
+              Saved addresses are tied to an account. Sign-in isn't available yet in this app — once it is, your
+              address book will show up here automatically.
+            </Text>
+          </Card>
+        </View>
       </View>
     )
   }
 
   if (error) {
-    return <ErrorState message={error} onRetry={load} />
+    return (
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        {screenHeader}
+        <ErrorState message={error} onRetry={load} />
+      </View>
+    )
   }
 
   if (formMode) {
     const initialValue = formMode.kind === 'edit' ? formMode.address : undefined
     return (
-      <View style={[styles.container, { backgroundColor: theme.colors.background, padding: theme.spacing(2) }]}>
-        <Text style={[theme.typography.heading, { color: theme.colors.text, marginBottom: theme.spacing(2) }]}>
-          {formMode.kind === 'create' ? 'Add address' : 'Edit address'}
-        </Text>
-        <AddressForm
-          initialValue={initialValue}
-          submitLabel={formMode.kind === 'create' ? 'Save address' : 'Save changes'}
-          isSubmitting={isSubmitting}
-          onCancel={() => setFormMode(null)}
-          onSubmit={(value) =>
-            formMode.kind === 'create' ? handleCreate(value) : handleUpdate(formMode.address.id, value)
-          }
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <ScreenHeader
+          title={formMode.kind === 'create' ? 'Add address' : 'Edit address'}
+          onBack={() => setFormMode(null)}
         />
+        <View style={{ padding: theme.spacing(2) }}>
+          <AddressForm
+            initialValue={initialValue}
+            submitLabel={formMode.kind === 'create' ? 'Save address' : 'Save changes'}
+            isSubmitting={isSubmitting}
+            onCancel={() => setFormMode(null)}
+            onSubmit={(value) =>
+              formMode.kind === 'create' ? handleCreate(value) : handleUpdate(formMode.address.id, value)
+            }
+          />
+        </View>
       </View>
     )
   }
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <View style={{ padding: theme.spacing(2), paddingBottom: 0 }}>
-        <Text style={[theme.typography.heading, { color: theme.colors.text }]}>Saved addresses</Text>
-      </View>
+      {screenHeader}
 
       {addresses.length === 0 ? (
         <EmptyState

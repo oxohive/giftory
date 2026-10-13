@@ -10,6 +10,7 @@ import { Card } from '../../../components/ui/Card'
 import { ErrorState } from '../../../components/ui/ErrorState'
 import { LoadingState } from '../../../components/ui/LoadingState'
 import { PriceText } from '../../../components/ui/PriceText'
+import { ScreenHeader } from '../../../components/ui/ScreenHeader'
 import { useTheme } from '../../../theme'
 import { useCheckoutSession } from '../hooks/useCheckoutSession'
 import { useCart } from '../../cart/hooks/useCart'
@@ -63,19 +64,40 @@ export default function ShippingScreen({ navigation }: Props) {
     load()
   }, [load])
 
-  if (loading) return <LoadingState label="Loading shipping options..." />
-  if (error) return <ErrorState message={error} onRetry={load} />
+  const screenHeader = <ScreenHeader title="Shipping" onBack={navigation.goBack} />
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        {screenHeader}
+        <LoadingState label="Loading shipping options..." />
+      </View>
+    )
+  }
+  if (error) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        {screenHeader}
+        <ErrorState message={error} onRetry={load} />
+      </View>
+    )
+  }
   if (!methods || methods.length === 0) {
-    return <ErrorState message="No shipping methods are available for this address." onRetry={load} />
+    return (
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        {screenHeader}
+        <ErrorState message="No shipping methods are available for this address." onRetry={load} />
+      </View>
+    )
   }
 
   const selected = methods.find((m) => m.id === selectedId) ?? methods[0]
   const estimatedTotalMajor = cartSubtotalMajor + selected.amountMajor
 
   return (
-    <ScrollView contentContainerStyle={{ padding: theme.spacing(2), gap: theme.spacing(1.5) }}>
-      <Text style={[theme.typography.heading, { color: theme.colors.text }]}>Shipping method</Text>
-
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      {screenHeader}
+      <ScrollView contentContainerStyle={{ padding: theme.spacing(2), gap: theme.spacing(1.5) }}>
       {methods.map((method) => {
         const isSelected = method.id === selected.id
         return (
@@ -117,10 +139,12 @@ export default function ShippingScreen({ navigation }: Props) {
           navigation.navigate('Payment')
         }}
       />
-    </ScrollView>
+      </ScrollView>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
+  container: { flex: 1 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
 })

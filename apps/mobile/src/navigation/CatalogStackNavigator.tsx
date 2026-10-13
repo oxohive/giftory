@@ -15,13 +15,18 @@ type Props = {
  * Rendered twice by the bottom-tab navigator: once per tab ("Home" and
  * "Products"), each with a different `initialRouteName`, so both tabs share
  * one typed stack instead of duplicating screens.
+ *
+ * Native header disabled stack-wide — every screen renders its own
+ * `ScreenHeader` instead, so they share Home's exact header structure
+ * (icon buttons, padding, safe-area handling) rather than React
+ * Navigation's platform header, which can never fully match a custom one.
  */
 export default function CatalogStackNavigator({ initialRouteName = 'Home' }: Props) {
   return (
-    <Stack.Navigator initialRouteName={initialRouteName}>
-      <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="ProductList" component={ProductListScreen} options={{ title: 'Products' }} />
-      <Stack.Screen name="ProductDetail" component={ProductDetailScreen} options={{ title: 'Product' }} />
+    <Stack.Navigator initialRouteName={initialRouteName} screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Home" component={HomeScreen} />
+      <Stack.Screen name="ProductList" component={ProductListScreen} />
+      <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
     </Stack.Navigator>
   )
 }

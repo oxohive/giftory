@@ -14,15 +14,18 @@ const Stack = createNativeStackNavigator<CartStackParamList>()
  * push straight through checkout. The checkout screens themselves are typed
  * against `CheckoutStackParamList` (the contract TASK-07 depends on) in
  * their own files; this navigator just mounts them alongside `Cart`.
+ *
+ * Native header disabled stack-wide — every screen renders its own
+ * `ScreenHeader` instead; see CatalogStackNavigator for why.
  */
 export default function CartStackNavigator() {
   return (
-    <Stack.Navigator initialRouteName="Cart">
-      <Stack.Screen name="Cart" component={CartScreen} options={{ title: 'Cart' }} />
-      <Stack.Screen name="Address" component={AddressScreen} options={{ title: 'Address' }} />
-      <Stack.Screen name="Shipping" component={ShippingScreen} options={{ title: 'Shipping' }} />
-      <Stack.Screen name="Payment" component={PaymentScreen} options={{ title: 'Payment' }} />
-      <Stack.Screen name="Confirmation" component={ConfirmationScreen} options={{ title: 'Confirmation' }} />
+    <Stack.Navigator initialRouteName="Cart" screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Cart" component={CartScreen} />
+      <Stack.Screen name="Address" component={AddressScreen} />
+      <Stack.Screen name="Shipping" component={ShippingScreen} />
+      <Stack.Screen name="Payment" component={PaymentScreen} />
+      <Stack.Screen name="Confirmation" component={ConfirmationScreen} />
     </Stack.Navigator>
   )
 }

@@ -43,6 +43,7 @@ import { Badge } from '../../../components/ui/Badge'
 import { Card } from '../../../components/ui/Card'
 import { EmptyState } from '../../../components/ui/EmptyState'
 import { LoadingState } from '../../../components/ui/LoadingState'
+import { ScreenHeader } from '../../../components/ui/ScreenHeader'
 import { useLocalOrderHistory, type TrackedOrder } from '../../orders/hooks/useLocalOrderHistory'
 
 type Props = NativeStackScreenProps<AccountStackParamList, 'Account'>
@@ -93,9 +94,8 @@ export default function AccountScreen({ navigation }: Props): JSX.Element {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <View style={{ padding: theme.spacing(2) }}>
-        <Text style={[theme.typography.heading, { color: theme.colors.text }]}>Account</Text>
-
+      <ScreenHeader title="Account" />
+      <View style={{ paddingHorizontal: theme.spacing(2) }}>
         <Card style={{ marginTop: theme.spacing(2) }}>
           <Badge label="Browsing as guest" tone="warning" />
           <Text style={[theme.typography.body, { color: theme.colors.text, marginTop: theme.spacing(1) }]}>

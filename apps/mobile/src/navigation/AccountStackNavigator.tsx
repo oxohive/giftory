@@ -6,13 +6,18 @@ import type { AccountStackParamList } from './types'
 
 const Stack = createNativeStackNavigator<AccountStackParamList>()
 
-/** Hosts Account -> Addresses and Account -> OrderDetail. */
+/**
+ * Hosts Account -> Addresses and Account -> OrderDetail.
+ *
+ * Native header disabled stack-wide — every screen renders its own
+ * `ScreenHeader` instead; see CatalogStackNavigator for why.
+ */
 export default function AccountStackNavigator() {
   return (
-    <Stack.Navigator initialRouteName="Account">
-      <Stack.Screen name="Account" component={AccountScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="Addresses" component={AddressesScreen} options={{ title: 'Addresses' }} />
-      <Stack.Screen name="OrderDetail" component={OrderDetailScreen} options={{ title: 'Order' }} />
+    <Stack.Navigator initialRouteName="Account" screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Account" component={AccountScreen} />
+      <Stack.Screen name="Addresses" component={AddressesScreen} />
+      <Stack.Screen name="OrderDetail" component={OrderDetailScreen} />
     </Stack.Navigator>
   )
 }

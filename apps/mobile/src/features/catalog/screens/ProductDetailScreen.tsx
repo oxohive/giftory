@@ -11,6 +11,7 @@ import { LoadingState } from '../../../components/ui/LoadingState'
 import { ErrorState } from '../../../components/ui/ErrorState'
 import { EmptyState } from '../../../components/ui/EmptyState'
 import { ProductImage } from '../../../components/ui/ProductImage'
+import { ScreenHeader } from '../../../components/ui/ScreenHeader'
 import { useProductDetail } from '../hooks/useProductDetail'
 import { FilterChip } from '../components/FilterChip'
 import { useCart } from '../../cart/hooks/useCart'
@@ -22,7 +23,7 @@ type Props = NativeStackScreenProps<CatalogStackParamList, 'ProductDetail'>
  * (TASK-09) — no local provider wrapper needed here. This also means
  * `useCart()` below shares the same cache as the Cart tab/checkout screens.
  */
-export default function ProductDetailScreen({ route }: Props): JSX.Element {
+export default function ProductDetailScreen({ route, navigation }: Props): JSX.Element {
   const theme = useTheme()
   const { handle } = route.params
   const { data: product, isLoading, isError, error, refetch } = useProductDetail(handle)
@@ -32,8 +33,6 @@ export default function ProductDetailScreen({ route }: Props): JSX.Element {
   const [giftWrap, setGiftWrap] = useState(false)
   const [giftMessage, setGiftMessage] = useState('')
   const [isAdding, setIsAdding] = useState(false)
-  const [addError, setAddError] = useState<string | null>(null)
-  const [added, setAdded] = useState(false)
 
   const variants = product?.variants ?? []
 
@@ -42,21 +41,38 @@ export default function ProductDetailScreen({ route }: Props): JSX.Element {
     return variants.find((v) => v.id === selectedVariantId) ?? variants[0]
   }, [variants, selectedVariantId])
 
+  // Generic title, not the product's own name — the body below already
+  // shows that prominently as its own heading right under the hero image.
+  const screenHeader = <ScreenHeader title="Product" onBack={navigation.goBack} />
+
   if (isLoading) {
-    return <LoadingState label="Loading product..." />
+    return (
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        {screenHeader}
+        <LoadingState label="Loading product..." />
+      </View>
+    )
   }
 
   if (isError) {
     return (
-      <ErrorState
-        message={error?.message ?? 'Failed to load product'}
-        onRetry={() => refetch()}
-      />
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        {screenHeader}
+        <ErrorState
+          message={error?.message ?? 'Failed to load product'}
+          onRetry={() => refetch()}
+        />
+      </View>
     )
   }
 
   if (!product) {
-    return <EmptyState title="Product not found" />
+    return (
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        {screenHeader}
+        <EmptyState title="Product not found" />
+      </View>
+    )
   }
 
   const displayPricing = selectedVariant?.pricing ?? product.pricing
@@ -71,8 +87,14 @@ export default function ProductDetailScreen({ route }: Props): JSX.Element {
   const heroImageUrl = product.media[0]?.url ?? product.imageUrl
 
   return (
-    <ScrollView contentContainerStyle={{ padding: theme.spacing(2) }}>
-      <ProductImage uri={heroImageUrl} style={styles.heroImage} accessibilityLabel={product.title} />
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      {screenHeader}
+      <ScrollView contentContainerStyle={{ padding: theme.spacing(2) }}>
+      <ProductImage
+        uri={heroImageUrl}
+        style={[styles.heroImage, { borderRadius: theme.radii.xl }]}
+        accessibilityLabel={product.title}
+      />
 
       <View style={styles.headerRow}>
         <Text style={[theme.typography.heading, { color: theme.colors.text, flex: 1 }]}>
@@ -143,25 +165,16 @@ export default function ProductDetailScreen({ route }: Props): JSX.Element {
         />
       </View>
 
-      {addError ? (
-        <Text style={[theme.typography.caption, { color: theme.colors.danger, marginTop: theme.spacing(1) }]}>
-          {addError}
-        </Text>
-      ) : null}
-      {added ? (
-        <Text style={[theme.typography.caption, { color: theme.colors.success, marginTop: theme.spacing(1) }]}>
-          Added to cart.
-        </Text>
-      ) : null}
-
       <View style={{ marginTop: theme.spacing(3) }}>
         <Button
           title="Add to cart"
           disabled={Boolean(giftMessageError)}
           loading={isAdding}
           onPress={() => {
-            setAddError(null)
-            setAdded(false)
+            // Success/failure feedback is already handled globally by
+            // useCart()'s addLine mutation (toast + haptics) — no local
+            // inline message needed here; this screen only needs to track
+            // its own button's busy state.
             setIsAdding(true)
             addLine({
               productId: product.id,
@@ -170,22 +183,24 @@ export default function ProductDetailScreen({ route }: Props): JSX.Element {
               giftWrap,
               giftMessage: giftMessage || undefined,
             })
-              .then(() => setAdded(true))
-              .catch((err: unknown) => {
-                setAddError(err instanceof Error ? err.message : 'Could not add this item to your cart.')
+              .catch(() => {
+                // Already surfaced via the global toast; nothing else to do here.
               })
               .finally(() => setIsAdding(false))
           }}
         />
       </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   heroImage: {
     height: 240,
-    borderRadius: 12,
   },
   headerRow: {
     flexDirection: 'row',
