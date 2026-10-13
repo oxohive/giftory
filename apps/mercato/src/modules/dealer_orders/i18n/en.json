@@ -1,0 +1,35 @@
+{
+  "dealer_orders": {
+    "errors": {
+      "orderNotFound": "Order not found",
+      "orderNotPaid": "Order must be in paid status before it can be assigned",
+      "orderAlreadyAssigned": "Order already has an active assignment; use reassign to change the dealer",
+      "assignmentNotFound": "Assignment not found",
+      "dealerNotFound": "Dealer not found",
+      "dealerNotApproved": "Dealer is not approved to receive orders",
+      "invalidStatusTransition": "Invalid status transition: {{from}} → {{to}}",
+      "assignmentCancelled": "Assignment is cancelled and cannot be updated",
+      "idempotencyKeyRequired": "Idempotency-Key header is required for this operation"
+    },
+    "audit": {
+      "assign": "Assign order to dealer",
+      "reassign": "Reassign order to different dealer",
+      "cancel": "Cancel dealer order assignment",
+      "updateStatus": "Update dealer order status"
+    },
+    "status": {
+      "assigned": "Assigned",
+      "acknowledged": "Acknowledged",
+      "in_production": "In Production",
+      "ready_for_dispatch": "Ready for Dispatch",
+      "dispatched": "Dispatched",
+      "cancelled": "Cancelled"
+    },
+    "notifications": {
+      "orderAssigned": {
+        "title": "New order assigned",
+        "body": "You have been assigned a new order. Log in to the dealer portal to view it."
+      }
+    }
+  }
+}

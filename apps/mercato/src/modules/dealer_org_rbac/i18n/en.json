@@ -1,0 +1,23 @@
+{
+  "dealer_org": {
+    "errors": {
+      "dealerNotFound": "Dealer not found",
+      "dealerNotApproved": "Dealer must be approved to perform this action",
+      "missingTenantScope": "Missing tenant scope — check authentication context",
+      "missingOrgScope": "Missing organization scope — check authentication context",
+      "capabilitiesNotFound": "Dealer capabilities not configured yet",
+      "staffInviteFailed": "Failed to invite staff user"
+    },
+    "audit": {
+      "upsertCapabilities": "Update dealer capabilities",
+      "inviteStaff": "Invite dealer staff user"
+    },
+    "printingMethods": {
+      "sublimation": "Sublimation Printing",
+      "dtg": "Direct-to-Garment (DTG)",
+      "laser_engraving": "Laser Engraving",
+      "uv_print": "UV Printing",
+      "offset": "Offset Printing"
+    }
+  }
+}

@@ -15,5 +15,6 @@ dist
 *.log
 
 .mercato/generated
+.mercato/next/.cache
 
 storage

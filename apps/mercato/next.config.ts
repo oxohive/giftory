@@ -31,6 +31,11 @@ const nextConfig: NextConfig & { agentRules?: boolean } = {
   experimental: {
     serverMinification: false,
     turbopackMinify: false,
+    // Limit static-generation workers to 2 to stay within Docker's memory
+    // budget. Default is os.cpus().length (up to 15), which OOMs at build time.
+    // The runner stage is blocked on COPY --from=builder so it no longer runs
+    // concurrently with next build; 2 workers at 1 GB each is safe.
+    cpus: 2,
     // Mirror apps/mercato: treat these barrel-heavy packages as having
     // modularized exports so only the named exports actually used are
     // evaluated. Keeps scaffolded apps on the same client-bundle baseline.

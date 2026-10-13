@@ -58,6 +58,9 @@ Thumbs.db
 .codex/
 .mcp.json
 .cursor/mcp.json
+
+# Staged framework-upgrade files, not real sources
+*.incoming
 .ai/sessions*.json
 .ai/session-exports/
 .ai/qa/test-env.json
