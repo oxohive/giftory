@@ -6,11 +6,15 @@
       "missingTenantScope": "Missing tenant scope — check authentication context",
       "missingOrgScope": "Missing organization scope — check authentication context",
       "capabilitiesNotFound": "Dealer capabilities not configured yet",
-      "staffInviteFailed": "Failed to invite staff user"
+      "staffInviteFailed": "Failed to invite staff user",
+      "cannotDeactivateSelf": "An owner cannot deactivate their own account",
+      "staffNotFound": "Staff user not found",
+      "capabilitiesVersionMismatch": "Capabilities were updated by someone else; reload and try again"
     },
     "audit": {
       "upsertCapabilities": "Update dealer capabilities",
-      "inviteStaff": "Invite dealer staff user"
+      "inviteStaff": "Invite dealer staff user",
+      "deactivateStaff": "Deactivate dealer staff user"
     },
     "printingMethods": {
       "sublimation": "Sublimation Printing",

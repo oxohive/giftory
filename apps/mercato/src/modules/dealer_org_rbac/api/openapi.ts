@@ -48,6 +48,25 @@ export const staffInviteResponseSchema = z.object({
   email: z.string().email(),
 })
 
+export const dealerStaffMemberWireSchema = z.object({
+  id: z.string().uuid(),
+  email: z.string().email(),
+  name: z.string().nullable(),
+  role: z.enum(['dealer:owner', 'dealer:staff']),
+  isActive: z.boolean(),
+  lastLoginAt: z.string().nullable(),
+  createdAt: z.string().nullable(),
+})
+
+export const staffListResponseSchema = z.object({
+  items: z.array(dealerStaffMemberWireSchema),
+})
+
+export const staffDeactivateResponseSchema = z.object({
+  userId: z.string().uuid(),
+  deactivated: z.literal(true),
+})
+
 export function commonAdminErrors() {
   return [
     { status: 401, description: 'Authentication required' },
