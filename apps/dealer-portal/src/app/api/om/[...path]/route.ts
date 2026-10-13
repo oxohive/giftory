@@ -1,6 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { isAllowed, NO_REFRESH } from '@/lib/http/allowlist'
 import { buildLoginForm } from '@/lib/http/login'
+import { isAuthAllowed, AUTH_NO_REFRESH, AUTH_FORM_ENCODED_PATHS } from '@/lib/auth/allowlist'
+import { buildResetRequestForm, buildResetValidateForm, buildResetConfirmForm } from '@/lib/auth/reset-form'
+import { isTrustedOrigin } from '@/lib/auth/csrf'
 
 /**
  * BFF proxy: browser -> dealer-portal (/api/om/*) -> apps/mercato (/api/*).
@@ -8,8 +11,9 @@ import { buildLoginForm } from '@/lib/http/login'
  * Why: the shared core-auth session uses httpOnly cookies (`auth_token`, `session_token`) set
  * on the backend origin. Proxying keeps them first-party on the dealer-portal origin and avoids
  * CORS entirely (the backend ships no CORS support). Only an explicit allowlist of
- * dealer-facing + shared-auth routes is reachable (src/lib/http/allowlist.ts) — admin routes
- * are never proxied here; admin screens live in apps/mercato directly.
+ * dealer-facing + shared-auth routes is reachable (src/lib/http/allowlist.ts, extended by
+ * src/lib/auth/allowlist.ts for the installed password-reset/invite-setup flow — see P2-UI-04) —
+ * admin routes are never proxied here; admin screens live in apps/mercato directly.
  *
  * Two real differences from the shared core-auth contract (verified against
  * @open-mercato/core's auth module source, not the module's own stale AGENTS.md note):
@@ -17,7 +21,14 @@ import { buildLoginForm } from '@/lib/http/login'
  * - `POST /api/auth/session/refresh` takes `{refreshToken}` in a JSON body, not the session
  *   cookie — and `POST /api/auth/logout` redirects (302) rather than returning JSON.
  * This route normalizes all three so every dealer-portal call can go through the same JSON
- * client (@gift/api-client's `request()`), including login/logout.
+ * client (@gift/api-client's `request()`), including login/logout. P2-UI-04 additionally
+ * normalizes the installed password-reset routes (`auth/reset`, `auth/reset/validate`,
+ * `auth/reset/confirm`), which share the same form-encoded-only quirk as login.
+ *
+ * CSRF (P2-UI-04): every mutating method is rejected with 403 if it carries an `Origin` header
+ * that doesn't match this app's own origin — see src/lib/auth/csrf.ts for why this was chosen
+ * over a double-submit token (zero client-side integration cost for every feature task that
+ * adds a mutating call on top of this proxy).
  */
 
 export const dynamic = 'force-dynamic'
@@ -35,6 +46,22 @@ function clientIp(req: NextRequest): string | null {
   const forwarded = req.headers.get('x-forwarded-for')
   if (forwarded) return forwarded.split(',')[0]?.trim() || null
   return req.headers.get('x-real-ip')
+}
+
+/**
+ * `req.nextUrl.origin` is NOT this app's origin as the browser/a proxy in front of it sees it —
+ * verified directly against a running dev server: with `Host: 127.0.0.1:3201`, `nextUrl.origin`
+ * still reported `http://localhost:3201` (Next's own internally-resolved canonical URL, decoupled
+ * from the actual `Host` header). Comparing an incoming `Origin` header against `nextUrl.origin`
+ * would reject legitimate same-origin requests any time the externally-visible host differs from
+ * Next's internal one — always true behind this app's production ALB. Mirrors the backend's own
+ * `resolveRequestOrigin` (@open-mercato/shared's `lib/url.ts`) instead: derive the origin from
+ * the request's own forwarded/host headers, never from `nextUrl`.
+ */
+function selfOrigin(req: NextRequest): string {
+  const proto = req.headers.get('x-forwarded-proto') || req.nextUrl.protocol.replace(':', '')
+  const host = req.headers.get('x-forwarded-host') || req.headers.get('host') || req.nextUrl.host
+  return `${proto}://${host}`
 }
 
 function cookieHeader(values: Record<string, string | undefined>): string | null {
@@ -96,20 +123,45 @@ async function buildBody(req: NextRequest, path: string, sessionToken: string | 
       return raw || undefined
     }
   }
+  if (AUTH_FORM_ENCODED_PATHS.has(path)) {
+    try {
+      const json = raw ? (JSON.parse(raw) as Record<string, unknown>) : {}
+      if (path === 'auth/reset') {
+        return buildResetRequestForm({ email: typeof json.email === 'string' ? json.email : '' })
+      }
+      if (path === 'auth/reset/validate') {
+        return buildResetValidateForm({ token: typeof json.token === 'string' ? json.token : '' })
+      }
+      // auth/reset/confirm
+      return buildResetConfirmForm({
+        token: typeof json.token === 'string' ? json.token : '',
+        password: typeof json.password === 'string' ? json.password : '',
+      })
+    } catch {
+      return raw || undefined
+    }
+  }
   return raw || undefined
 }
 
 function contentTypeFor(path: string, original: string | null): string | null {
   if (path === 'auth/login') return 'application/x-www-form-urlencoded'
   if (path === 'auth/session/refresh') return 'application/json'
+  if (AUTH_FORM_ENCODED_PATHS.has(path)) return 'application/x-www-form-urlencoded'
   return original
 }
 
 async function proxy(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
   const { path: segments } = await ctx.params
   const path = segments.map((s) => s.trim()).filter(Boolean).join('/')
-  if (!isAllowed(path, req.method)) {
+  if (!isAllowed(path, req.method) && !isAuthAllowed(path, req.method)) {
     return NextResponse.json({ error: 'Not available' }, { status: 404 })
+  }
+
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    if (!isTrustedOrigin(req.headers.get('origin'), selfOrigin(req))) {
+      return NextResponse.json({ error: 'Invalid origin' }, { status: 403 })
+    }
   }
 
   const headers = new Headers()
@@ -123,7 +175,7 @@ async function proxy(req: NextRequest, ctx: { params: Promise<{ path: string[] }
   let authToken = req.cookies.get(AUTH_COOKIE)?.value
   const sessionToken = req.cookies.get(SESSION_COOKIE)?.value
   let refreshedCookies: string[] = []
-  if (!authToken && sessionToken && !NO_REFRESH.has(path)) {
+  if (!authToken && sessionToken && !NO_REFRESH.has(path) && !AUTH_NO_REFRESH.has(path)) {
     refreshedCookies = await refreshSession(sessionToken)
     authToken = readSetCookieValue(refreshedCookies, AUTH_COOKIE) ?? undefined
   }

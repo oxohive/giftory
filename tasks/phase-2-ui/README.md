@@ -58,7 +58,7 @@ Dependency numbers below refer to P2-UI task IDs.
 | [P2-UI-01](TASK-01-dealer-portal-scaffold-and-shared-ui-foundation.md) | Dealer portal scaffold and shared UI foundation | A | 00 | Review |
 | [P2-UI-02](TASK-02-dealer-authorization-and-data-isolation-prerequisite.md) | Dealer authorization and data isolation prerequisite | A | 00 | Review |
 | [P2-UI-03](TASK-03-missing-ui-data-and-lifecycle-apis.md) | Missing UI data and lifecycle APIs | A | 00, 02 | Review |
-| [P2-UI-04](TASK-04-dealer-authentication-and-access-states.md) | Dealer authentication and access states | B | 00, 01, 02, 03 | Planned |
+| [P2-UI-04](TASK-04-dealer-authentication-and-access-states.md) | Dealer authentication and access states | B | 00, 01, 02, 03 | Review |
 | [P2-UI-05](TASK-05-dealer-registration-and-kyc-screens.md) | Dealer registration and KYC screens | B | 01, 03, 04 | Planned |
 | [P2-UI-06](TASK-06-dealer-profile-and-capabilities-screens.md) | Dealer profile and capabilities screens | B | 01, 03, 04 | Planned |
 | [P2-UI-07](TASK-07-dealer-staff-management-screens.md) | Dealer staff management screens | B | 01, 03, 04 | Planned |
@@ -66,7 +66,7 @@ Dependency numbers below refer to P2-UI task IDs.
 | [P2-UI-09](TASK-09-dealer-assigned-orders-list.md) | Dealer assigned orders list | C | 01, 02, 03, 04 | Planned |
 | [P2-UI-10](TASK-10-dealer-order-detail-and-production-status.md) | Dealer order detail and production status | C | 01, 02, 03, 04 | Planned |
 | [P2-UI-11](TASK-11-admin-kyc-application-review.md) | Admin KYC application review | D | 00, 03 | Review |
-| [P2-UI-12](TASK-12-admin-dealer-directory-and-capabilities.md) | Admin dealer directory and capabilities | D | 00, 03 | Planned |
+| [P2-UI-12](TASK-12-admin-dealer-directory-and-capabilities.md) | Admin dealer directory and capabilities | D | 00, 03 | Review |
 | [P2-UI-13](TASK-13-admin-order-assignment-ui.md) | Admin order assignment UI | D | 00, 02, 03 | Planned |
 | [P2-UI-14](TASK-14-dealer-earnings-and-ledger-screens.md) | Dealer earnings and ledger screens | E | 00, 01, 02, 04 | Planned |
 | [P2-UI-15](TASK-15-admin-commission-management.md) | Admin commission management | E | 00, 02 | Review |
