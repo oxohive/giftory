@@ -40,19 +40,28 @@ export async function executeStaffInvite(
     systemActor: true,
   }
 
-  const { result } = await commandBus.execute<Record<string, unknown>, { id: string }>('auth.users.create', {
-    input: {
-      email: parsed.email,
-      name: parsed.name,
-      organizationId: orgId,
-      roles: [DEALER_STAFF_ROLE],
-      sendInviteEmail: true,
-      tenantId,
+  // `auth.users.create` returns `{ user, warning }` (@open-mercato/core's
+  // `commands/users.ts`), not a flat `{ id }` — the generic type param
+  // below previously claimed `{ id: string }`, which TypeScript trusted
+  // without checking against the real command's actual return type, so
+  // `result.id` silently resolved to `undefined` at runtime on every
+  // invite. Confirmed by reading the real command source directly.
+  const { result } = await commandBus.execute<Record<string, unknown>, { user: { id: string }; warning?: string }>(
+    'auth.users.create',
+    {
+      input: {
+        email: parsed.email,
+        name: parsed.name,
+        organizationId: orgId,
+        roles: [DEALER_STAFF_ROLE],
+        sendInviteEmail: true,
+        tenantId,
+      },
+      ctx: systemCtx,
     },
-    ctx: systemCtx,
-  })
+  )
 
-  return { userId: result.id, email: parsed.email }
+  return { userId: result.user.id, email: parsed.email }
 }
 
 const command: CommandHandler<Record<string, unknown>, { userId: string; email: string }> = {
