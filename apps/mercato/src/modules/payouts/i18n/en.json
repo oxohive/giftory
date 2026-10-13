@@ -15,6 +15,112 @@
       "creditCommission": "Credit commission earned",
       "recordPayout": "Record payout disbursement",
       "createAdjustment": "Create ledger adjustment"
+    },
+    "admin": {
+      "nav": {
+        "group": "Dealers"
+      },
+      "actions": {
+        "cancel": "Cancel",
+        "recording": "Recording…"
+      },
+      "entryType": {
+        "commission_earned": "Commission earned",
+        "payout_disbursed": "Payout recorded",
+        "adjustment_credit": "Adjustment (credit)",
+        "adjustment_debit": "Adjustment (debit)"
+      },
+      "dealerPicker": {
+        "title": "Payouts",
+        "description": "Pick a dealer to view their ledger, record a payout, or add an adjustment.",
+        "notice": "Payouts are always viewed per dealer. Only approved dealers appear here.",
+        "searchPlaceholder": "Search by business name or email",
+        "table": {
+          "title": "Approved dealers",
+          "empty": "No approved dealers yet.",
+          "column": {
+            "name": "Dealer",
+            "email": "Contact email",
+            "location": "Location"
+          }
+        }
+      },
+      "ledger": {
+        "title": "Payout ledger",
+        "titleWithDealer": "Payout ledger — {{dealer}}",
+        "description": "Append-only record of commissions earned, payouts recorded, and manual adjustments for this dealer.",
+        "moneyDisclaimer": "Recording a payout here documents a payment that was already completed outside Giftory (e.g. a bank transfer). It does not send any money — Giftory has no disbursement integration yet.",
+        "actions": {
+          "recordPayout": "Record payout",
+          "addAdjustment": "Add adjustment"
+        },
+        "balance": {
+          "pending": "Pending balance",
+          "pendingHint": "Earned but not yet paid out, net of recorded payouts and debit adjustments",
+          "earned": "Total earned (lifetime)",
+          "earnedHint": "Commissions only — unaffected by payouts or adjustments"
+        },
+        "filters": {
+          "entryType": "Entry type",
+          "direction": "Direction",
+          "dateRange": "Date range",
+          "dateRangeTooltip": "Filters only the entries currently loaded on this page, not the full history"
+        },
+        "direction": {
+          "credit": "Credit",
+          "debit": "Debit"
+        },
+        "table": {
+          "title": "Ledger entries",
+          "empty": "No ledger entries yet for this dealer.",
+          "column": {
+            "date": "Date",
+            "type": "Type",
+            "amount": "Amount",
+            "note": "Note / reference"
+          }
+        },
+        "error": {
+          "balance": "Failed to load balance",
+          "dealer": "Failed to load dealer",
+          "dealerNotFound": "Dealer not found or not approved"
+        }
+      },
+      "ledgerDialog": {
+        "moneyNotice": "Giftory has no payment disbursement integration yet. Complete the transfer in your banking system first, then record it here for the ledger.",
+        "error": {
+          "invalidAmount": "Enter a whole or 2-decimal rupee amount greater than zero"
+        }
+      },
+      "recordPayoutDialog": {
+        "title": "Record payout",
+        "description": "This only documents that a payment was already completed outside Giftory (e.g. a bank transfer). It does not send any money.",
+        "amountLabel": "Amount paid",
+        "referenceLabel": "Payment reference",
+        "referencePlaceholder": "Bank transfer UTR, cheque number, or other proof of payment",
+        "submit": "Record payout",
+        "success": "Payout recorded",
+        "error": {
+          "generic": "Could not record this payout",
+          "missingReference": "A payment reference is required"
+        }
+      },
+      "adjustmentDialog": {
+        "title": "Add ledger adjustment",
+        "description": "Use this to correct the ledger — e.g. a reversed commission or a manual credit. This never edits or removes an existing entry; it always appends a new one.",
+        "directionLabel": "Direction",
+        "directionCredit": "Credit — increases the dealer's pending balance",
+        "directionDebit": "Debit — decreases the dealer's pending balance",
+        "amountLabel": "Amount",
+        "reasonLabel": "Reason",
+        "reasonPlaceholder": "Why is this adjustment needed?",
+        "submit": "Add adjustment",
+        "success": "Adjustment recorded",
+        "error": {
+          "generic": "Could not create this adjustment",
+          "missingReason": "A reason is required for every adjustment"
+        }
+      }
     }
   }
 }
