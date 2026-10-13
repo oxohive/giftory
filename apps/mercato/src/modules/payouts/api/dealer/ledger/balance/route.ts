@@ -3,6 +3,7 @@ import type { EntityManager } from '@mikro-orm/postgresql'
 import type { OpenApiRouteDoc } from '@open-mercato/shared/lib/openapi'
 import { z } from 'zod'
 import { adminHandler } from '../../../../lib/http'
+import { resolveOwnDealerProfileId } from '../../../../commands/shared'
 import { dealerLedgerTag, balanceSchema } from '../../../openapi'
 
 export const metadata = {
@@ -12,15 +13,16 @@ export const metadata = {
 /**
  * GET /api/dealer/ledger/balance — own current balance.
  *
- * FEAT-009 note: resolve dealerProfileId from session once RBAC ships.
- * Until then the caller passes it as a query param.
+ * `dealerProfileId` is always derived from the caller's authenticated
+ * tenant + organization scope; it is no longer accepted (or required) as a
+ * query param, since a caller-supplied value was never compared against the
+ * session and let any dealer read any other dealer's balance. Fails closed
+ * (404) if the caller's org has no approved dealer profile.
  */
-export const GET = adminHandler('dealer.ledger.balance', async ({ req, container, scope }) => {
-  const url = new URL(req.url)
-  const dealerProfileId = url.searchParams.get('dealerProfileId')
-  if (!dealerProfileId) return NextResponse.json({ error: 'dealerProfileId is required' }, { status: 400 })
-
+export const GET = adminHandler('dealer.ledger.balance', async ({ container, scope }) => {
   const em = container.resolve<EntityManager>('em')
+  const dealerProfileId = await resolveOwnDealerProfileId(em, scope.organizationId, scope.tenantId)
+
   const rows = await em.getConnection().execute<
     Array<{ total_earned: string; total_debited: string }>
   >(

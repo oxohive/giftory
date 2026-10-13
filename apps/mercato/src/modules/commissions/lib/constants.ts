@@ -15,3 +15,12 @@ export const COMMISSION_SNAPSHOT_RESOURCE_KIND = 'commissions.order_commission_s
 export const COMMISSION_RULE_CREATE_COMMAND = 'commissions.rules.create' as const
 export const COMMISSION_RULE_DEACTIVATE_COMMAND = 'commissions.rules.deactivate' as const
 export const COMMISSION_SNAPSHOT_CREATE_COMMAND = 'commissions.snapshots.create' as const
+
+/**
+ * Dealer role names, created by `dealer_onboarding`'s setup. Redeclared
+ * locally per the module-isolation convention (see
+ * `dealer_org_rbac/lib/constants.ts` for the existing precedent) — do not
+ * import role names across module boundaries.
+ */
+export const DEALER_OWNER_ROLE = 'dealer:owner' as const
+export const DEALER_STAFF_ROLE = 'dealer:staff' as const

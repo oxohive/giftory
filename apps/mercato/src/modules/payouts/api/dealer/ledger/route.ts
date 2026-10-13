@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { DealerLedgerEntry } from '../../../data/entities'
 import { ledgerListSchema } from '../../../data/validators'
 import { adminHandler } from '../../../lib/http'
-import { serializeLedgerEntry } from '../../../commands/shared'
+import { serializeLedgerEntry, resolveOwnDealerProfileId } from '../../../commands/shared'
 import { dealerLedgerTag, pagedEntriesSchema } from '../../openapi'
 
 export const metadata = {
@@ -16,17 +16,20 @@ export const metadata = {
 /**
  * GET /api/dealer/ledger — own ledger entries.
  *
- * FEAT-009 note: once dealer RBAC ships, resolve dealerProfileId from the
- * session automatically. Until then the caller passes it as a query param.
+ * `dealerProfileId` is always derived from the caller's authenticated
+ * tenant + organization scope; a caller-supplied `dealerProfileId` query
+ * param (if present) is ignored. Fails closed (404) if the caller's org has
+ * no approved dealer profile.
  */
 export const GET = adminHandler('dealer.ledger.list', async ({ req, container, scope }) => {
   const url = new URL(req.url)
   const query = ledgerListSchema.parse(Object.fromEntries(url.searchParams))
 
   const em = container.resolve<EntityManager>('em')
+  const dealerProfileId = await resolveOwnDealerProfileId(em, scope.organizationId, scope.tenantId)
   const where: FilterQuery<DealerLedgerEntry> = {
     tenantId: scope.tenantId,
-    ...(query.dealerProfileId ? { dealerProfileId: query.dealerProfileId } : {}),
+    dealerProfileId,
     ...(query.entryType ? { entryType: query.entryType } : {}),
     ...(query.direction ? { direction: query.direction } : {}),
   } as FilterQuery<DealerLedgerEntry>

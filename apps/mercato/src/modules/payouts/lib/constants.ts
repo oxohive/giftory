@@ -21,3 +21,12 @@ export const LEDGER_ENTRY_RESOURCE_KIND = 'payouts.dealer_ledger_entry' as const
 export const PAYOUTS_LEDGER_CREDIT_COMMISSION_COMMAND = 'payouts.ledger.credit_commission' as const
 export const PAYOUTS_LEDGER_RECORD_PAYOUT_COMMAND = 'payouts.ledger.record_payout' as const
 export const PAYOUTS_LEDGER_CREATE_ADJUSTMENT_COMMAND = 'payouts.ledger.create_adjustment' as const
+
+/**
+ * Dealer role names, created by `dealer_onboarding`'s setup. Redeclared
+ * locally per the module-isolation convention (see
+ * `dealer_org_rbac/lib/constants.ts` for the existing precedent) — do not
+ * import role names across module boundaries.
+ */
+export const DEALER_OWNER_ROLE = 'dealer:owner' as const
+export const DEALER_STAFF_ROLE = 'dealer:staff' as const
