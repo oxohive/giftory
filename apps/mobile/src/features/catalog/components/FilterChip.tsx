@@ -22,10 +22,10 @@ export function FilterChip(props: FilterChipProps): JSX.Element {
       style={[
         styles.base,
         {
-          borderRadius: theme.radii.md,
+          borderRadius: theme.radii.pill,
           borderColor: selected ? theme.colors.primary : theme.colors.border,
           backgroundColor: selected ? theme.colors.primary : theme.colors.surface,
-          paddingHorizontal: theme.spacing(1.5),
+          paddingHorizontal: theme.spacing(2),
           paddingVertical: theme.spacing(0.75),
         },
       ]}

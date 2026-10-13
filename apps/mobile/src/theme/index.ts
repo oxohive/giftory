@@ -42,7 +42,7 @@ export interface ThemeColors {
 export interface Theme {
   colors: ThemeColors
   spacing: (multiplier: number) => number
-  radii: { sm: number; md: number; lg: number }
+  radii: { sm: number; md: number; lg: number; xl: number; pill: number }
   typography: {
     display: TextStyle
     heading: TextStyle
@@ -56,35 +56,39 @@ export interface Theme {
   isDark: boolean
 }
 
+// Warm ivory canvas with white, shadow-lifted cards — the "atelier" palette
+// from the commissioned design mockups (Supporting-document/GIFTORY.zip).
+// Deliberately inverted from a flat-UI default: `background` carries the
+// cream tint, `surface` (cards/sheets) is bright white so every card reads
+// as lifted off the page rather than blending into it.
 const lightColors: ThemeColors = {
-  background: '#FFFFFF',
-  surface: '#F7F5F2',
+  background: '#FBF7F1',
+  surface: '#FFFFFF',
   text: '#1A1A1A',
-  textMuted: '#6B6B6B',
+  textMuted: '#6E645D',
   primary: '#B3122E',
   primaryText: '#FFFFFF',
-  border: '#E2DED8',
+  border: '#ECE3D8',
   success: '#1E7F3C',
   warning: '#B8860B',
   danger: '#C0392B',
 }
 
-// Dark palette: background/surface/text/textMuted/border inverted sensibly.
-// `primary` (brand red) is kept identical — white `primaryText` on `#B3122E`
-// still reads clearly against the dark surface, so no second brand color is
-// needed. success/warning/danger are also kept as-is; they already have
-// enough contrast against the dark background/surface values below.
+// Dark palette: a deep maroon-black canvas (not neutral gray) to keep the
+// same warm "atelier" identity after dark, with a lighter warm-dark surface
+// for cards. `primary` brightens to `#E8536C` since the base brand red loses
+// contrast against a near-black background; `primaryText` stays white.
 const darkColors: ThemeColors = {
-  background: '#121212',
-  surface: '#1E1E1E',
-  text: '#F2F2F2',
-  textMuted: '#A3A3A3',
-  primary: '#B3122E',
+  background: '#170E10',
+  surface: '#241619',
+  text: '#F6E9E6',
+  textMuted: '#C9A9A2',
+  primary: '#E8536C',
   primaryText: '#FFFFFF',
-  border: '#2E2E2E',
-  success: '#1E7F3C',
-  warning: '#B8860B',
-  danger: '#C0392B',
+  border: '#3A2228',
+  success: '#5FBF7F',
+  warning: '#D4A556',
+  danger: '#E2574C',
 }
 
 // spacing(1) === 8px base unit, e.g. spacing(2) => 16
@@ -94,6 +98,8 @@ const radii = {
   sm: 4,
   md: 8,
   lg: 16,
+  xl: 28,
+  pill: 999,
 }
 
 // Font family names registered by `useFonts()` in `useThemeFonts()` below.

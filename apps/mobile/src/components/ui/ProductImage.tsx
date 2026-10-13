@@ -2,6 +2,7 @@ import React from 'react'
 import { Image } from 'expo-image'
 import type { ImageStyle } from 'expo-image'
 import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native'
+import Ionicons from '@expo/vector-icons/Ionicons'
 import { useTheme } from '../../theme'
 
 export interface ProductImageProps {
@@ -19,9 +20,11 @@ export interface ProductImageProps {
  *
  * - Has a `uri`: renders via `expo-image` with disk caching and a fade-in
  *   transition, backed by a themed placeholder color while it loads.
- * - No `uri` (missing/null/empty): renders a plain themed placeholder box —
- *   no broken-image icon, just `theme.colors.surface` — instead of a blank
- *   white gap.
+ * - No `uri` (missing/null/empty): renders a themed box with a centered
+ *   icon glyph — a flat color box with nothing in it read as a rendering
+ *   glitch on-device (confirmed: occasion pills and the Home hero both
+ *   looked broken before this), so every size uses the same icon rather
+ *   than an empty fill.
  */
 export function ProductImage(props: ProductImageProps): JSX.Element {
   const { uri, style, aspectRatio = 1, accessibilityLabel } = props
@@ -29,16 +32,18 @@ export function ProductImage(props: ProductImageProps): JSX.Element {
 
   const sharedStyle = {
     aspectRatio,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md,
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.radii.lg,
   }
 
   if (!uri) {
     return (
       <View
-        style={[styles.base, sharedStyle, style as StyleProp<ViewStyle>]}
+        style={[styles.base, styles.placeholder, sharedStyle, style as StyleProp<ViewStyle>]}
         accessibilityLabel={accessibilityLabel}
-      />
+      >
+        <Ionicons name="gift-outline" size={theme.sizes.icon.lg} color={theme.colors.textMuted} />
+      </View>
     )
   }
 
@@ -61,5 +66,9 @@ const styles = StyleSheet.create({
   base: {
     width: '100%',
     overflow: 'hidden',
+  },
+  placeholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 })

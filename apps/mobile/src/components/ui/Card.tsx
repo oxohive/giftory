@@ -1,5 +1,5 @@
 import React from 'react'
-import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native'
+import { StyleProp, View, ViewStyle } from 'react-native'
 import { useTheme } from '../../theme'
 
 export interface CardProps {
@@ -14,12 +14,11 @@ export function Card(props: CardProps): JSX.Element {
   return (
     <View
       style={[
-        styles.base,
         {
           backgroundColor: theme.colors.surface,
-          borderColor: theme.colors.border,
-          borderRadius: theme.radii.lg,
+          borderRadius: theme.radii.xl,
           padding: theme.spacing(2),
+          ...theme.elevation.sm,
         },
         style,
       ]}
@@ -28,9 +27,3 @@ export function Card(props: CardProps): JSX.Element {
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  base: {
-    borderWidth: 1,
-  },
-})

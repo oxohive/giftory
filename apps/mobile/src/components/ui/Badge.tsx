@@ -19,9 +19,8 @@ export function Badge(props: { label: string; tone?: 'info' | 'success' | 'warni
         styles.base,
         {
           backgroundColor: theme.colors.surface,
-          borderColor: toneColor,
-          borderRadius: theme.radii.sm,
-          paddingHorizontal: theme.spacing(1),
+          borderRadius: theme.radii.pill,
+          paddingHorizontal: theme.spacing(1.25),
           paddingVertical: theme.spacing(0.5),
         },
       ]}
@@ -29,7 +28,14 @@ export function Badge(props: { label: string; tone?: 'info' | 'success' | 'warni
       accessibilityRole="text"
       accessibilityLabel={label}
     >
-      <Text style={[theme.typography.caption, { color: toneColor, fontWeight: '600' }]}>
+      <View style={[styles.dot, { backgroundColor: toneColor }]} />
+      <Text
+        numberOfLines={1}
+        style={[
+          theme.typography.caption,
+          { color: theme.colors.text, fontWeight: '700', letterSpacing: 0.4, textTransform: 'uppercase', flexShrink: 1 },
+        ]}
+      >
         {label}
       </Text>
     </View>
@@ -39,6 +45,19 @@ export function Badge(props: { label: string; tone?: 'info' | 'success' | 'warni
 const styles = StyleSheet.create({
   base: {
     alignSelf: 'flex-start',
-    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    // `alignSelf: 'flex-start'` alone only sizes the pill to its own text —
+    // it does NOT stop that text from exceeding the parent's width when the
+    // badge sits alone (e.g. stacked under a price, not in a row with a
+    // sibling to shrink against). Confirmed on-device: "Customizable" on a
+    // narrow 2-col product card rendered past the card's edge entirely.
+    maxWidth: '100%',
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
 })

@@ -25,11 +25,11 @@ export function Button(props: ButtonProps): JSX.Element {
   const containerStyle = [
     styles.base,
     {
-      borderRadius: theme.radii.md,
-      paddingVertical: theme.spacing(1.5),
-      paddingHorizontal: theme.spacing(2),
+      borderRadius: theme.radii.pill,
+      paddingVertical: theme.spacing(1.75),
+      paddingHorizontal: theme.spacing(3),
     },
-    variant === 'primary' && { backgroundColor: theme.colors.primary },
+    variant === 'primary' && { backgroundColor: theme.colors.primary, ...theme.elevation.sm },
     variant === 'secondary' && {
       backgroundColor: theme.colors.surface,
       borderWidth: 1,
@@ -61,7 +61,7 @@ export function Button(props: ButtonProps): JSX.Element {
       {loading ? (
         <ActivityIndicator color={textColor} size="small" />
       ) : (
-        <Text style={[theme.typography.body, styles.text, { color: textColor }]}>
+        <Text style={[theme.typography.body, styles.text, { color: textColor, letterSpacing: 0.2 }]}>
           {title}
         </Text>
       )}
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   text: {
-    fontWeight: '600',
+    fontWeight: '700',
   },
   disabled: {
     opacity: 0.5,

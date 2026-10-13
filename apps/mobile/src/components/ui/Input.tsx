@@ -52,10 +52,10 @@ export function Input(props: InputProps): JSX.Element {
           {
             color: theme.colors.text,
             borderColor: hasError ? theme.colors.danger : theme.colors.border,
-            borderRadius: theme.radii.sm,
-            backgroundColor: theme.colors.surface,
-            paddingHorizontal: theme.spacing(1.5),
-            paddingVertical: theme.spacing(1),
+            borderRadius: theme.radii.lg,
+            backgroundColor: theme.colors.background,
+            paddingHorizontal: theme.spacing(2),
+            paddingVertical: theme.spacing(1.25),
           },
         ]}
       />
