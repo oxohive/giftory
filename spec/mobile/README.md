@@ -2,7 +2,7 @@
 
 Phase: unassigned in `docs/architecture.md` (mobile is named only as "later phase" — see §2/§3). This directory tracks the first implementation pass, scoped to a standalone app at `apps/mobile` that calls the existing `apps/mercato` backend API directly. It follows the same spec-driven convention as `spec/phase-1/` and `spec/phase-2/`, adapted for parallel background-agent execution.
 
-- **Status:** Implemented, sandbox-verified. All 9 tasks complete — `apps/mobile` exists, typechecks clean (`tsc --noEmit`, 0 errors), and its Android bundle builds successfully via Metro (936 modules, 0 resolution errors). **Never booted on a real simulator/device, and never run against a live `apps/mercato` backend** — see [`IMPLEMENTATION-NOTES.md`](IMPLEMENTATION-NOTES.md) for the full, current list of what still needs live verification (4 wire-shape discrepancies, Razorpay field mapping, `.env` values, the full manual QA pass) before this is production-ready.
+- **Status:** Implemented and verified live on a physical Android device (catalog, cart, and navigation exercised end-to-end over a `cloudflared` tunnel against the deployed dev backend), plus a design restyle against commissioned mockups (`Supporting-document/`). **Razorpay payment itself still not verified** — see [`IMPLEMENTATION-NOTES.md`](IMPLEMENTATION-NOTES.md) for the full, current list of what's left (Razorpay field mapping, `.env` values for a fresh setup, the full manual QA pass) before this is production-ready.
 - **Depends on:** Phase 1 backend (Implemented — see `spec/phase-1/index.md`).
 - **Setup/run instructions:** see [`apps/mobile/README.md`](../../apps/mobile/README.md).
 - **Scope decisions (locked in, do not re-derive):**

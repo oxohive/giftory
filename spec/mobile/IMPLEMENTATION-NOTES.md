@@ -156,7 +156,31 @@ What **did** happen instead — direct verification against the real data and th
 7. `npx tsc --noEmit` still passes with 0 errors after all the comment edits (no logic changed, only documentation corrected in-place).
 
 ### Still genuinely open after this pass
-- The app has still never been **booted** (no simulator/device, and this sandbox cannot reach the user's running backend over HTTP at all — a hard network-policy boundary, not something fixable from in here).
 - Razorpay's native-SDK `providerData` field mapping (`order_id`, `amount`) in `PaymentScreen.tsx` — still a best-effort inference from reading `apps/storefront`'s code, not a live payment attempt. This is now the single highest-value thing left to verify, since everything else blocking it has been resolved.
 - Idempotent-replay behavior on `POST /checkout/orders` under a real retry — still untested.
 - The full FEAT-001–006 manual QA pass — still requires a human running the app on their own device against this now-fully-configured backend.
+
+(The "app has never been booted" item above is resolved — see the next section.)
+
+---
+
+## Live device verification + design restyle pass (2026-10-13)
+
+The app was finally **booted on a physical Android device** — the sandbox's own network isolation (confirmed above, 2026-10-10) made a local dev server unreachable from here, so the session instead pointed `apps/mobile/.env`'s `EXPO_PUBLIC_API_BASE_URL` at the **deployed dev backend** (`https://admin.giftory.dev.oxohive.com`, same Supabase DB/org as local dev) and connected the phone via a `cloudflared` tunnel (`EXPO_PACKAGER_PROXY_URL` — see `apps/mobile/README.md`'s tunnel section for the exact setup, including why `--tunnel`/ngrok remains broken).
+
+**What got exercised live, for real, for the first time**: catalog browsing (search/sort/filter), cart (add/update/remove/gift options), and navigation across every screen. **What did not**: an actual Razorpay payment — checkout was only verified up to the payment screen rendering, not a completed transaction.
+
+### Real bugs found via live testing (all fixed)
+- **Dark-mode background mismatch**: `NavigationContainer` had no `theme` prop, so every screen's native container background used React Navigation's own fixed default — independent of the app's theme or OS dark-mode setting. Invisible while the old light/dark surfaces were low-contrast; glaring once the design restyle (below) made them diverge. Fixed by wiring a theme-aware nav theme into `App.tsx`.
+- **Horizontal `ScrollView` row items ballooning to fill the screen**: a classic RN gotcha — a horizontal row's items default to `alignItems: 'stretch'` on the cross axis; without pinning to `flex-start`, Home's "More to discover" product cards stretched to fill ambiguous available height instead of staying card-sized.
+- **Android `elevation` shadow halo on small chips**: badges/pills with a shadow rendered as a visible rectangular blur on Android at small sizes — shadows now reserved for genuinely elevated surfaces (cards, buttons, the tab bar), removed from `Badge` and `OccasionChip`.
+- **"Customizable" badge overflow on the 2-col product grid**: price and badge were crammed into one row with no room to shrink; fixed by stacking them, plus a `maxWidth: '100%'` safety net added to `Badge` itself.
+- **Home masthead scrolling up under the status bar**: its safe-area top padding was applied to the *scrollable* content container, so it scrolled away with everything else. Fixed by pulling the masthead into a fixed sibling above the `ScrollView` — the same pattern `AccountScreen` already used correctly.
+- **Toast colliding with the floating tab bar, then with a screen's own CTA button**: redesigned as a top icon banner (full rationale in the design-restyle commit) instead of chasing bottom-anchored offsets screen by screen.
+- **Stray full-width masthead padding regression**: pulling the masthead out of the scroll view (above) also pulled it out of the scroll container's inherited 16px side padding — briefly rendered flush to both screen edges before being caught and fixed.
+
+### Design restyle
+Applied the commissioned mockups in `Supporting-document/` (the "Giftory — Atelier India" direction) to the shared design tokens and primitives, then rebuilt the Home screen's layout to match its mockup using only data this app already fetches (occasions, products, cart) — no new backend capability. Full rationale in each commit; summary in `apps/mobile/README.md`'s new "Design system" section.
+
+### Tab bar: real library, not hand-rolled
+An animated sliding-indicator tab bar was first hand-built with React Native's `Animated` API, then explicitly replaced with a real library per direct instruction. `@gorhom/animated-tabbar` (same author as the already-installed `@gorhom/bottom-sheet`) looked like the natural pick, but reading its actual source showed it imports Reanimated v1's removed imperative API (`useCode`/`cond`/`eq`/`call`) and the deprecated `useSafeArea` hook — its latest npm release is `2.1.2`, published 2021-06-29, abandoned for 5+ years, and would have crashed on import against this project's Reanimated v3. Replaced with `react-native-animated-nav-tab-bar` (actively maintained, last release May 2025; uses plain `Animated.spring`, no Reanimated dependency at all). One known platform nuance: its floating-mode bottom margin is a hardcoded 20px gated on an iOS-only "is this an iPhone X" check, not this device's actual Android gesture-nav inset — looked fine in testing, worth re-checking on other devices.

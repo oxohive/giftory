@@ -7,7 +7,7 @@ Gift marketplace built on Open Mercato 0.8.0. See [docs/architecture.md](docs/ar
 ```
 apps/mercato/     # Backend + admin (Open Mercato), port 3000
 apps/storefront/  # Customer storefront (Next.js), port 3100
-apps/mobile/      # Customer storefront (Expo/React Native), Phase 1 port — guest-only, Razorpay only, sandbox-implemented/unverified on-device (see apps/mobile/README.md)
+apps/mobile/      # Customer storefront (Expo/React Native), Phase 1 port — guest-only, Razorpay only, verified live on a physical device (catalog/cart/nav); Razorpay payment itself not yet verified (see apps/mobile/README.md)
 docs/             # Architecture and decision documents
 spec/             # Feature specs, user stories, ADRs (spec-driven development)
   phase-1/        # Phase 1 — Commerce Foundation (implemented)

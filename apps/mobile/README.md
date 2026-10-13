@@ -2,7 +2,7 @@
 
 Customer-facing mobile port of Phase 1 (catalog, cart, guest checkout via Razorpay, guest-scoped order history) calling the `apps/mercato` backend directly. Standalone Expo app — no monorepo workspace, no shared packages, zero coupling to `apps/storefront`.
 
-**Status: implemented, sandbox-verified, never run on a real device or against a live backend.** See [`spec/mobile/README.md`](../../spec/mobile/README.md) and [`spec/mobile/IMPLEMENTATION-NOTES.md`](../../spec/mobile/IMPLEMENTATION-NOTES.md) for the full build history, every discrepancy found between the spec and the real backend, and the open items below before treating this as production-ready.
+**Status: implemented and verified live on a physical Android device**, via a `cloudflared` tunnel (see below) against the deployed dev backend (`apps/mercato`, same Supabase DB as local dev). Catalog browsing, cart, and navigation have been exercised end-to-end on-device; **Razorpay checkout has not** — the native-SDK field mapping is still an inference from reading the web storefront's code, not a confirmed live payment. See [`spec/mobile/README.md`](../../spec/mobile/README.md) and [`spec/mobile/IMPLEMENTATION-NOTES.md`](../../spec/mobile/IMPLEMENTATION-NOTES.md) for the full build history, every discrepancy found between the spec and the real backend, and the open items below before treating this as production-ready.
 
 ## Setup
 
@@ -59,16 +59,26 @@ If Metro's dev server runs on a remote machine the phone can't reach directly (e
 
 ## Architecture
 
-- `src/navigation/` — typed React Navigation (bottom tabs + nested native-stacks). See `types.ts` for every route's param list.
+- `src/navigation/` — typed React Navigation (bottom tabs + nested native-stacks). See `types.ts` for every route's param list. The bottom tab bar is `react-native-animated-nav-tab-bar` (a real sliding-indicator segmented-control-style bar, not hand-rolled — see `RootTabNavigator.tsx` for why that library specifically, and `@gorhom/animated-tabbar`, which looked like the obvious choice, was rejected as abandoned/Reanimated-v1-only).
 - `src/lib/api/` — the whole backend client: `http.ts`/`env.ts`/`money.ts`/`idempotency.ts`/`errors.ts` (core) plus one file per domain (`catalog`, `occasions`, `cart`, `checkout`, `orders`, `addresses`, `payments`). Ported from `apps/storefront/src/lib/api/*`, adapted to call the backend directly instead of through the web app's same-origin BFF proxy. No cookie-jar shim — relies on React Native's native HTTP stack (OkHttp/NSURLSession) persisting the backend's session cookies automatically, same as a browser would.
 - `src/lib/queryClient.ts` — the single app-wide TanStack Query client, mounted once in `App.tsx`. Every feature's data hooks share this one cache.
-- `src/theme/`, `src/components/ui/` — design tokens and shared primitives (Button, Input, Card, PriceText, Loading/Empty/ErrorState, Badge).
+- `src/theme/`, `src/components/ui/` — design tokens and shared primitives (Button, Input, Card, PriceText, Loading/Empty/ErrorState, Badge, **ScreenHeader**, Toast). See "Design system" below.
 - `src/features/{catalog,cart,checkout,account,orders}/` — one directory per feature, each with its own `screens/`, `hooks/`, `components/`.
+
+## Design system
+
+Restyled against commissioned mockups in [`Supporting-document/`](../../Supporting-document/) (the "Giftory — Atelier India" direction: warm ivory canvas, shadow-lifted white cards, deep-red brand accent). A few decisions worth knowing before touching styling:
+
+- **`theme/index.ts`** is the single source for color/spacing/radii/typography — `background` (the screen canvas) and `surface` (card fill) are deliberately inverted from a flat-UI default: cream canvas, bright white cards, so every card reads as lifted rather than blending in.
+- **`ScreenHeader`** (`components/ui/ScreenHeader.tsx`) is the *only* header every screen renders. All three stack navigators set `headerShown: false` — themeing React Navigation's native header (an earlier, insufficient attempt) can't fully match a custom one; it's a structurally different platform component regardless of color/font.
+- **`Toast`** is a top icon banner, not a bottom box — nothing else on any screen occupies that space, so it can't collide with a screen's own bottom CTA or the tab bar the way a bottom-anchored toast repeatedly did during testing.
+- Small chips/badges carry **no shadow** — Android's `elevation` renders as a visible halo on small shapes; shadows are reserved for genuinely elevated surfaces (cards, buttons, the tab bar).
 
 ## Known limitations (read before testing)
 
 - **Guest-only.** No login/signup/password-reset screens. Account tab shows a guest-mode banner; order history is tracked locally per-device (via `expo-secure-store`) from orders placed in this app, not a real account's full history; the address book UI is complete but gated behind a "sign in" message since its endpoints require a signed-in customer.
 - **Razorpay only.** No Stripe integration in this app (the backend/web storefront support both).
 - **4 wire-shape assumptions need live-backend verification**: product tax rate (defaults to 0), cart validation-error line attribution (renders as a banner, not per-line, since the real error shape doesn't carry a line id), order detail's payment/shipping-address fields (optional with safe defaults), Razorpay confirm response fields (defensively defaulted). Full detail in `spec/mobile/IMPLEMENTATION-NOTES.md`.
-- **Razorpay's native-SDK field mapping (`order_id`, `amount`) is a best-effort inference** from reading the web storefront's code, not a live response — verify this first on an actual payment attempt, since a wrong field name breaks checkout silently.
-- **Never booted on a real simulator/device or against a live `apps/mercato` server** in this build. What *is* verified: `tsc --noEmit` passes with 0 errors, and the Android JS bundle builds successfully via Metro (936 modules, 0 resolution errors) — confirming the module graph resolves end-to-end, short of an actual runtime smoke test.
+- **Razorpay's native-SDK field mapping (`order_id`, `amount`) is a best-effort inference** from reading the web storefront's code, not a live response — verify this first on an actual payment attempt, since a wrong field name breaks checkout silently. This is the one major flow never exercised on-device.
+- **Tab bar's floating-mode bottom margin is a fixed 20px** (from `react-native-animated-nav-tab-bar`, gated on an iOS-only "is this an iPhone X" check) — it doesn't read this device's actual Android gesture-nav safe-area inset. Looked fine in testing; worth re-checking on other Android devices.
+- **Verified so far**: `tsc --noEmit` passes with 0 errors; booted live on a physical Android device over a `cloudflared` tunnel against the deployed dev backend; catalog browsing (search/filter/sort), cart (add/update/remove/gift options), and navigation across every screen have been exercised on-device. Checkout (address → shipping → Razorpay payment → confirmation) has only been verified up to the payment screen rendering correctly — not an actual completed payment.
