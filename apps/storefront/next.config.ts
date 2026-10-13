@@ -1,4 +1,10 @@
 import type { NextConfig } from 'next'
+import { fileURLToPath } from 'node:url'
+
+// Turbopack's root inference stops at this app's package.json unless told otherwise, so it
+// never sees ../../packages/ui that @gift/ui symlinks to. Point it at the monorepo root
+// explicitly (a sibling of apps/dealer-portal and packages/).
+const monorepoRoot = fileURLToPath(new URL('../..', import.meta.url))
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000'
 
@@ -21,6 +27,11 @@ const backendPattern = remotePatternFor(apiBase)
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // @gift/ui ships untranspiled .tsx/.ts source (file: package, no build step).
+  transpilePackages: ['@gift/ui'],
+  turbopack: {
+    root: monorepoRoot,
+  },
   images: {
     remotePatterns: backendPattern ? [backendPattern] : [],
   },

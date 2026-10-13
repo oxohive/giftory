@@ -54,9 +54,9 @@ Dependency numbers below refer to P2-UI task IDs.
 
 | Task | Deliverable | Lane | Depends on | Status |
 |---|---|---|---|---|
-| [P2-UI-00](TASK-00-contract-audit-and-implementation-preflight.md) | Contract audit and implementation preflight | A | none | Planned |
-| [P2-UI-01](TASK-01-dealer-portal-scaffold-and-shared-ui-foundation.md) | Dealer portal scaffold and shared UI foundation | A | 00 | Planned |
-| [P2-UI-02](TASK-02-dealer-authorization-and-data-isolation-prerequisite.md) | Dealer authorization and data isolation prerequisite | A | 00 | Planned |
+| [P2-UI-00](TASK-00-contract-audit-and-implementation-preflight.md) | Contract audit and implementation preflight | A | none | Review |
+| [P2-UI-01](TASK-01-dealer-portal-scaffold-and-shared-ui-foundation.md) | Dealer portal scaffold and shared UI foundation | A | 00 | Review |
+| [P2-UI-02](TASK-02-dealer-authorization-and-data-isolation-prerequisite.md) | Dealer authorization and data isolation prerequisite | A | 00 | Review |
 | [P2-UI-03](TASK-03-missing-ui-data-and-lifecycle-apis.md) | Missing UI data and lifecycle APIs | A | 00, 02 | Planned |
 | [P2-UI-04](TASK-04-dealer-authentication-and-access-states.md) | Dealer authentication and access states | B | 00, 01, 02, 03 | Planned |
 | [P2-UI-05](TASK-05-dealer-registration-and-kyc-screens.md) | Dealer registration and KYC screens | B | 01, 03, 04 | Planned |
