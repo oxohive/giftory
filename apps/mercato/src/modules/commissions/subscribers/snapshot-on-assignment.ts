@@ -34,7 +34,7 @@ export default async function onDealerOrderAssigned(
 ): Promise<void> {
   try {
     const container = await createRequestContainer()
-    const em = container.resolve<{ getConnection: () => { execute: (sql: string, params: unknown[]) => Promise<Array<{ subtotal_amount: string }>> } }>('em')
+    const em = container.resolve<{ getConnection: () => { execute: (sql: string, params: unknown[]) => Promise<Array<{ subtotal_net_amount: string }>> } }>('em')
 
     // `sales_orders` is the real table — see `dealer_orders/lib/orderDetails.ts`'s
     // identical raw-SQL precedent against the sales module's own tables (this
@@ -44,10 +44,21 @@ export default async function onDealerOrderAssigned(
     // every real order assignment silently failed this query and was swallowed
     // by the catch block below — no commission snapshot was ever created.
     //
+    // Column is `subtotal_net_amount`, not `subtotal_amount` — `sales_orders`
+    // has no column named `subtotal_amount` (confirmed against
+    // `@open-mercato/core`'s `sales` module entity, which only defines
+    // `subtotal_net_amount`/`subtotal_gross_amount`). A prior version of this
+    // query selected the nonexistent `subtotal_amount`, which threw inside the
+    // try/catch below on every real assignment — the exact same silent-failure
+    // shape as the `orders`-table bug above, just one layer deeper. FEAT-012's
+    // own spec (`spec/phase-2/features/FEAT-012-commission-engine.md`) defines
+    // commission as a percentage of the subtotal "excluding platform fees,
+    // shipping, and tax" — i.e. the NET subtotal, not the tax-inclusive gross.
+    //
     // `product_type_code` is deliberately NOT selected here — see the doc
     // comment below for why.
     const rows = await em.getConnection().execute(
-      `SELECT subtotal_amount FROM sales_orders WHERE id = ? AND tenant_id = ? LIMIT 1`,
+      `SELECT subtotal_net_amount FROM sales_orders WHERE id = ? AND tenant_id = ? LIMIT 1`,
       [payload.orderId, payload.tenantId],
     )
 
@@ -57,7 +68,7 @@ export default async function onDealerOrderAssigned(
     }
 
     const row = rows[0]
-    const subtotalAmount = parseInt(String(row.subtotal_amount ?? '0'), 10)
+    const subtotalAmount = parseInt(String(row.subtotal_net_amount ?? '0'), 10)
 
     const commandBus = container.resolve<CommandBus>('commandBus')
     const ctx: CommandRuntimeContext = {
