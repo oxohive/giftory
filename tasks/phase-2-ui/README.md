@@ -67,7 +67,7 @@ Dependency numbers below refer to P2-UI task IDs.
 | [P2-UI-10](TASK-10-dealer-order-detail-and-production-status.md) | Dealer order detail and production status | C | 01, 02, 03, 04 | Planned |
 | [P2-UI-11](TASK-11-admin-kyc-application-review.md) | Admin KYC application review | D | 00, 03 | Review |
 | [P2-UI-12](TASK-12-admin-dealer-directory-and-capabilities.md) | Admin dealer directory and capabilities | D | 00, 03 | Review |
-| [P2-UI-13](TASK-13-admin-order-assignment-ui.md) | Admin order assignment UI | D | 00, 02, 03 | Planned |
+| [P2-UI-13](TASK-13-admin-order-assignment-ui.md) | Admin order assignment UI | D | 00, 02, 03 | Review |
 | [P2-UI-14](TASK-14-dealer-earnings-and-ledger-screens.md) | Dealer earnings and ledger screens | E | 00, 01, 02, 04 | Planned |
 | [P2-UI-15](TASK-15-admin-commission-management.md) | Admin commission management | E | 00, 02 | Review |
 | [P2-UI-16](TASK-16-admin-ledger-payout-recording-and-adjustments.md) | Admin ledger, payout recording and adjustments | E | 00, 02 | Review |

@@ -26,6 +26,93 @@
       "dispatched": "Dispatched",
       "cancelled": "Cancelled"
     },
+    "admin": {
+      "orderTab": {
+        "tabLabel": "Dealer assignment",
+        "loading": "Loading dealer assignment…",
+        "loadingHistory": "Loading history…",
+        "staleState": "This order’s assignment changed elsewhere — showing the latest state.",
+        "errors": {
+          "load": "Failed to load the dealer assignment for this order",
+          "loadHistory": "Failed to load the assignment history for this order",
+          "loadDealers": "Failed to load the approved dealers list",
+          "forbidden": "You don't have permission to manage this order's dealer assignment."
+        },
+        "actions": {
+          "retry": "Retry",
+          "assign": "Assign to dealer",
+          "reassign": "Reassign",
+          "cancel": "Cancel assignment",
+          "toggleHistory": "Assignment history"
+        },
+        "empty": {
+          "title": "No dealer assigned yet",
+          "description": "Assign this order to an approved dealer. The order must be fully paid before it can be assigned."
+        },
+        "field": {
+          "dealer": "Dealer",
+          "unknownDealer": "Dealer {{id}} (not found in the approved-dealers directory)",
+          "status": "Status",
+          "requiredBy": "Production deadline",
+          "assignedAt": "Assigned at",
+          "statusNote": "Latest dealer note"
+        },
+        "history": {
+          "assignedThenRequired": "Assigned {{assignedAt}} · due {{requiredBy}}",
+          "empty": "No assignment history yet."
+        },
+        "success": {
+          "assigned": "Order assigned",
+          "reassigned": "Order reassigned",
+          "cancelled": "Assignment cancelled"
+        }
+      },
+      "dealerPicker": {
+        "loading": "Loading dealers…",
+        "placeholder": "Select an approved dealer",
+        "empty": "No approved dealers found",
+        "capabilitiesHint": "Capabilities (not enforced — informational only)",
+        "noProductTypes": "no product types declared",
+        "noStates": "no serviceable states declared",
+        "maxDaily": "max {{count}}/day"
+      },
+      "assignDialog": {
+        "assignTitle": "Assign order to a dealer",
+        "reassignTitle": "Reassign order to a different dealer",
+        "assignDescription": "The dealer will receive an email with the production deadline and a link to this order.",
+        "reassignDescription": "The current assignment will be cancelled and a new one created for the dealer you select.",
+        "dealerLabel": "Dealer",
+        "deadlineLabel": "Production deadline",
+        "reasonLabel": "Reason for reassignment",
+        "reasonOptional": "(optional)",
+        "reasonPlaceholder": "Why is this order being reassigned?",
+        "assignSubmit": "Assign order",
+        "reassignSubmit": "Reassign order",
+        "submitting": "Saving…",
+        "error": {
+          "dealerRequired": "Select a dealer",
+          "deadlineRequired": "Select a production deadline",
+          "orderNotPaid": "This order must be paid before it can be assigned",
+          "generic": "Could not save this assignment"
+        }
+      },
+      "cancelDialog": {
+        "title": "Cancel this assignment",
+        "description": "The dealer will no longer see this order. This cannot be undone — assign the order again afterward if needed.",
+        "reasonLabel": "Reason",
+        "reasonPlaceholder": "Why is this assignment being cancelled?",
+        "submit": "Cancel assignment",
+        "submitting": "Cancelling…",
+        "error": {
+          "reasonRequired": "A reason is required",
+          "generic": "Could not cancel this assignment"
+        }
+      },
+      "actions": {
+        "cancel": "Cancel",
+        "keepAssignment": "Don't cancel"
+      }
+    },
     "notifications": {
       "orderAssigned": {
         "title": "New order assigned",
