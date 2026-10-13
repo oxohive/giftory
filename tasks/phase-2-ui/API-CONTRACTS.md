@@ -4,7 +4,7 @@ Produced by: P2-UI-00 (contract audit and implementation preflight).
 Audited against commit `f70b310` and the working tree, 2026-10-13.
 Source of truth: the route files under `apps/mercato/src/modules/{dealer_onboarding,dealer_org_rbac,dealer_orders,commissions,payouts}/`, their `acl.ts`/`setup.ts`, the shared `@open-mercato/core` auth commands/services, and `docs/dealer-marketplace-api.md` (which this document independently re-verified against source, not merely restated).
 
-**Read the [Critical backend gaps](#critical-backend-gaps) section first.** Two of the five gaps listed there mean dealer-facing endpoints across three modules are currently unreachable by any dealer user. No UI task may treat those endpoints as usable until the fix lands (tracked in TASK-02 / TASK-03).
+**Read the [Critical backend gaps](#critical-backend-gaps) section first.** Two of the gaps listed there mean dealer-facing endpoints across three modules are currently unreachable by any dealer user. No UI task may treat those endpoints as usable until the fix lands (tracked in TASK-02 / TASK-03). Gaps 1–3 were fixed by TASK-02; Gap 7 (a newer, equally severe finding — the admin order-assignment flow queried a nonexistent table — see below) was fixed by TASK-03. Gaps 4–6 (payouts/commissions idempotency, balance guard, adjustment-credit semantics) remain open — out of TASK-02/03's owned paths.
 
 ---
 
@@ -121,6 +121,12 @@ pendingAmount = totalEarned - totalDebited
 
 `adjustment_credit` is a `credit` direction row but is **excluded** from `totalEarned` (the `entry_type='commission_earned'` filter excludes it) and not subtracted either — it has no effect on `pendingAmount`. `adjustment_debit` *does* reduce `pendingAmount` (any `debit` direction counts) and can drive it negative. Any admin-facing ledger UI (TASK-16) must not claim adjustment credits "top up the balance" — as coded, they currently do not.
 
+### Gap 7 (new, severe, fixed by TASK-03) — `dealer_orders`' `assertOrderIsPaid` queried a table that does not exist
+
+`dealer_orders/commands/assignments.ts`'s `assertOrderIsPaid` (gates every `POST`/`PUT /admin/orders/{id}/assignment`) ran `SELECT id FROM orders WHERE ...`. **No table named `orders` exists in this app's schema** — Phase 1 checkout writes `SalesOrder` rows to `sales_orders` (verified against `storefront/lib/checkout.ts`'s `createSalesOrder`). Every unit test mocks `em.getConnection().execute(...)`, so the wrong table name was never exercised against a real database; against a real Postgres instance **every admin order assignment would fail with `relation "orders" does not exist`** — the dealer assignment flow has never worked end to end. **Fixed in TASK-03**: the query now reads `sales_orders`. Regression test: `dealer_orders/__tests__/assertOrderIsPaid.test.ts`.
+
+**`commissions/subscribers/snapshot-on-assignment.ts` has the identical bug** (`FROM orders o`, plus `order_lines`/`gifts` for the product type lookup) — same root cause, same fix needed, but that file is outside TASK-03's owned paths (commissions/payouts are owned by a concurrent lane). Flagging here for that lane/the coordinator; not fixed by this task.
+
 ---
 
 ## `dealer_onboarding` (FEAT-008)
@@ -133,7 +139,9 @@ Business types: `proprietorship | partnership | pvt_ltd | llp`. Document types: 
 |---|---|---|---|
 | `POST /api/dealer_onboarding/dealer/onboarding/register` | Public | `requireAuth:false`, 5 req/h | **Verified working** |
 | `GET /api/dealer_onboarding/dealer/onboarding/status` | Dealer | `dealer_onboarding.view_own` | **Verified working, but see Gap 2** — breaks for pending dealers once any other dealer in the tenant is approved |
-| `POST /api/dealer_onboarding/dealer/onboarding/documents` | Dealer | `dealer_onboarding.submit`, 20 req/h | Same Gap 2 exposure |
+| `POST /api/dealer_onboarding/dealer/onboarding/documents` | Dealer | `dealer_onboarding.submit`, 20 req/h | **Implemented (TASK-03)** — real file upload, see below |
+| `GET /api/dealer_onboarding/dealer/onboarding/documents/{id}/file` | Dealer | `dealer_onboarding.view_own` | **New (TASK-03)** — download the caller's own KYC document |
+| `GET /api/dealer_onboarding/admin/dealers/applications/{id}/documents/{documentId}/file` | Admin | `dealer_onboarding.admin` | **New (TASK-03)** — admin review download |
 | `POST /api/dealer_onboarding/dealer/onboarding/resubmit` | Dealer | `dealer_onboarding.submit` | Same Gap 2 exposure |
 | `GET /api/dealer_onboarding/admin/dealers/applications` | Admin | `dealer_onboarding.admin` | **Verified working** |
 | `GET /api/dealer_onboarding/admin/dealers/applications/{id}` | Admin | `dealer_onboarding.admin` | **Verified working** |
@@ -148,10 +156,13 @@ Creates an inactive backend organization, a `DealerProfile` with `kycStatus:"pen
 ### `GET .../status`
 `200` profile (`id, organizationId, tenantId, businessName, contactEmail, phone, businessType, city, state, pincode, kycStatus, rejectionReason, reviewedBy, reviewedAt, approvedAt, createdAt, updatedAt`) + `documents[]` (`id, dealerProfileId, tenantId, documentType, storageKey, fileName, fileSizeBytes, mimeType, uploadedAt`). `404 profile_not_found` when no profile exists for the session's org. Scope is correctly session-derived (`auth.orgId`/`auth.tenantId`), unlike the Gap-3 routes.
 
-### `POST .../documents`
-Body: `documentType`, `storageKey` (1–1024), `fileName`, `fileSizeBytes` (1–10485760), `mimeType`.
-`201 {"id","documentType","fileName"}` · `400` when status is not `pending_verification`/`under_review` · `404` no profile.
-Idempotent per type (existing active doc of the same type is soft-deleted). First upload advances the profile to `under_review`. **This route only records metadata** — the file must already be in object storage; the UI needs a separate pre-signed-URL step that does not exist in these five modules (object storage integration is out of scope for this audit; flag to TASK-05 as an external dependency to confirm before building the upload screen).
+### `POST .../documents` — real file upload (TASK-03)
+**No longer metadata-only.** Body is now `multipart/form-data`: `documentType` field + `file` field (the actual bytes). The route uploads the file to private, access-controlled object storage via the installed `attachments` module's `attachmentService.createScoped` (never a hand-rolled S3 call, never a presigned-URL dance — direct authenticated multipart upload through this route, which this codebase's `attachments` module already supports end to end). `fileName`/`mimeType`/`fileSizeBytes` recorded on the `DealerKycDocument` row are the REAL, server-sniffed values from the uploaded bytes, never client-declared. Mime type is checked twice (declared, pre-upload; sniffed, post-upload) against the allowlist (`application/pdf`, `image/jpeg|png|webp|tiff`); size capped at 10 MB. `storageKey` is now the resulting attachment's id (server-generated UUID), never caller-chosen.
+`201 {"id","documentType","fileName"}` · `400` when status is not `pending_verification`/`under_review`, file too large, or unsupported mime type · `404` no profile · `422` missing file/documentType.
+Idempotent per type (existing active doc of the same type is soft-deleted — the underlying attachment is not released, a known minor storage-hygiene gap). First upload advances the profile to `under_review`.
+
+### Download — `GET .../documents/{id}/file` (dealer) and `GET .../applications/{id}/documents/{documentId}/file` (admin) (TASK-03)
+Streams the stored file bytes. **Fails closed**: the dealer route re-resolves the caller's OWN profile (session-derived) and 404s if the requested document doesn't belong to it; the admin route resolves the application by id within the admin's tenant and 404s if the requested document doesn't belong to THAT application. Only after that check does either route call `attachmentService.readScoped(...)` — the admin route necessarily reads with the scope (tenantId/orgId) of the DEALER being reviewed, not the admin's own, since the attachment is stored under the dealer's org; this is the documented "scope switch after authorization" pattern (see `attachmentService.readScoped`'s own doc comment) and grants nothing beyond the one document already authorized by the two checks above. Verified with tests exercising cross-dealer and cross-tenant document ids directly against the data-access layer (`dealer_onboarding/__tests__/kycDocumentAccess.test.ts`) — not just code review.
 
 ### `POST .../resubmit`
 Body: any subset of registration fields + `note` (≤2000, accepted but not persisted — do not build a UI affordance implying the note is saved anywhere).
@@ -164,10 +175,12 @@ Query: `kycStatus?`, `search?` (business name or contact email), `page`, `pageSi
 `200` profile + **decrypted** `gstin`/`pan` + `documents[]`. `404` when not found in tenant. **Backend hardening note (not a UI blocker):** decryption scope uses the profile id rather than the organization id — cosmetic for the UI, flagged for backend follow-up only.
 
 ### `POST .../approve`
-No body. `200 {"ok":true}` · `400` unless current status is `under_review` · `404`. **Triggers Gap 2** — the UI's approval success toast must not imply "the dealer can now manage their profile/staff," because as coded, approval currently breaks that for every dealer owner in the tenant until Gap 2 is fixed.
+No body. `200 {"ok":true}` · `400` unless current status is `under_review` · `404`. Gap 2 is fixed (TASK-02) — the UI's approval success toast may now accurately say the dealer can log in and manage their profile/staff. **TASK-03:** now also emits `dealer_onboarding.profile.approved`, which a persistent subscriber (`subscribers/notify-dealer-on-approval.ts`) turns into a real email to the dealer's `contactEmail`, via the shared `sendEmail` pipeline, linking to the dealer portal login page. Verified with a test exercising the real send pipeline (`OM_TEST_MODE` capture), not a mock of `sendEmail`.
 
 ### `POST .../reject`
-Body: `reason` (1–2000, required). `200 {"ok":true}` · `400` from `pending_verification`/`under_review` only · `404`.
+Body: `reason` (1–2000, required). `200 {"ok":true}` · `400` from `pending_verification`/`under_review` only · `404`. **TASK-03:** emits `dealer_onboarding.profile.rejected`; `subscribers/notify-dealer-on-rejection.ts` sends a real email including the rejection reason and a login link — once logged in, the dealer can `GET .../onboarding/status` (to see the reason again) and `POST .../onboarding/resubmit`. This is the "pending/rejected applicants need a secure way to check their own status" requirement — satisfied by login + the existing status endpoint, not an unauthenticated token in the email.
+
+**Email delivery note (both routes):** links use `DEALER_PORTAL_BASE_URL` (new env var, mirrors the `PLATFORM_PORTAL_BASE_URL` lesson from spec/phase-1 Gap G7) — falls back to `http://localhost:3200` outside production, throws loudly if unset in production rather than mailing a dead localhost link. The dealer-portal app itself (TASK-01) does not exist yet, so the link's destination page is not yet live; the link's construction, the event wiring, and the real send are all verified now regardless.
 
 ---
 
@@ -179,7 +192,9 @@ Capabilities enums: `printingMethods ∈ {sublimation, dtg, laser_engraving, uv_
 |---|---|---|---|
 | `GET /api/dealer_org_rbac/dealer/profile` | Dealer | `dealer_org.view` | **Broken by Gap 2** after first approval in tenant |
 | `PUT /api/dealer_org_rbac/dealer/profile/capabilities` | Dealer owner | `dealer_org.manage_capabilities` | **Broken by Gap 2** after first approval in tenant |
-| `POST /api/dealer_org_rbac/dealer/staff/invite` | Dealer owner | `dealer_org.manage_staff` | **Broken by Gap 2** after first approval in tenant |
+| `POST /api/dealer_org_rbac/dealer/staff/invite` | Dealer owner | `dealer_org.manage_staff` | **Implemented (TASK-02/03)** |
+| `GET /api/dealer_org_rbac/dealer/staff` | Dealer owner | `dealer_org.manage_staff` | **New (TASK-03)** — owner+staff roster, scoped to caller's own org |
+| `POST /api/dealer_org_rbac/dealer/staff/{id}/deactivate` | Dealer owner | `dealer_org.manage_staff` | **New (TASK-03)** — resolves the "staff deactivate" gap CONTRACT-HANDOFF.md flagged as missing |
 | `GET /api/dealer_org_rbac/admin/dealers` | Admin | `dealer_org.admin` | **Verified working** |
 | `GET /api/dealer_org_rbac/admin/dealers/{id}` | Admin | `dealer_org.admin` | **Verified working** |
 | `PUT /api/dealer_org_rbac/admin/dealers/{id}/capabilities` | Admin | `dealer_org.admin` | **Verified working** |
@@ -194,6 +209,11 @@ Strict body (unknown keys → 422): `productTypeCodes?` (≤100), `printingMetho
 
 ### `POST .../dealer/staff/invite`
 Strict body: `email`, `name?`. `201 {"userId","email"}` · `404` no approved profile. Creates a `dealer:staff` user with an invite email. Staff receive **only** `dealer_onboarding.view_own` + `dealer_org.view` (per `dealer_org_rbac/setup.ts` — verified: staff do *not* get `manage_capabilities`/`manage_staff`, and, per Gap 1, do not currently get `dealer_orders.dealer_access` either until that gap is fixed).
+
+### `GET .../dealer/staff` and `POST .../dealer/staff/{id}/deactivate` (TASK-03) — resolved "staff deactivate" question
+CONTRACT-HANDOFF.md flagged "no staff-list/deactivate endpoint exists" as a gap for TASK-07 to either request or descope. Both now exist:
+- `GET .../dealer/staff` → `{"items":[{id,email,name,role,isActive,lastLoginAt,createdAt}]}` — the dealer org's owner+staff roster, read via the INSTALLED auth module's own `User`/`Role`/`UserRole` entities (`findWithDecryption` for the encrypted `email` column — never raw SQL on `users`, which would return ciphertext).
+- `POST .../dealer/staff/{id}/deactivate` → `{"userId","deactivated":true}` · `400` if `id` is the caller's own id (an owner can never deactivate themselves) · `404` if `id` doesn't resolve as a `dealer:staff` member of the caller's own org (never another org's user, never a `dealer:owner`). Deactivation calls the installed `auth.users.update` command with `isConfirmed: false` — the SAME flag the auth module's session-integrity check (re-run on every authenticated request) and login route both honor, so this is a real access revocation, not a flag nothing checks.
 
 ### Admin directory
 `GET /admin/dealers` lists **approved dealers only**, tenant-scoped, `businessName ASC`, `search?`, `state?`, pagination; each item includes a batch-loaded `capabilities` object. `GET /admin/dealers/{id}` — single dealer; `404` if not approved. `PUT /admin/dealers/{id}/capabilities` — admin full-replace of a dealer's capabilities; `400` if dealer not approved.
@@ -213,9 +233,11 @@ Assignment statuses: `assigned | acknowledged | in_production | ready_for_dispat
 | `PUT /api/dealer_orders/admin/orders/{id}/assignment` | **Order ID** | Admin | `dealer_orders.manage` | Verified |
 | `DELETE /api/dealer_orders/admin/orders/{id}/assignment` | **Order ID** | Admin | `dealer_orders.manage` | Verified |
 | `GET /api/dealer_orders/admin/dealers/{dealerId}/orders` | `dealerId` = dealer profile ID | Admin | `dealer_orders.view` | Verified |
-| `GET /api/dealer_orders/dealer/orders` | n/a (list) | Dealer | `dealer_orders.dealer_access` | **Blocked — Gap 1** |
-| `GET /api/dealer_orders/dealer/orders/{id}` | **Assignment ID** (OpenAPI doc comment confirms: `pathParams: { id: ... .describe('Assignment ID') }`) | Dealer | `dealer_orders.dealer_access` | **Blocked — Gap 1, Gap 3** |
-| `POST /api/dealer_orders/dealer/orders/{id}/status` | **Assignment ID** (route reads `id` into `assignmentId`) | Dealer | `dealer_orders.dealer_access` | **Blocked — Gap 1, Gap 3** |
+| `GET /api/dealer_orders/dealer/orders` | n/a (list) | Dealer | `dealer_orders.dealer_access` | **Implemented (TASK-02/03)** — supports `sortField` (`assignedAt`\|`requiredBy`) + `sortDir`, server-side (DB-level sort-then-paginate, not a client-side page sort) |
+| `GET /api/dealer_orders/dealer/orders/{id}` | **Assignment ID** (OpenAPI doc comment confirms: `pathParams: { id: ... .describe('Assignment ID') }`) | Dealer | `dealer_orders.dealer_access` | **Implemented (TASK-02/03)** — see "Safe dealer order detail" below for the TASK-03 payload change |
+| `POST /api/dealer_orders/dealer/orders/{id}/status` | **Assignment ID** (route reads `id` into `assignmentId`) | Dealer | `dealer_orders.dealer_access` | **Implemented (TASK-02/03)** — accepts optional `updatedAt` for optimistic concurrency (409 on stale write; omitted = unchanged last-write-wins, backward compatible) |
+| `GET /api/dealer_orders/dealer/dashboard` | n/a | Dealer | `dealer_orders.dealer_access` | **New (TASK-03)** — order-status aggregates; see "Dashboard aggregates" below |
+| `GET /api/dealer_orders/admin/orders/{id}/assignments` (plural) | **Order ID** | Admin | `dealer_orders.view` | **New (TASK-03)** — full assignment history including cancelled/superseded rows, newest first. Resolves the "assignment history" open question below |
 
 So: the admin assignment routes are keyed by the **order's** id (because they answer "what is this order's current assignment"); the dealer-facing detail/status routes are keyed by the **assignment's** id (because a dealer may have had multiple assignments over time for different orders, and the one id that is unambiguous to them is the assignment id they were notified about). TASK-09/TASK-10 must carry `assignment.id`, not `assignment.orderId`, as the route param when linking from the dealer's order list into order detail/status-update.
 
@@ -224,7 +246,7 @@ Serialized assignment: `id, orderId, dealerProfileId, tenantId, organizationId, 
 ### `POST /admin/orders/{id}/assignment` — resolved "eligible-dealer filtering" question
 Headers: `Idempotency-Key` **required** (400 `idempotency_key_required` if missing — not consumed, see Gap 4).
 Body: `orderId` (uuid), `dealerProfileId` (uuid), `requiredBy` (`YYYY-MM-DD`, future).
-`201 {"id"}` · `400` when order is not `payment_status='paid'` · `409` when an active assignment already exists.
+`201 {"id"}` · `400` when order is not `payment_status='paid'` · `409` when an active assignment already exists. **Fixed by TASK-03 (Gap 7):** the paid-status check previously queried a nonexistent `orders` table and would have failed every real assignment attempt — see the Gap 7 writeup above. Emits `dealer_order.assigned`; `subscribers/notify-dealer-on-assignment.ts` now sends the dealer a REAL email (previously a TODO-only log stub) with the production deadline and a link to the assignment, resolving FEAT-011/US-005 AC #4 ("the dealer receives an email notification"). Verified end-to-end (event → DealerProfile contact-email lookup → real `sendEmail` capture) in `dealer_orders/__tests__/notifyOnAssignment.test.ts`.
 
 **There is no server-side eligible-dealer filter.** The command accepts any `dealerProfileId` with zero validation against the order's product types or the dealer's declared capabilities (`productTypeCodes`, `serviceableStates`, `maxDailyCapacity`). FEAT-011 AC #2 ("The assignment UI shows only dealers whose capabilities include the product types in the order") is **not implemented anywhere in the backend.**
 
@@ -244,6 +266,29 @@ Body: `reason` (required, 1–500). No idempotency key. `200 {"ok":true}` · `40
 `200 {"assignment": {...} | null}` — **never 404s**; returns the single **currently-active** (non-cancelled) assignment or `null`. **There is no endpoint that returns an order's full assignment history** (including cancelled/superseded rows from past reassignments). FEAT-011 AC #7 ("The order detail in the admin panel shows current assignment status and history") is **only half-implemented** — current status, yes; history, no.
 
 The data to support history already exists in the table (reassignment soft-cancels the old row and inserts a new one; nothing is ever hard-deleted), but no route projects it. **Proposed, not yet implemented:** `GET /api/dealer_orders/admin/orders/{id}/assignments` (plural) returning all rows for the order including cancelled ones, ordered by `assignedAt DESC`. TASK-13 (admin assignment UI, which is the only task needing history) should either request this as a TASK-03 addition, or — if history display is not a hard requirement for the initial cut — ship without it and note the gap in that task's handoff. Do not build a history UI against a guessed endpoint shape.
+
+### Safe dealer order detail — `GET .../dealer/orders/{id}` response shape (TASK-03)
+
+Previously returned the bare serialized assignment (internal scope/audit fields included). Now returns the FEAT-010-scoped safe projection only:
+
+```
+{
+  assignmentId, orderId, orderNumber, status, statusNote, statusUpdatedAt,
+  requiredBy, assignedAt, updatedAt,
+  lines: [{ id, productId, variantId, name, quantity, giftMessage, productionRequirements }],
+  shipping: { city, pincode }
+}
+```
+
+`assignmentId` and `orderId` are both present and intentionally distinct (`orderId` is read-only reference data, paired with `orderNumber`; the dealer portal routes by `assignmentId` only). Excludes `dealerProfileId`/`tenantId`/`organizationId`/`assignedBy`/`cancelledReason` and all customer PII/payment data — sourced via raw SQL against `sales_orders`/`sales_order_lines` (mirrors the existing `assertOrderIsPaid` cross-module-read pattern). `productionRequirements` is `sales_order_lines.configuration` (catalog customization payload) merged with any free-text `comment`; `giftMessage` is read from `metadata.gift.giftMessage` (same shape storefront uses). `shipping.pincode` is `shipping_address_snapshot.postalCode`. See `dealer_orders/lib/orderDetails.ts`.
+
+### Dashboard aggregates — `GET .../dealer/dashboard` (TASK-03)
+
+```json
+{ "pendingAcknowledgment": 3, "inProduction": 1, "dispatchedThisWeek": 2, "weekStartsAt": "2026-01-04T18:30:00.000Z", "timezone": "Asia/Kolkata" }
+```
+
+Computed as ONE SQL aggregate (`COUNT(*) FILTER (...)`) scoped to the caller's own `dealerProfileId`, never by summing/filtering pages of `GET /dealer/orders` — that would silently undercount past the first page. `dispatchedThisWeek` uses an explicit Asia/Kolkata week boundary (most recent Monday 00:00 IST, converted to its UTC instant) — see `dealer_orders/lib/dateWindows.ts`'s `startOfIstWeek`; `weekStartsAt` is returned so the client can render the exact boundary used. This endpoint only covers `dealer_orders`' own counts — TASK-08 (dealer dashboard) must separately call the already-correct aggregate endpoints `GET /payouts/dealer/ledger/balance` (SQL `SUM`, not a page sum) and `GET /dealer_org_rbac/dealer/profile` (for `capabilities.maxDailyCapacity`) and compose them client-side; no single cross-module dashboard endpoint was added (would require an ORM/SQL join across module-owned tables, which this repo's module-isolation convention forbids).
 
 ### `POST .../dealer/orders/{id}/status` — dealer status update
 Body: `status` (any value except `assigned`/`cancelled`), `note?` (≤500). `200 {"ok":true}` · `400` invalid transition or cancelled assignment · `404` not found. `statusNote` is **overwritten**, not appended — a status-history/notes-timeline UI (if desired) cannot be built from this field; only the single latest note is ever retained. Emits `dealer_order.status_updated`.
@@ -325,9 +370,9 @@ Body: `direction` (`credit|debit`), `amount` (positive, paise), `note` (**requir
 | Owner vs staff earnings access | **Neither currently has access** (Gap 1). Once fixed: `commissions.dealer_access`/`payouts.dealer_access` should go to `dealer:owner` only; `dealer_orders.dealer_access` to both owner and staff. FEAT-010's "staff: no financial access" intent is correct product direction but is not yet encoded anywhere. |
 | KYC pending-user authentication | A pending dealer logs in through the normal core-auth endpoints immediately after registration (no special "pending" auth mode) and can call `GET .../onboarding/status` via the `dealer_onboarding.view_own` grant — **but this breaks (403) for any still-pending dealer once any other dealer in the tenant has been approved** (Gap 2). |
 | Assignment-ID vs order-ID | Admin routes key off **order ID**. Dealer-facing detail/status routes key off **assignment ID**. See the `dealer_orders` table above for the exact per-route breakdown. |
-| Assignment history | No endpoint exists; only the current active assignment is queryable (`GET /admin/orders/{id}/assignment`). History data exists in the table (cancelled rows are retained) but nothing projects it. Proposed addition: `GET .../admin/orders/{id}/assignments` (plural). |
-| Running ledger balance | No per-entry running balance; only an aggregate `{pendingAmount, totalEarned}` endpoint exists. Recommend building UI against the aggregate + a plain chronological list, not a computed running column. |
-| Eligible-dealer filtering | No server-side filter. `GET /admin/dealers` returns every approved dealer with capabilities already attached; TASK-13 must filter client-side against the order's product types. |
+| Assignment history | **Implemented (TASK-03):** `GET /api/dealer_orders/admin/orders/{id}/assignments` (plural) returns every row for the order, including cancelled/superseded, newest first. |
+| Running ledger balance | **Explicitly descoped from TASK-03** — `payouts/` is owned by a concurrent lane and out of TASK-03's owned paths. No per-entry running balance exists; only the aggregate `{pendingAmount, totalEarned}` endpoint. Decision stands as originally recommended: build UI against the aggregate + a plain chronological list, not a computed running column. If a running-balance column is still wanted, that is a new window-function query in `payouts/api/.../ledger/route.ts`, to be raised with whichever lane owns `payouts/` next. |
+| Eligible-dealer filtering | **Confirmed, no new endpoint added (TASK-03).** No server-side filter exists or was added — `GET /admin/dealers` already returns every approved dealer with capabilities batch-loaded, which is correct, non-paginated data (not the "summing a page" problem the running-balance case has). TASK-13 filters client-side against the order's product types, per the original recommendation. |
 | Business-profile edit scope | Dealer-facing `PUT` only covers **capabilities** (`productTypeCodes`, `printingMethods`, `maxDailyCapacity`, `serviceableStates`, `minOrderQty`). No endpoint edits business-identity fields (name/GSTIN/PAN/contact/address) post-approval; those are editable only pre-approval via `resubmit` while `kycStatus==="rejected"`. |
 | Inactive-rule filtering / boolean parsing | Confirmed bug: `activeOnly=false` is coerced to `true` by `z.coerce.boolean()`. Only an **empty** `activeOnly=` value yields `false`. |
 
@@ -341,17 +386,17 @@ Every P2-UI task from 04 onward is listed here with its required contracts and c
 |---|---|---|
 | TASK-01 (scaffold) | No backend contract — shared UI/package wiring only | Not blocked by backend |
 | TASK-02 (dealer authZ prerequisite) | Fix Gap 1, Gap 2, Gap 3 | **This is where Gaps 1–3 must be fixed** |
-| TASK-03 (missing APIs) | Decide on assignment-history endpoint, running-balance approach, eligible-dealer-filter approach (all documented above as proposed-not-implemented or client-side-workaround) | Depends on TASK-02 |
+| TASK-03 (missing APIs) | Decide on assignment-history endpoint, running-balance approach, eligible-dealer-filter approach | **Done.** Assignment history: implemented (`GET .../admin/orders/{id}/assignments`). Running balance: explicitly descoped (payouts out of this task's owned paths). Eligible-dealer filter: confirmed client-side, no new endpoint (per the original recommendation). Also fixed a severe, previously-undiscovered bug (Gap 7: `assertOrderIsPaid` queried a nonexistent `orders` table — see above), added real KYC file upload/download, staff list/deactivate, order-detail safe payload, dashboard aggregates, and optimistic-concurrency 409s on capabilities/status-update. |
 | TASK-04 (dealer auth/access states) | Core-auth login/refresh/logout + `dealer_onboarding.view_own` status check | Verified working **except** Gap 2's multi-dealer lockout — must be fixed first or TASK-04's "pending" state is untestable with >1 dealer |
-| TASK-05 (registration/KYC) | `dealer_onboarding` register/status/documents/resubmit | Verified working; Gap 2 caveat applies; object-storage pre-signed-URL step is an external dependency to confirm |
+| TASK-05 (registration/KYC) | `dealer_onboarding` register/status/documents/resubmit | Verified working; Gap 2 fixed by TASK-02. Object-storage question resolved by TASK-03: no pre-signed-URL step — `POST .../documents` is a direct `multipart/form-data` upload; download via `GET .../documents/{id}/file` |
 | TASK-06 (profile/capabilities) | `dealer_org_rbac` profile/capabilities GET+PUT | Blocked by Gap 2 until fixed; scope is capabilities-only (see above) |
-| TASK-07 (staff management) | `dealer_org_rbac` staff/invite | Blocked by Gap 2 until fixed; no staff-list/deactivate endpoint exists — FEAT-010's `/staff` page description ("invite, deactivate") is only half-contracted: invite yes, deactivate **no endpoint found**. Flag as proposed addition to TASK-03 if deactivation is required for the initial cut. |
-| TASK-08 (dashboard) | Aggregates across `dealer_orders`/`commissions`/`payouts` dealer routes | Blocked by Gap 1 (and Gap 2, Gap 3) |
-| TASK-09 (orders list) | `GET /dealer_orders/dealer/orders` | Blocked by Gap 1, Gap 3 |
-| TASK-10 (order detail/status) | `GET`/`POST /dealer_orders/dealer/orders/{assignmentId}...` | Blocked by Gap 1, Gap 3; no optimistic-concurrency check on status update today |
+| TASK-07 (staff management) | `dealer_org_rbac` staff/invite/list/deactivate | Gap 2 fixed by TASK-02. Staff list + deactivate implemented by TASK-03 (`GET .../dealer/staff`, `POST .../dealer/staff/{id}/deactivate`) — FEAT-010's "invite, deactivate" page description is now fully contracted. |
+| TASK-08 (dashboard) | Aggregates across `dealer_orders`/`commissions`/`payouts` dealer routes | Gaps 1–3 fixed by TASK-02. `dealer_orders` aggregate added by TASK-03 (`GET .../dealer/dashboard`); compose client-side with the already-correct `commissions`/`payouts` aggregate endpoints (see "Dashboard aggregates" above) |
+| TASK-09 (orders list) | `GET /dealer_orders/dealer/orders` | Gaps 1–3 fixed by TASK-02. Server-side `sortField=requiredBy` sorting added by TASK-03. |
+| TASK-10 (order detail/status) | `GET`/`POST /dealer_orders/dealer/orders/{assignmentId}...` | Gaps 1–3 fixed by TASK-02. TASK-03 changed the detail response to the safe FEAT-010 projection (see above) and added an optional `updatedAt` optimistic-concurrency check (409 on stale write) to the status-update route. |
 | TASK-11 (admin KYC review) | `dealer_onboarding` admin routes | Verified working |
 | TASK-12 (admin dealer directory) | `dealer_org_rbac` admin routes | Verified working |
-| TASK-13 (admin assignment UI) | `dealer_orders` admin routes + client-side eligible-dealer filter + (optional) history endpoint | Verified working for assign/reassign/cancel/current-status; eligible-dealer filter and history are gaps documented above |
+| TASK-13 (admin assignment UI) | `dealer_orders` admin routes + client-side eligible-dealer filter + history endpoint | Verified working for assign/reassign/cancel/current-status (and now actually reaches a real `sales_orders` row — see Gap 7). History: implemented (`GET .../admin/orders/{id}/assignments`). Eligible-dealer filter: confirmed client-side (no new endpoint — see above). |
 | TASK-14 (dealer earnings/ledger) | `commissions`/`payouts` dealer routes | Blocked by Gap 1, Gap 3; running-balance approach decided above |
 | TASK-15 (admin commission mgmt) | `commissions` admin routes | Verified working; `activeOnly` boolean bug documented above |
 | TASK-16 (admin ledger/payout) | `payouts` admin routes | Verified working; no balance guard/idempotency (Gap 4/5), adjustment-credit semantics (Gap 6) |

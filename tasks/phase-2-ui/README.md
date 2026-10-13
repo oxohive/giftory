@@ -57,7 +57,7 @@ Dependency numbers below refer to P2-UI task IDs.
 | [P2-UI-00](TASK-00-contract-audit-and-implementation-preflight.md) | Contract audit and implementation preflight | A | none | Review |
 | [P2-UI-01](TASK-01-dealer-portal-scaffold-and-shared-ui-foundation.md) | Dealer portal scaffold and shared UI foundation | A | 00 | Review |
 | [P2-UI-02](TASK-02-dealer-authorization-and-data-isolation-prerequisite.md) | Dealer authorization and data isolation prerequisite | A | 00 | Review |
-| [P2-UI-03](TASK-03-missing-ui-data-and-lifecycle-apis.md) | Missing UI data and lifecycle APIs | A | 00, 02 | Planned |
+| [P2-UI-03](TASK-03-missing-ui-data-and-lifecycle-apis.md) | Missing UI data and lifecycle APIs | A | 00, 02 | Review |
 | [P2-UI-04](TASK-04-dealer-authentication-and-access-states.md) | Dealer authentication and access states | B | 00, 01, 02, 03 | Planned |
 | [P2-UI-05](TASK-05-dealer-registration-and-kyc-screens.md) | Dealer registration and KYC screens | B | 01, 03, 04 | Planned |
 | [P2-UI-06](TASK-06-dealer-profile-and-capabilities-screens.md) | Dealer profile and capabilities screens | B | 01, 03, 04 | Planned |
@@ -69,7 +69,7 @@ Dependency numbers below refer to P2-UI task IDs.
 | [P2-UI-12](TASK-12-admin-dealer-directory-and-capabilities.md) | Admin dealer directory and capabilities | D | 00, 03 | Planned |
 | [P2-UI-13](TASK-13-admin-order-assignment-ui.md) | Admin order assignment UI | D | 00, 02, 03 | Planned |
 | [P2-UI-14](TASK-14-dealer-earnings-and-ledger-screens.md) | Dealer earnings and ledger screens | E | 00, 01, 02, 04 | Planned |
-| [P2-UI-15](TASK-15-admin-commission-management.md) | Admin commission management | E | 00, 02 | Planned |
+| [P2-UI-15](TASK-15-admin-commission-management.md) | Admin commission management | E | 00, 02 | Review |
 | [P2-UI-16](TASK-16-admin-ledger-payout-recording-and-adjustments.md) | Admin ledger, payout recording and adjustments | E | 00, 02 | Review |
 | [P2-UI-17](TASK-17-integration-accessibility-and-regression-verification.md) | Integration, accessibility and regression verification | A | 05, 06, 07, 08, 09, 10, 11, 12, 13, 14, 15, 16 | Planned |
 | [P2-UI-18](TASK-18-delivery-documentation-and-deployment-readiness.md) | Delivery documentation and deployment readiness | A | 17 | Planned |

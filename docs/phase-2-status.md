@@ -85,6 +85,8 @@ What exists today in the repo:
 - `packages/api-client`, `packages/ui` — thin shared-package scaffolds intended for the portal.
 - No custom admin screens exist for the five Phase 2 modules; admin review of KYC, dealers, assignment, commissions and payouts is API-only right now.
 
+**Deferred: a dealer-facing mobile app.** A dealer field app (assigned orders, production status updates, earnings) is a reasonable future surface — but a separate one from `apps/mobile` (the customer shopping app), not an extension of it. Deliberately deferred until the web dealer portal above is actually built and proven against real contracts, rather than building two unproven UIs against the same unproven contracts at once. Revisit once P2-UI-17/18 (integration + delivery) land.
+
 ---
 
 ## Live verification status
