@@ -23,14 +23,18 @@ export const ALLOWED: Rule[] = [
   { pattern: /^dealer_onboarding\/dealer\/onboarding\/register$/, methods: ['POST'] },
   { pattern: /^dealer_onboarding\/dealer\/onboarding\/status$/, methods: ['GET'] },
   { pattern: /^dealer_onboarding\/dealer\/onboarding\/documents$/, methods: ['POST'] },
+  { pattern: /^dealer_onboarding\/dealer\/onboarding\/documents\/[^/]+\/file$/, methods: ['GET'] },
   { pattern: /^dealer_onboarding\/dealer\/onboarding\/resubmit$/, methods: ['POST'] },
 
   // dealer_org_rbac (FEAT-009).
   { pattern: /^dealer_org_rbac\/dealer\/profile$/, methods: ['GET'] },
   { pattern: /^dealer_org_rbac\/dealer\/profile\/capabilities$/, methods: ['PUT'] },
+  { pattern: /^dealer_org_rbac\/dealer\/staff$/, methods: ['GET'] },
   { pattern: /^dealer_org_rbac\/dealer\/staff\/invite$/, methods: ['POST'] },
+  { pattern: /^dealer_org_rbac\/dealer\/staff\/[^/]+\/deactivate$/, methods: ['POST'] },
 
   // dealer_orders (FEAT-011). Dealer-side {id} is the ASSIGNMENT id, not the order id.
+  { pattern: /^dealer_orders\/dealer\/dashboard$/, methods: ['GET'] },
   { pattern: /^dealer_orders\/dealer\/orders$/, methods: ['GET'] },
   { pattern: /^dealer_orders\/dealer\/orders\/[^/]+$/, methods: ['GET'] },
   { pattern: /^dealer_orders\/dealer\/orders\/[^/]+\/status$/, methods: ['POST'] },
