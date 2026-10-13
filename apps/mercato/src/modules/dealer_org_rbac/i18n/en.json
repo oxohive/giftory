@@ -23,5 +23,91 @@
       "uv_print": "UV Printing",
       "offset": "Offset Printing"
     }
+  },
+  "dealer_org_rbac": {
+    "admin": {
+      "nav": {
+        "group": "Dealers"
+      },
+      "kycStatus": {
+        "approved": "Approved"
+      },
+      "businessType": {
+        "proprietorship": "Proprietorship",
+        "partnership": "Partnership",
+        "pvt_ltd": "Private Limited",
+        "llp": "Limited Liability Partnership"
+      },
+      "directory": {
+        "title": "Dealers",
+        "searchPlaceholder": "Search by business name or email",
+        "empty": "No approved dealers match these filters.",
+        "capabilitiesSummary": "{productTypes} product types · {printingMethods} printing methods · {capacity}/day capacity",
+        "actions": {
+          "refresh": "Refresh"
+        },
+        "column": {
+          "businessName": "Business name",
+          "contactEmail": "Contact email",
+          "location": "Location",
+          "state": "State",
+          "kycStatus": "KYC status",
+          "capabilities": "Capabilities"
+        }
+      },
+      "detail": {
+        "title": "Dealer detail",
+        "loading": "Loading dealer…",
+        "error": {
+          "notFound": "Dealer not found or not approved",
+          "generic": "Failed to load dealer"
+        },
+        "field": {
+          "phone": "Phone",
+          "businessType": "Business type",
+          "location": "Location",
+          "approvedAt": "Approved on"
+        },
+        "links": {
+          "ledger": "Payout ledger",
+          "commission": "Commission history"
+        }
+      },
+      "capabilities": {
+        "sectionTitle": "Capability configuration",
+        "notConfigured": "Not configured",
+        "success": "Capabilities saved",
+        "readOnlyNotice": "You can view this dealer's capability configuration but do not have permission to change it.",
+        "error": {
+          "generic": "Could not save capability changes",
+          "validation": "Some values are invalid",
+          "conflictHint": "Reload this dealer's capabilities to see the latest values, then try your change again."
+        },
+        "productTypeCodes": {
+          "label": "Product types",
+          "sublabel": "Free text — no fixed catalog yet",
+          "placeholder": "Add a product type and press Enter"
+        },
+        "printingMethods": {
+          "label": "Printing methods",
+          "placeholder": "Select a printing method"
+        },
+        "serviceableStates": {
+          "label": "Serviceable states",
+          "placeholder": "Select a state"
+        },
+        "maxDailyCapacity": {
+          "label": "Max daily capacity"
+        },
+        "minOrderQty": {
+          "label": "Minimum order quantity"
+        },
+        "actions": {
+          "reset": "Reset",
+          "save": "Save capabilities",
+          "saving": "Saving…"
+        }
+      }
+    }
   }
 }
