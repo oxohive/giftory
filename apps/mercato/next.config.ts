@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from 'node:path'
 import { resolveAllowedDevOrigins } from './src/lib/dev-origins'
 import { telemetryServerExternalPackages } from '@open-mercato/telemetry/nextjs-config'
 
@@ -61,6 +62,11 @@ const nextConfig: NextConfig & { agentRules?: boolean } = {
     '@open-mercato/content',
     '@open-mercato/onboarding',
     '@open-mercato/ai-assistant',
+    // workflows' WorkflowGraph component imports this directly (not via a
+    // layout/global CSS file), which Next's default node_modules exclusion
+    // rejects with "Module parse failed: Unexpected token" on the .css file —
+    // transpiling it routes the import through Next's normal CSS pipeline.
+    '@xyflow/react',
   ],
   serverExternalPackages: [
     'esbuild',
@@ -75,7 +81,123 @@ const nextConfig: NextConfig & { agentRules?: boolean } = {
     // @open-mercato/telemetry so it can never drift into a partial (silently
     // "emits nothing") copy.
     ...telemetryServerExternalPackages,
+    // @opentelemetry/sdk-node's own build/src/{utils,sdk}.js unconditionally
+    // `require()` ALL four OTLP exporter variants (HTTP + gRPC) regardless of
+    // which protocol is actually configured — telemetryServerExternalPackages
+    // only lists the HTTP ones. Without these, webpack tries to bundle
+    // @grpc/grpc-js (which needs Node's `fs`) and fails with
+    // "Module not found: Can't resolve 'fs'" in certificate-provider.js.
+    '@opentelemetry/exporter-trace-otlp-grpc',
+    '@opentelemetry/exporter-logs-otlp-grpc',
+    '@opentelemetry/exporter-metrics-otlp-grpc',
+    '@opentelemetry/otlp-grpc-exporter-base',
+    '@grpc/grpc-js',
+    '@grpc/proto-loader',
+    // bullmq (wrapped by @open-mercato/queue, which IS in transpilePackages
+    // above) ships dynamic require() patterns for its pluggable Redis client
+    // and sandboxed child-process job runner — "Critical dependency: the
+    // request of a dependency is an expression" warnings that make webpack
+    // try to bundle a huge, essentially-unbundlable dependency tree even for
+    // the legitimate server build. Must run as a real Node module.
+    'bullmq',
+    'ioredis',
+    '@valkey/valkey-glide',
+    // awilix (the DI/IoC library @open-mercato/shared's container is built
+    // on) has the same "Critical dependency: the request of a dependency is
+    // an expression" dynamic-require pattern.
+    'awilix',
   ],
+  // `serverExternalPackages` above only covers the Node.js server compilation.
+  // The grpc/OTel chain also gets pulled into the CLIENT (browser) bundle via
+  // .mercato/generated/messages.client.generated.ts -> a module's
+  // message-objects.ts -> @open-mercato/core's bootstrap -> events/queue ->
+  // @open-mercato/telemetry -> @opentelemetry/sdk-node -> the gRPC exporters
+  // -> @grpc/grpc-js, which needs real Node sockets/DNS/TLS/fs that don't
+  // exist in a browser. That code path is never actually reachable client-side
+  // (telemetry only runs server-side) — it's an accidental transitive import,
+  // not a real client dependency — so stub these out for the browser bundle
+  // only, rather than trying to break the import chain itself.
+  webpack: (config, { isServer, webpack }) => {
+    // @open-mercato/shared's DI container does `await import("@/di")` as an
+    // app-extension hook (node_modules/@open-mercato/shared/dist/lib/di/container.js:213),
+    // expecting the CONSUMING APP's own tsconfig "@/*" -> "./src/*" alias to
+    // resolve it to this app's src/di.ts. Next.js's built-in tsconfig-paths
+    // support only applies to imports written in the app's own source tree,
+    // not to dynamic imports made from inside a third-party node_modules
+    // package -- so this never resolved. This genuinely needs to be real on
+    // the SERVER build (createRequestContainer(), used by every storefront
+    // route, needs the real registration). On the CLIENT build it must be
+    // stubbed, not resolved: src/di.ts statically imports the full
+    // bootstrap() chain (events/queue/bullmq/telemetry/grpc), and bullmq's
+    // dynamic require() patterns are essentially unbundlable by webpack --
+    // pointing '@/di' at the real file for the client build (an earlier,
+    // wrong version of this fix) made the homepage compile hang for
+    // minutes trying to trace through BullMQ for a bundle that never
+    // legitimately needs any of it.
+    if (isServer) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        '@/di': path.resolve(__dirname, 'src/di.ts'),
+      }
+    }
+    if (!isServer) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        '@/di': false,
+      }
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        dns: false,
+        net: false,
+        tls: false,
+        child_process: false,
+        http2: false,
+        os: false,
+        perf_hooks: false,
+        async_hooks: false,
+        diagnostics_channel: false,
+        worker_threads: false,
+        inspector: false,
+        cluster: false,
+        dgram: false,
+        readline: false,
+        repl: false,
+        v8: false,
+        module: false,
+      }
+      // Root-cause fix instead of chasing every downstream dependency:
+      // messageObjectPreviews.js (and every other module's message-objects.ts)
+      // calls createRequestContainer() to load DB-backed preview data — correct
+      // for SERVER-side rendering, but every module gets swept into one client
+      // registry (messages.client.generated.ts) via `import * as X`, which
+      // defeats tree-shaking and drags the ENTIRE server bootstrap (DB driver,
+      // event bus, queue, telemetry, grpc) into the browser bundle even though
+      // nothing client-side ever actually calls it. Cutting the import here
+      // stops the whole chain at its one real entry point, instead of
+      // continuing to stub each new downstream package as it's discovered.
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        '@open-mercato/shared/lib/di/container': false,
+      }
+      // The alias above only cuts ONE of messageObjectPreviews.js's server-only
+      // imports (createRequestContainer). It also imports findOneWithDecryption
+      // from @open-mercato/shared/lib/encryption/find, an independent path to
+      // node:crypto that the same file pulls in regardless. Every one of the 7
+      // modules' messageObjectPreviews.js is entirely server-only by function
+      // (DB-backed preview data, decryption) — none of it is ever legitimately
+      // called client-side. Rather than alias each new deep import as it's
+      // discovered, replace the whole file (by filename pattern, so it covers
+      // all 7 modules at once) with an empty module for the client bundle.
+      config.plugins.push(
+        new webpack.NormalModuleReplacementPlugin(
+          /\/lib\/messageObjectPreviews(\.js)?$/,
+          require.resolve('./src/lib/empty-module.js'),
+        ),
+      )
+    }
+    return config
+  },
   // Mirror server-only env vars that client components must observe. Keep this
   // list minimal — anything added here is inlined into the client bundle.
   env: {
