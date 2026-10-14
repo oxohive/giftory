@@ -28,7 +28,7 @@ import { describe, expect, it, jest } from '@jest/globals'
  * `jest.config.cjs`'s own comment and the equivalent note in
  * `components/__tests__/realAssignmentPrecedence.test.ts`), so "real
  * contract fixtures" here means: fixture rows shaped exactly like what `pg`
- * actually returns for these real columns (e.g. `subtotal_amount` as a
+ * actually returns for these real columns (e.g. `subtotal_net_amount` as a
  * decimal string), fed through the unmodified production command handler —
  * not a mock of the subscriber's own internals and not an assertion that a
  * SQL string merely "looks right".
@@ -88,11 +88,11 @@ type RuleFixture = { dealerProfileId: string | null; productTypeCode: string | n
  * the subscriber functionally gets no data back — not because a string
  * literal changed.
  */
-function makeExecuteMock(opts: { orderRow?: { subtotal_amount: string } | null; rules?: RuleFixture[] }) {
+function makeExecuteMock(opts: { orderRow?: { subtotal_net_amount: string } | null; rules?: RuleFixture[] }) {
   // `opts.orderRow === undefined` means "not passed, use the default row";
   // an explicit `null` means "simulate no matching sales_orders row" — `??`
   // would collapse both cases together, so check explicitly.
-  const orderRow = opts.orderRow !== undefined ? opts.orderRow : { subtotal_amount: String(SUBTOTAL_PAISE) }
+  const orderRow = opts.orderRow !== undefined ? opts.orderRow : { subtotal_net_amount: String(SUBTOTAL_PAISE) }
   const rules = opts.rules ?? []
   return jest.fn(async (sql: string, params: unknown[]): Promise<Array<Record<string, unknown>>> => {
     if (/FROM\s+sales_orders\b/i.test(sql)) {
@@ -266,9 +266,9 @@ describe('snapshot-on-assignment — real sales_orders/sales_order_lines contrac
     expect(dataEngine.createOrmEntity).not.toHaveBeenCalled()
   })
 
-  it('parses a realistic decimal-string subtotal_amount (as pg returns numeric columns) into an integer paise amount', async () => {
+  it('parses a realistic decimal-string subtotal_net_amount (as pg returns numeric columns) into an integer paise amount', async () => {
     const executeMock = makeExecuteMock({
-      orderRow: { subtotal_amount: '999999' },
+      orderRow: { subtotal_net_amount: '999999' },
       rules: [{ dealerProfileId: null, productTypeCode: null, id: PLATFORM_RULE_ID, rateBps: PLATFORM_RATE_BPS }],
     })
     const em = makeEm(executeMock)
