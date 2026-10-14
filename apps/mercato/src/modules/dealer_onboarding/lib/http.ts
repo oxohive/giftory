@@ -55,8 +55,28 @@ export function dealerHandler(
     try {
       const container = await createRequestContainer()
       const auth = await getAuthFromRequest(req)
+      // `resolveOrganizationScopeForRequest` takes a single options object
+      // (`{ container, auth, request, selectedId?, tenantId? }`) — a prior version of this
+      // call passed `(req, container, auth)` positionally. Since the function destructures
+      // its single parameter, that positional call silently resolved every field to
+      // `undefined`, so the early `!auth || !auth.sub` guard inside it always returned
+      // `{ selectedId: null, filterIds: null, allowedIds: null, tenantId: null }` — a
+      // *truthy* scope object with `tenantId: null` — instead of throwing or returning a
+      // scope that matches the real caller. `ensureOrganizationScope` (used by every
+      // dealer_onboarding command via `resolveCommandScope`) treats a truthy scope with a
+      // null `tenantId` as a hard scope violation for any non-superadmin caller, so this
+      // silently turned into a 403 Forbidden on every real, non-admin dealer request through
+      // this handler (KYC document upload, resubmit, status) — confirmed live: a real
+      // registered dealer owner uploading a real KYC document got 403 against a real
+      // Postgres-backed session, which cascades into every downstream step (the dealer can
+      // never reach `under_review`, so admin approval 400s, so the dealer is never approved,
+      // so every dealer_org_rbac/dealer_orders/commissions/payouts dealer-facing route then
+      // 404s "no approved dealer profile" too). Admin/superadmin callers never hit this
+      // because `ensureOrganizationScope` skips the broken check entirely when
+      // `ctx.auth.isSuperAdmin` is true — which is why admin-side KYC review routes appeared
+      // to work fine in every prior task's testing.
       const organizationScope = auth
-        ? await resolveOrganizationScopeForRequest(req, container, auth).catch(() => null)
+        ? await resolveOrganizationScopeForRequest({ request: req, container, auth }).catch(() => null)
         : null
       return await handler({ req, ctx, container, translate, auth, organizationScope })
     } catch (err) {
