@@ -72,8 +72,15 @@ test('deactivation is performed through the installed auth.users.update command 
   assert.match(source, /isConfirmed:\s*false/)
 })
 
-test('staff invite is created with the real dealer:staff role via the installed auth.users.create command', () => {
+test('staff invite is created with the real dealer:staff role via the installed auth.users.create command, reading the id off the real {user,warning} return shape', () => {
   const source = readMercatoFile('commands/staff.ts')
-  assert.match(source, /commandBus\.execute<Record<string, unknown>, \{ id: string \}>\(\s*'auth\.users\.create'/)
+  // `auth.users.create` returns `{ user: { id }, warning? }`, not a flat `{ id }` — a prior
+  // version of this file declared the generic return type as `{ id: string }` and read
+  // `result.id`, which was always `undefined` at runtime (TASK-07's documented backend gap,
+  // fixed since). Pin the FIXED shape so a regression back to the flat-`id` assumption fails
+  // this test for a real contract-mismatch reason, not a stale string match.
+  assert.match(source, /commandBus\.execute<Record<string, unknown>, \{ user: \{ id: string \}; warning\?: string \}>\(\s*'auth\.users\.create'/)
+  assert.match(source, /result\.user\.id/)
+  assert.doesNotMatch(source, /commandBus\.execute<Record<string, unknown>, \{ id: string \}>\(\s*'auth\.users\.create'/)
   assert.match(source, /roles:\s*\[DEALER_STAFF_ROLE\]/)
 })
