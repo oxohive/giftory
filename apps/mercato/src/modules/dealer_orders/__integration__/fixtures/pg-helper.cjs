@@ -3,13 +3,11 @@
 /**
  * Tiny CommonJS SQL helper for the dealer-marketplace-journey integration spec.
  *
- * Why this exists: the spec file lives under apps/dealer-portal, which has no `pg`
- * dependency of its own (it is a thin BFF frontend — no direct DB access in production).
- * `pg` IS a real dependency of apps/mercato. Rather than add a new dependency to this
- * app just for tests, this script is invoked as a separate `node` child process with
- * `NODE_PATH` pointed at apps/mercato's `node_modules` (NODE_PATH is a CommonJS-only
- * resolution fallback, which is why this file is `.cjs`, not `.mjs`/TS) and
- * `DATABASE_URL` pointed at the ephemeral test harness's own Postgres instance
+ * Why this exists: Playwright's spec files run as ESM; this helper is invoked as a
+ * separate `node` child process (plain CommonJS, which is why this file is `.cjs`, not
+ * `.mjs`/TS) so a synchronous, isolated `pg` client call is trivial to script from the
+ * spec via `execFileSync`. `DATABASE_URL` is inherited from the ephemeral test harness's
+ * own env, pointed at the real, disposable Postgres instance it just booted
  * (`process.env.DATABASE_URL`, set by `@open-mercato/cli`'s ephemeral runner for every
  * discovered integration spec — see `startEphemeralEnvironment` in
  * `node_modules/@open-mercato/cli/dist/lib/testing/integration.js`).

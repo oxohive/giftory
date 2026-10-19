@@ -28,7 +28,7 @@ import { pgCall } from './fixtures/pg'
 
 const BASE_URL = process.env.BASE_URL ?? 'http://127.0.0.1:5001'
 const EMAIL_CAPTURE_PATH =
-  process.env.OM_TEST_EMAIL_CAPTURE_PATH ?? path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'mercato', '.ai', 'qa', 'email-capture.jsonl')
+  process.env.OM_TEST_EMAIL_CAPTURE_PATH ?? path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..', '.ai', 'qa', 'email-capture.jsonl')
 
 type Jar = Record<string, string>
 
