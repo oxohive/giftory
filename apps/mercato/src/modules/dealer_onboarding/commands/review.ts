@@ -183,6 +183,14 @@ async function scopeDealerRoleToOrg(
   const existingFeatures: string[] = Array.isArray((acl as { featuresJson?: string[] } | null)?.featuresJson)
     ? ((acl as { featuresJson: string[] }).featuresJson as string[])
     : []
+  // `auth.role-acl.update`'s `persist` writes `isSuperAdmin` unconditionally from
+  // its input (no fallback of its own — see @open-mercato/core's `api/roles/acl/route.ts`,
+  // which always resolves `requestedIsSuperAdmin = parsed.data.isSuperAdmin ?? existingIsSuperAdmin`
+  // before calling this same command). Omitting it here left it `undefined`, which MikroORM's
+  // changeset diffed against the loaded `false` and wrote as a real SQL NULL — a NOT NULL
+  // violation on `role_acls.is_super_admin` for every dealer:owner role that already had an ACL
+  // row (i.e. every tenant with more than one approved dealer). Preserve the current value.
+  const existingIsSuperAdmin = Boolean((acl as { isSuperAdmin?: boolean } | null)?.isSuperAdmin)
 
   const needsOrgUpdate = !existingOrgs.includes(organizationId)
   const needsFeatureUpdate = DEALER_OWNER_APPROVAL_FEATURES.some((f) => !existingFeatures.includes(f))
@@ -195,6 +203,7 @@ async function scopeDealerRoleToOrg(
     {
       roleId: role.id,
       tenantId,
+      isSuperAdmin: existingIsSuperAdmin,
       // Merge, never replace: keep every org already scoped in, plus this one.
       organizations: needsOrgUpdate ? [...existingOrgs, organizationId] : existingOrgs,
       // Merge, never replace: keep every feature already granted, plus the
