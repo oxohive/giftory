@@ -30,7 +30,13 @@ export const DS_RULES = Object.freeze([
   {
     id: 'inline-style',
     description: 'Use shared components and design tokens instead of inline style props.',
-    pattern: String.raw`\bstyle\s*=`,
+    // Must require an expression container (`style={...}`) right after `=`, never a bare
+    // `style="..."`/`style='...'` — React's native `style` DOM prop can only be an object,
+    // so a quoted string there is always a shared component's own variant prop (e.g.
+    // `Alert`'s `style: 'filled' | 'light' | 'lighter'`), never an inline CSS violation.
+    // Confirmed against this exact false-positive: every one of the 15 "violations" this
+    // rule previously flagged across commissions/payouts/dealer_* was `<Alert ... style="lighter">`.
+    pattern: String.raw`\bstyle\s*=\s*\{`,
   },
   {
     id: 'raw-backend-table',
@@ -123,7 +129,7 @@ function collectSyntaxFacts(source) {
     if (tag && ['table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td'].includes(tag)) {
       rawTableTags.push({ tag, offset: match.index })
     }
-    for (const styleMatch of openingTag.matchAll(/\bstyle\s*=/g)) {
+    for (const styleMatch of openingTag.matchAll(/\bstyle\s*=\s*\{/g)) {
       inlineStyleOffsets.push(match.index + styleMatch.index)
     }
   }

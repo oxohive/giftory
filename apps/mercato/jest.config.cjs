@@ -38,5 +38,10 @@ module.exports = {
     ],
   },
   transformIgnorePatterns: ['/node_modules/(?!(@open-mercato|@mikro-orm|@tanstack/react-table|@tanstack/table-core|@tanstack/react-store|@tanstack/store)/)'],
-  testPathIgnorePatterns: ['/node_modules/', '/.next/', '/.mercato/', '/.ai/qa/'],
+  // `__integration__` is excluded here per the header comment above, but this
+  // pattern was never actually exercised until the app's first module-local
+  // `__integration__` directory existed (src/modules/dealer_orders/__integration__/)
+  // — Jest picked up its real Playwright `.spec.ts` file as a unit test and
+  // failed to compile it (`@playwright/test` isn't a Jest environment).
+  testPathIgnorePatterns: ['/node_modules/', '/.next/', '/.mercato/', '/.ai/qa/', '/__integration__/'],
 }
