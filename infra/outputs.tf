@@ -22,3 +22,13 @@ output "codebuild_project_name" {
   description = "CodeBuild project name"
   value       = aws_codebuild_project.mercato.name
 }
+
+output "dealer_portal_project_id" {
+  description = "Vercel project ID for the dealer portal (apps/dealer-portal)"
+  value       = vercel_project.dealer_portal.id
+}
+
+output "dealer_portal_url" {
+  description = "Dealer portal URL once its domain's DNS/TXT verification is complete"
+  value       = "https://${var.dealer_subdomain}.${var.domain_name}"
+}

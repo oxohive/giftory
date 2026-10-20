@@ -62,6 +62,23 @@ resource "porkbun_dns_record" "storefront_verify" {
   ttl     = "600"
 }
 
+# CNAME: dealer.giftory.dev.oxohive.com → Vercel
+resource "porkbun_dns_record" "dealer_portal" {
+  domain  = var.domain_name
+  type    = "CNAME"
+  name    = var.dealer_subdomain
+  content = "cname.vercel-dns.com"
+  ttl     = "600"
+}
+
+# TXT: Vercel domain ownership verification for the dealer portal.
+# NOT YET APPLIED — the verification code is issued by Vercel when
+# vercel_project_domain.dealer_portal is first created; it cannot be known
+# ahead of that (storefront's own TXT record above was added the same way,
+# after its domain's first apply). Read it from `tofu apply`'s output or the
+# Vercel dashboard (Project → Settings → Domains) and fill it in here, mirroring
+# the storefront_verify record above, before the domain will actually resolve.
+
 # ─── ACM Validation wait ──────────────────────────────────────────────────────
 
 resource "aws_acm_certificate_validation" "mercato" {

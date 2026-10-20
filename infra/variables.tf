@@ -106,6 +106,24 @@ variable "vercel_team_id" {
   default     = ""
 }
 
+variable "dealer_portal_project_name" {
+  description = "Vercel project name for the dealer portal (used for the default .vercel.app URL)"
+  type        = string
+  default     = "giftory-dealer-portal"
+}
+
+variable "dealer_subdomain" {
+  description = "Dealer portal subdomain served by Vercel (e.g. dealer.giftory.dev)"
+  type        = string
+  default     = "dealer.giftory.dev"
+}
+
+variable "github_repository" {
+  description = "GitHub \"owner/repo\" this infra deploys from, for Vercel's git integration"
+  type        = string
+  default     = "oxohive/giftory"
+}
+
 variable "domain_name" {
   description = "Root domain managed in Porkbun (e.g. oxohive.com)"
   type        = string
