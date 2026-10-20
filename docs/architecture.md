@@ -341,6 +341,15 @@ Each save that matters (add to cart, submit, proof revision) creates an immutabl
 
 ## 7. Marketplace & Dealer Orchestration
 
+### 7.0 Tenant & organization model (as implemented)
+
+Open Mercato's multi-tenancy is two levels: one **tenant** owns many **organizations**. In practice:
+
+- **oxohive is the only tenant.** The business running Giftory is single-tenant — there is one `tenants` row (renamed from its seed value "Acme Corp" to "Giftory"; tenant id `1505a066-a8f9-40dc-a23c-8626dd4a4239`). Nothing in the product today creates a second tenant; the framework supports it, but it isn't a feature Giftory exposes.
+- **Organizations are the unit that actually separates data within that one tenant.** The root organization (`5e4fe2d8-71a6-4c15-978a-e31df68d84c7`) is Giftory's own catalog/storefront org. Every dealer that registers gets its **own, separate organization** under the same tenant — a dealer never shares an organization with Giftory's own catalog org or with another dealer. `organizationId` is the scope that keeps one dealer's orders, KYC documents, and earnings invisible to another dealer (see § 7.1/ADR-003); `tenantId` only separates oxohive's data from a hypothetical second business, which doesn't exist today.
+- **Dealer self-registration is invite-link only**, e.g. `https://giftory-blue.vercel.app/onboarding/register?organizationId=5e4fe2d8-71a6-4c15-978a-e31df68d84c7`. The `organizationId` query parameter on that link is **not** the new dealer's organization — it's a pointer the backend uses to look up `Organization.tenant` and resolve *which tenant* to register the dealer under (today, there's only one tenant to resolve to, but the mechanism is generic). Registration always creates a brand-new organization for the dealer; it never reuses the `organizationId` from the link. There is deliberately no public "become a dealer" link anywhere in the UI — this is confirmed by there being zero other references to `/onboarding/register` in the codebase outside the invite flow itself.
+- **A practical worked example:** if oxohive later ran two genuinely separate storefront brands (say, a "gifts for kids" line and a "corporate gifting" line) that needed to keep their dealers, catalogs, and orders from ever appearing in each other's admin views, *that* would be the point at which a second tenant makes sense — organizations alone can't express "these two businesses must never see each other's RBAC roles or billing," but they're the right tool for "these dealers must never see each other's data" within one business.
+
 ### 7.1 Dealer model
 
 Dealers are modeled as **organizations** in Open Mercato, with dealer roles under RBAC. Gift modules add:

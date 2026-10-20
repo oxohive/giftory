@@ -75,3 +75,7 @@ OM users: users.organization_id = dealer-org-id
 ```
 
 Option B is rejected — it would duplicate user management, invites, session handling, and RBAC that OM already provides correctly.
+
+### Update: `role_acls.organizations_json` per-org scoping was not the final isolation mechanism
+
+The line above (`role_acls.organizations_json = [dealer-org-id]`) describes scoping one role ACL row *per dealer organization*. That does not scale to many dealers sharing the same role name and, in practice, was not how isolation actually ended up enforced. `dealer:owner`/`dealer:staff` are a **single shared role per tenant** (not one ACL scoped per org), and dealer-level isolation is instead enforced by an **explicit `organizationId`/`dealerProfileId` equality check inside every command and route handler** — the caller's own org/profile id is derived from the authenticated session (`scope.organizationId`, `resolveOwnDealerProfileId()`), never accepted as client input, and compared directly against the row being read or written. See [docs/dealer-marketplace-api.md](../../docs/dealer-marketplace-api.md#known-gaps) item 1 for where this was fixed, and `dealer_orders/api/dealer/orders/route.ts` for the pattern. Everything else in this ADR (organizations-as-dealers, `dealer_profiles` as the type discriminator, roles created via `auth.roles.create`) still holds.
