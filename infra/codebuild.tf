@@ -22,7 +22,7 @@ resource "aws_codebuild_project" "mercato" {
   environment {
     type         = "LINUX_CONTAINER"
     image        = "aws/codebuild/standard:7.0"
-    compute_type = "BUILD_GENERAL1_MEDIUM"
+    compute_type = "BUILD_GENERAL1_LARGE"
 
     # Needed to run `docker build` inside CodeBuild
     privileged_mode = true

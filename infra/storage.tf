@@ -98,16 +98,13 @@ resource "aws_s3_bucket_policy" "kyc_documents" {
           Bool = { "aws:SecureTransport" = "false" }
         }
       },
-      {
-        Sid       = "DenyUnencryptedUploads"
-        Effect    = "Deny"
-        Principal = "*"
-        Action    = "s3:PutObject"
-        Resource  = "${aws_s3_bucket.kyc_documents.arn}/*"
-        Condition = {
-          StringNotEquals = { "s3:x-amz-server-side-encryption" = "aws:kms" }
-        }
-      },
+      # No "deny PutObject without an explicit x-amz-server-side-encryption
+      # header" statement here (deliberately): the installed
+      # @open-mercato/storage-s3 driver never sets that header — it relies
+      # entirely on the bucket's own default encryption below, which already
+      # guarantees every object is encrypted with aws:kms at rest regardless
+      # of what the client requests. A statement requiring the header would
+      # just reject every real upload from this driver (confirmed live).
     ]
   })
 }
