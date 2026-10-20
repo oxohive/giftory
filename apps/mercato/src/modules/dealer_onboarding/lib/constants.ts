@@ -38,36 +38,19 @@ export const DEALER_APPROVE_COMMAND = 'dealer_onboarding.profiles.approve' as co
 export const DEALER_REJECT_COMMAND = 'dealer_onboarding.profiles.reject' as const
 export const DEALER_RESUBMIT_COMMAND = 'dealer_onboarding.profiles.resubmit' as const
 
-/** Roles created for dealer users. Scoped to their org via role_acls.organizations_json at approval. */
+/**
+ * Roles created for dealer users. `dealer:owner` is a SINGLE, tenant-wide role
+ * shared by every dealer owner in the tenant (not one role per dealer org) —
+ * isolation between dealers is enforced at the command/data layer (every
+ * dealer-facing command scopes its query by the caller's own `auth.orgId`),
+ * never by restricting this shared role's `RoleAcl.organizations_json`. A
+ * prior version of the approval flow tried the latter (per ADR-003's
+ * original text), but a role-level org allow-list doesn't fit flat sibling
+ * orgs that must be added one at a time: the moment any dealer was approved,
+ * every other still-pending dealer's own org fell outside the list and their
+ * own self-service requests started 403ing. Feature grants for this role come
+ * entirely from each module's own `setup.ts` `defaultRoleFeatures`, applied at
+ * tenant creation (or via `yarn mercato auth sync-role-acls` for drift).
+ */
 export const DEALER_OWNER_ROLE = 'dealer:owner' as const
 export const DEALER_STAFF_ROLE = 'dealer:staff' as const
-
-/**
- * Features that must be present on `dealer:owner`'s RoleAcl once a dealer in
- * the tenant is approved. `dealer:owner` is a single, tenant-wide role shared
- * by every dealer owner in the tenant (ADR-003) — these features are MERGED
- * into the role's existing `featuresJson` at approval time, never used to
- * replace it (see `scopeDealerRoleToOrg` in commands/review.ts). Includes the
- * `*.dealer_access` grants for dealer_orders/commissions/payouts so that an
- * approved dealer owner can actually reach their dealer-facing order,
- * earnings and ledger endpoints (those features are declared in each of
- * those modules' own acl.ts/setup.ts, but granting them here too — via the
- * same merge-safe write — heals any tenant whose dealer_orders/commissions/
- * payouts setup.ts grants haven't yet been (re)synced via
- * `yarn mercato auth sync-role-acls`).
- *
- * `dealer:staff`'s `dealer_orders.dealer_access` grant is NOT listed here —
- * staff's RoleAcl is never org-scoped by `scopeDealerRoleToOrg` (only
- * `dealer:owner`'s is), so staff's grant comes exclusively from
- * `dealer_orders/setup.ts`'s `defaultRoleFeatures`, applied at tenant
- * creation or via `sync-role-acls`. `commissions.dealer_access` and
- * `payouts.dealer_access` are intentionally owner-only (FEAT-009: staff
- * cannot access commission or payout data).
- */
-export const DEALER_OWNER_APPROVAL_FEATURES = [
-  'dealer_onboarding.view_own',
-  'dealer_onboarding.submit',
-  'dealer_orders.dealer_access',
-  'commissions.dealer_access',
-  'payouts.dealer_access',
-] as const

@@ -6,9 +6,10 @@ import { DEALER_OWNER_ROLE, DEALER_STAFF_ROLE } from './lib/constants'
 const logger = createLogger('dealer_onboarding').child({ component: 'setup' })
 
 /**
- * Create dealer roles if they don't yet exist for this tenant.
- * The roles are org-scope-restricted at dealer approval time via `auth.role-acl.update`
- * (see the approve command). Until then, they carry only the onboarding feature grants.
+ * Create dealer roles if they don't yet exist for this tenant. `dealer:owner`
+ * is shared tenant-wide across every dealer owner — see the comment on
+ * `DEALER_OWNER_ROLE` (lib/constants.ts) for why this role is never
+ * org-restricted via `RoleAcl.organizations_json`.
  */
 async function ensureDealerRoles(em: import('@mikro-orm/postgresql').EntityManager, tenantId: string): Promise<void> {
   const { Role } = await import('@open-mercato/core/modules/auth/data/entities')

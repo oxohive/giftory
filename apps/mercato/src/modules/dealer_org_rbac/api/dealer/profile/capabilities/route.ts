@@ -24,7 +24,7 @@ export const PUT = dealerHandler('dealer.profile.capabilities.update', async ({ 
     auth,
     organizationScope,
     selectedOrganizationId: auth.orgId,
-    organizationIds: organizationScope?.organizationIds ?? [auth.orgId],
+    organizationIds: [auth.orgId],
     systemActor: false,
   }
 

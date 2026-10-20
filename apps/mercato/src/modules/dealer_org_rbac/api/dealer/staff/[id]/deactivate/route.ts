@@ -35,7 +35,7 @@ export const POST = dealerHandler('dealer.staff.deactivate', async ({ ctx: route
     auth,
     organizationScope,
     selectedOrganizationId: auth.orgId,
-    organizationIds: organizationScope?.organizationIds ?? [auth.orgId],
+    organizationIds: [auth.orgId],
     systemActor: false,
   }
 

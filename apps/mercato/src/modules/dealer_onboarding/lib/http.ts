@@ -5,7 +5,7 @@ import { isCrudHttpError } from '@open-mercato/shared/lib/crud/errors'
 import { resolveTranslations } from '@open-mercato/shared/lib/i18n/server'
 import { createLogger } from '@open-mercato/shared/lib/logger'
 import { getAuthFromRequest, type AuthContext } from '@open-mercato/shared/lib/auth/server'
-import { resolveOrganizationScopeForRequest, type OrganizationScope } from '@open-mercato/core/modules/directory/utils/organizationScope'
+import type { OrganizationScope } from '@open-mercato/core/modules/directory/utils/organizationScope'
 
 const logger = createLogger('dealer_onboarding').child({ component: 'http' })
 
@@ -55,29 +55,21 @@ export function dealerHandler(
     try {
       const container = await createRequestContainer()
       const auth = await getAuthFromRequest(req)
-      // `resolveOrganizationScopeForRequest` takes a single options object
-      // (`{ container, auth, request, selectedId?, tenantId? }`) — a prior version of this
-      // call passed `(req, container, auth)` positionally. Since the function destructures
-      // its single parameter, that positional call silently resolved every field to
-      // `undefined`, so the early `!auth || !auth.sub` guard inside it always returned
-      // `{ selectedId: null, filterIds: null, allowedIds: null, tenantId: null }` — a
-      // *truthy* scope object with `tenantId: null` — instead of throwing or returning a
-      // scope that matches the real caller. `ensureOrganizationScope` (used by every
-      // dealer_onboarding command via `resolveCommandScope`) treats a truthy scope with a
-      // null `tenantId` as a hard scope violation for any non-superadmin caller, so this
-      // silently turned into a 403 Forbidden on every real, non-admin dealer request through
-      // this handler (KYC document upload, resubmit, status) — confirmed live: a real
-      // registered dealer owner uploading a real KYC document got 403 against a real
-      // Postgres-backed session, which cascades into every downstream step (the dealer can
-      // never reach `under_review`, so admin approval 400s, so the dealer is never approved,
-      // so every dealer_org_rbac/dealer_orders/commissions/payouts dealer-facing route then
-      // 404s "no approved dealer profile" too). Admin/superadmin callers never hit this
-      // because `ensureOrganizationScope` skips the broken check entirely when
-      // `ctx.auth.isSuperAdmin` is true — which is why admin-side KYC review routes appeared
-      // to work fine in every prior task's testing.
-      const organizationScope = auth
-        ? await resolveOrganizationScopeForRequest({ request: req, container, auth }).catch(() => null)
-        : null
+      // Every dealer-facing route derives its target organization directly from the
+      // caller's own `auth.orgId` (never from a broader resolved scope), matching
+      // dealer_orders/commissions/payouts's `organizationScope: null` pattern. This used
+      // to call `resolveOrganizationScopeForRequest`, which reads the SHARED, tenant-wide
+      // `dealer:owner` role's `RoleAcl.organizations_json` — but that mechanism is built
+      // for parent/child org hierarchies, not flat sibling dealer orgs added one at a
+      // time: the approval flow unioned each newly-approved dealer's org into that one
+      // shared list, so any still-pending dealer whose own org wasn't in the union yet
+      // got denied access to their OWN data (confirmed live: a real second dealer's KYC
+      // upload 403'd the moment the first dealer in the tenant was approved). Every
+      // dealer_onboarding/dealer_org_rbac command already scopes its own queries by the
+      // caller's own tenantId/organizationId (see `findOwnProfile` and friends), so this
+      // RoleAcl-based check was a redundant, mis-scoped gate, not the thing actually
+      // enforcing dealer-to-dealer isolation.
+      const organizationScope: OrganizationScope | null = null
       return await handler({ req, ctx, container, translate, auth, organizationScope })
     } catch (err) {
       if (err instanceof DealerApiError) {

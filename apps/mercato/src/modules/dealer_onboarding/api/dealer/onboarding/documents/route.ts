@@ -61,7 +61,7 @@ export const POST = dealerHandler('dealer.documents', async ({ req, container, a
     auth,
     organizationScope,
     selectedOrganizationId: auth.orgId,
-    organizationIds: organizationScope?.organizationIds ?? [auth.orgId],
+    organizationIds: [auth.orgId],
     systemActor: false,
   }
 

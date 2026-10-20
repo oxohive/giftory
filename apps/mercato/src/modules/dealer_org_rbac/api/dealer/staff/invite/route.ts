@@ -24,7 +24,7 @@ export const POST = dealerHandler('dealer.staff.invite', async ({ req, container
     auth,
     organizationScope,
     selectedOrganizationId: auth.orgId,
-    organizationIds: organizationScope?.organizationIds ?? [auth.orgId],
+    organizationIds: [auth.orgId],
     systemActor: false,
   }
 
