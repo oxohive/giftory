@@ -37,7 +37,7 @@ export type SerializedLedgerEntry = {
   referenceType: string
   referenceId: string
   note: string | null
-  createdBy: string
+  createdBy: string | null
   createdAt: string
 }
 
@@ -53,7 +53,7 @@ export function serializeLedgerEntry(e: DealerLedgerEntry): SerializedLedgerEntr
     referenceType: e.referenceType,
     referenceId: String(e.referenceId),
     note: e.note ?? null,
-    createdBy: String(e.createdBy),
+    createdBy: e.createdBy == null ? null : String(e.createdBy),
     createdAt: e.createdAt instanceof Date ? e.createdAt.toISOString() : String(e.createdAt),
   }
 }

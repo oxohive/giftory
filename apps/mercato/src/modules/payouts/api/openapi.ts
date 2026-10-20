@@ -14,7 +14,7 @@ export const serializedEntrySchema = z.object({
   referenceType: z.enum(['order_commission_snapshot', 'manual_payout', 'adjustment']),
   referenceId: z.string().uuid(),
   note: z.string().nullable(),
-  createdBy: z.string(),
+  createdBy: z.string().nullable(),
   createdAt: z.string(),
 })
 
