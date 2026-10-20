@@ -91,7 +91,9 @@ What exists today in the repo:
 
 ## Live verification status
 
-[docs/phase-2-testing-guide.md](phase-2-testing-guide.md) is a prepared checklist for exercising the dealer flows end to end against a running backend. **It has not been executed** — no boxes are checked, and the passing unit tests do not establish workflow or access-control correctness in a live environment. Recorded deployment: `admin.giftory.dev.oxohive.com` (backend), with a storefront domain on the same infrastructure.
+[docs/phase-2-testing-guide.md](phase-2-testing-guide.md) is a prepared checklist for exercising the dealer flows end to end against a running backend. **It has not been executed** — no boxes are checked, and the passing unit tests do not establish workflow or access-control correctness in a live environment. Recorded deployment: `admin.giftory.dev.oxohive.com` (backend, AWS ECS Fargate); storefront (`giftory-storefront.vercel.app`) and dealer portal (`giftory-blue.vercel.app`) are separate Vercel deployments, not the same infrastructure as the backend.
+
+KYC documents and catalog product images persist in S3 as of 2026-10-20 (bucket `giftory-dev-kyc-documents`) — both were silently writing to the backend ECS task's local disk before that, which is wiped on every scale-to-zero cycle and redeploy. Any product image uploaded before that date is very likely unrecoverable.
 
 ---
 

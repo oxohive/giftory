@@ -2,16 +2,16 @@
 
 Gift marketplace with 3D customization. Product plan: [docs/Gift_Marketplace_Complete_Phased_Plan.docx](docs/Gift_Marketplace_Complete_Phased_Plan.docx). Architecture: [docs/architecture.md](docs/architecture.md). Current state: [docs/phase-2-status.md](docs/phase-2-status.md).
 
-**Status:** Phase 1 (Commerce Foundation) implemented. Phase 2 dealer marketplace backend implemented (267 unit tests passing); dealer portal and admin UI in progress.
+**Status:** Phase 1 (Commerce Foundation) implemented, deployed. Phase 2 dealer marketplace implemented and deployed — backend on ECS (`admin.giftory.dev.oxohive.com`), storefront and dealer portal on Vercel.
 
 ## Layout
 
 | Path | What | Port |
 |---|---|---|
 | `apps/mercato` | Backend + admin: Open Mercato 0.8.0 with the Gift App modules | 3000 |
-| `apps/storefront` | Customer storefront (Next.js) | 3100 |
+| `apps/storefront` | Customer storefront (Next.js) — deployed to Vercel: `giftory-storefront.vercel.app` | 3100 |
 | `apps/mobile` | Customer storefront (Expo/React Native) — Phase 1 port, guest-only, Razorpay only. **Verified live on a physical device** (catalog/cart/nav); Razorpay payment itself not yet verified — see [apps/mobile/README.md](apps/mobile/README.md) | 8081 (Metro) |
-| `apps/dealer-portal` | Dealer portal (Next.js) — scaffold only, see [tasks/phase-2-ui](tasks/phase-2-ui/README.md) | 3200 |
+| `apps/dealer-portal` | Dealer portal (Next.js) — deployed to Vercel: `giftory-blue.vercel.app` | 3200 |
 | `packages/` | Shared `api-client` and `ui` packages used by the portal apps | — |
 
 Gift App modules live in `apps/mercato/src/modules/`:
@@ -60,6 +60,16 @@ npm run dev
 - The Data API roles (`anon`, `authenticated`) have **no access** to the `public` schema. Don't grant it back: these tables hold users, orders and addresses.
 - Schema changes: `yarn db:generate` → review the migration → `yarn db:migrate`.
 - **Warning:** `yarn mercato init` (re)initializes the database. It ignores `--help`.
+
+## Attachment storage (S3)
+
+KYC documents (`dealer_onboarding`) and catalog product images persist in AWS S3 (bucket `giftory-dev-kyc-documents`, private, SSE-KMS, 7-year lifecycle retention — see `infra/storage.tf`). Enabling it locally or re-pointing an environment at it needs three separate steps, each independently necessary:
+
+1. Set `OM_ENABLE_STORAGE_S3=true` **before** `yarn generate`/the Docker build runs — module enablement is baked in at generate/build time, not read from the environment at request time.
+2. Bootstrap per-tenant credentials into the DB: `yarn mercato storage_s3 configure-from-env --tenant <id> --org <id>` (or `--all-tenants`), with `OM_INTEGRATION_STORAGE_S3_{ACCESS_KEY_ID,SECRET_ACCESS_KEY,BUCKET,REGION}` exported. This is a one-time seed, not something re-read on every request.
+3. Point the attachment partition(s) at the `s3` driver — this is a separate per-partition DB setting (`attachment_partitions.storage_driver`) from the tenant credentials above; a fresh install seeds every partition as `local` regardless of step 2.
+
+Public partitions (`isPublic: true`, e.g. `productsMedia`) are served anonymously through an app-level override of the core attachments routes (`apps/mercato/src/app/api/attachments/{file/[id],image/[id]/[[...slug]]}/route.ts`) — the vendored framework routes deny unauthenticated access to any tenant/org-scoped attachment even on a public partition, which blocks the storefront's plain `<img src>` requests for product photos. Private partitions are unaffected.
 
 ## Seed data
 

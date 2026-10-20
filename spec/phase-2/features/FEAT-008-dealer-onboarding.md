@@ -2,7 +2,7 @@
 
 - **Feature ID:** FEAT-008
 - **Phase:** 2
-- **Status:** Draft
+- **Status:** Implemented
 - **Objective:** Allow a dealer (a printing/production business) to self-register on the platform, submit KYC documents, and be approved by an admin before receiving order assignments.
 - **Business Value:** Dealers are the fulfillment layer for all customizable gifts. Without verified, approved dealers, no order can be produced.
 - **Scope:** Dealer self-registration, KYC document submission, admin review + approval/rejection, dealer profile management.
@@ -52,7 +52,7 @@
 | `dealer_profile_id` | `uuid` | FK → `dealer_profiles` |
 | `tenant_id` | `uuid` | |
 | `document_type` | `text` | `gst_certificate`, `pan_card`, `address_proof` |
-| `storage_key` | `text` | Object storage key (private bucket) |
+| `storage_key` | `text` | Open Mercato `attachments.id` — the document is read back via the generic attachments service (`AttachmentService.readScoped`), not a raw storage key |
 | `file_name` | `text` | Original file name |
 | `file_size_bytes` | `int` | |
 | `mime_type` | `text` | |
@@ -82,7 +82,7 @@
 ## Dependencies
 
 - Open Mercato `organizations` module — dealer maps to an OM organization
-- Object storage (S3/MinIO) for KYC documents — private bucket, signed URLs
+- Object storage: AWS S3 bucket `giftory-dev-kyc-documents` (`infra/storage.tf`), private, SSE-KMS encrypted, 7-year lifecycle retention (covers both India's GST 6-year and KYC/PMLA 5-year retention requirements). Documents are **server-mediated** (client → backend → S3), not presigned direct-to-S3 — appropriate for small (<5 MB), sensitive PII documents. Reads go through `AttachmentService.readScoped`, which re-checks the document against the caller's own dealer profile before streaming it (`GET /api/dealer/onboarding/documents/:id/file`) — a dealer cannot read another dealer's document by guessing/enumerating its id.
 - Email notification (FEAT-008 triggers: verification, approval, rejection)
 - [ADR-003](../decisions/ADR-003-dealer-org-model.md) — must be decided before implementation
 
