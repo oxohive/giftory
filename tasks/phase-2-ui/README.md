@@ -71,7 +71,7 @@ Dependency numbers below refer to P2-UI task IDs.
 | [P2-UI-14](TASK-14-dealer-earnings-and-ledger-screens.md) | Dealer earnings and ledger screens | E | 00, 01, 02, 04 | Review |
 | [P2-UI-15](TASK-15-admin-commission-management.md) | Admin commission management | E | 00, 02 | Review |
 | [P2-UI-16](TASK-16-admin-ledger-payout-recording-and-adjustments.md) | Admin ledger, payout recording and adjustments | E | 00, 02 | Review |
-| [P2-UI-17](TASK-17-integration-accessibility-and-regression-verification.md) | Integration, accessibility and regression verification | A | 05, 06, 07, 08, 09, 10, 11, 12, 13, 14, 15, 16 | Planned |
+| [P2-UI-17](TASK-17-integration-accessibility-and-regression-verification.md) | Integration, accessibility and regression verification | A | 05, 06, 07, 08, 09, 10, 11, 12, 13, 14, 15, 16 | Review — full real journey passes 12/12 live; browser a11y, Phase 1 regression, second tenant still open (see [VERIFICATION.md](VERIFICATION.md)) |
 | [P2-UI-18](TASK-18-delivery-documentation-and-deployment-readiness.md) | Delivery documentation and deployment readiness | A | 17 | Planned |
 
 ## Shared acceptance requirements
