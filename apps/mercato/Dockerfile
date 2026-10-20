@@ -5,6 +5,11 @@ ENV NEXT_TELEMETRY_DISABLED=1 \
 ARG OPEN_MERCATO_DOCKER_REGISTRY_HOST=host.docker.internal
 ARG NEXT_PUBLIC_DOCUMENTS_COLLAB_URL
 ENV NEXT_PUBLIC_DOCUMENTS_COLLAB_URL=${NEXT_PUBLIC_DOCUMENTS_COLLAB_URL}
+# Module enablement is baked in by `yarn generate` below, not read at container
+# runtime — the ECS task definition's own OM_ENABLE_STORAGE_S3=true only takes
+# effect because it's also set here at build time. Setting it only at runtime
+# (without this) silently no-ops: the module never gets compiled in.
+ENV OM_ENABLE_STORAGE_S3=true
 
 WORKDIR /app
 

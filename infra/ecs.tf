@@ -53,6 +53,8 @@ resource "aws_ecs_task_definition" "mercato" {
       { name = "RAZORPAY_KEY_ID",                     valueFrom = aws_ssm_parameter.razorpay_key_id.arn },
       { name = "RAZORPAY_KEY_SECRET",                 valueFrom = aws_ssm_parameter.razorpay_key_secret.arn },
       { name = "RAZORPAY_WEBHOOK_SECRET",             valueFrom = aws_ssm_parameter.razorpay_webhook_secret.arn },
+      { name = "OM_INTEGRATION_STORAGE_S3_ACCESS_KEY_ID",     valueFrom = aws_ssm_parameter.storage_s3_access_key_id.arn },
+      { name = "OM_INTEGRATION_STORAGE_S3_SECRET_ACCESS_KEY", valueFrom = aws_ssm_parameter.storage_s3_secret_access_key.arn },
     ]
 
     environment = [
@@ -62,6 +64,9 @@ resource "aws_ecs_task_definition" "mercato" {
       # container. Two Node processes share the 2048 MB container; 800 MB each
       # leaves ~450 MB for OS, new-gen heap, native addons, and headroom.
       { name = "NODE_OPTIONS", value = "--max-old-space-size=800" },
+      { name = "OM_ENABLE_STORAGE_S3",            value = "true" },
+      { name = "OM_INTEGRATION_STORAGE_S3_BUCKET", value = local.storage_bucket_name },
+      { name = "OM_INTEGRATION_STORAGE_S3_REGION", value = var.region },
     ]
 
     logConfiguration = {
