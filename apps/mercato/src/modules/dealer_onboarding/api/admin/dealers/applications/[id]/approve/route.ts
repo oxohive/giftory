@@ -23,7 +23,7 @@ export const POST = dealerHandler('admin.dealers.approve', async ({ req, ctx, co
     auth,
     organizationScope,
     selectedOrganizationId: auth.orgId,
-    organizationIds: organizationScope?.organizationIds ?? (auth.orgId ? [auth.orgId] : []),
+    organizationIds: auth.orgId ? [auth.orgId] : [],
     systemActor: false,
   }
 

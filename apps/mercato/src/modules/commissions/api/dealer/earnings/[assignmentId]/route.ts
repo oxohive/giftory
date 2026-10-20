@@ -4,22 +4,29 @@ import type { OpenApiRouteDoc } from '@open-mercato/shared/lib/openapi'
 import { z } from 'zod'
 import { OrderCommissionSnapshot } from '../../../../data/entities'
 import { adminHandler, readRouteParam } from '../../../../lib/http'
-import { serializeCommissionSnapshot } from '../../../../commands/shared'
+import { serializeCommissionSnapshot, resolveOwnDealerProfileId } from '../../../../commands/shared'
 import { dealerEarningsTag, serializedSnapshotSchema } from '../../../openapi'
 
 export const metadata = {
   GET: { requireAuth: true, requireFeatures: ['commissions.dealer_access'] },
 }
 
-/** GET /api/dealer/earnings/:assignmentId — commission snapshot for a specific assignment */
+/**
+ * GET /api/dealer/earnings/:assignmentId — commission snapshot for a
+ * specific assignment, scoped to the caller's own dealer profile. Filtering
+ * by tenant alone would let any dealer in the tenant read another dealer's
+ * earning by guessing/enumerating the assignment id.
+ */
 export const GET = adminHandler('dealer.earnings.get', async ({ routeCtx, container, scope, translate }) => {
   const assignmentId = readRouteParam(routeCtx, 'assignmentId')
   if (!assignmentId) return NextResponse.json({ error: 'invalid_id' }, { status: 400 })
   const em = container.resolve<EntityManager>('em')
+  const dealerProfileId = await resolveOwnDealerProfileId(em, scope.organizationId, scope.tenantId)
 
   const snapshot = await em.findOne(OrderCommissionSnapshot, {
     assignmentId,
     tenantId: scope.tenantId,
+    dealerProfileId,
   } as FilterQuery<OrderCommissionSnapshot>)
 
   if (!snapshot) {

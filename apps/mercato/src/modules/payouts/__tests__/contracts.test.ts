@@ -366,3 +366,19 @@ describe('serializeLedgerEntry', () => {
     expect(result.createdAt).toBe('2026-10-12T08:00:00.000Z')
   })
 })
+
+// ---------------------------------------------------------------------------
+// Gap 1 fix — payouts.dealer_access must be owner-only (FEAT-009: "staff
+// cannot access commission or payout data"). This is the exact cell from
+// CONTRACT-HANDOFF.md's permission matrix — if a future change
+// accidentally grants this to dealer:staff too, this test catches it.
+// ---------------------------------------------------------------------------
+
+describe('setup.defaultRoleFeatures — Gap 1 fix (owner-only dealer_access)', () => {
+  it('grants payouts.dealer_access to dealer:owner but NOT dealer:staff', async () => {
+    const { setup } = await import('../setup')
+    const { DEALER_OWNER_ROLE, DEALER_STAFF_ROLE } = await import('../lib/constants')
+    expect(setup.defaultRoleFeatures?.[DEALER_OWNER_ROLE]).toContain('payouts.dealer_access')
+    expect(setup.defaultRoleFeatures?.[DEALER_STAFF_ROLE] ?? []).not.toContain('payouts.dealer_access')
+  })
+})

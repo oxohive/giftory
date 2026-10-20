@@ -29,7 +29,7 @@ export const GET = adminHandler('admin.dealers.orders.list', async ({ req, route
   if (query.status) (where as Record<string, unknown>).status = query.status
 
   const [items, total] = await em.findAndCount(DealerOrderAssignment, where, {
-    orderBy: { assignedAt: 'DESC' },
+    orderBy: { [query.sortField]: query.sortDir.toUpperCase() } as Record<string, 'ASC' | 'DESC'>,
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
   })

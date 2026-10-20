@@ -24,7 +24,7 @@ export const POST = dealerHandler('dealer.resubmit', async ({ req, container, au
     auth,
     organizationScope,
     selectedOrganizationId: auth.orgId,
-    organizationIds: organizationScope?.organizationIds ?? [auth.orgId],
+    organizationIds: [auth.orgId],
     systemActor: false,
   }
 

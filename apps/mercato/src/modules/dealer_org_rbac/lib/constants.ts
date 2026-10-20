@@ -9,6 +9,7 @@ export const FEAT_DEALER_ORG_MANAGE_STAFF = 'dealer_org.manage_staff' as const
 // Command IDs
 export const DEALER_CAPABILITIES_UPSERT_COMMAND = 'dealer_org_rbac.capabilities.upsert' as const
 export const DEALER_STAFF_INVITE_COMMAND = 'dealer_org_rbac.staff.invite' as const
+export const DEALER_STAFF_DEACTIVATE_COMMAND = 'dealer_org_rbac.staff.deactivate' as const
 
 // Role names (created by dealer_onboarding setup)
 export const DEALER_OWNER_ROLE = 'dealer:owner' as const

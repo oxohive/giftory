@@ -11,6 +11,35 @@ export type DealerRow = { id: string; businessName: string; contactEmail: string
 export type Capabilities = { productTypeCodes: string[]; printingMethods: string[]; serviceableStates: string[]; maxDailyCapacity: number; minOrderQty: number; updatedAt?: string | null }
 export type ListResult<T> = { items: T[]; total: number; page: number; pageSize: number; totalPages: number }
 
+/**
+ * `GET /api/dealer_onboarding/admin/dealers/applications/{id}` response
+ * shape (API-CONTRACTS.md "Admin detail"): the serialized `DealerProfile`
+ * plus decrypted `gstin`/`pan` and the application's live `documents[]`.
+ */
+export type ApplicationDocument = {
+  id: string
+  dealerProfileId: string
+  tenantId: string
+  documentType: string
+  storageKey: string
+  fileName: string
+  fileSizeBytes: number
+  mimeType: string
+  uploadedAt: string | null
+}
+
+export type ApplicationDetail = DealerRow & {
+  organizationId: string
+  tenantId: string
+  gstin: string | null
+  pan: string | null
+  reviewedBy: string | null
+  reviewedAt: string | null
+  approvedAt: string | null
+  createdAt: string | null
+  documents: ApplicationDocument[]
+}
+
 export function useAdminResource<T>(url: string) {
   const scope = useOrganizationScopeVersion()
   return useQuery({ queryKey: ['dealer-admin', url, scope], queryFn: () => readApiResultOrThrow<T>(url) })

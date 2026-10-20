@@ -29,7 +29,7 @@ export const POST = dealerHandler('admin.dealers.reject', async ({ req, ctx, con
     auth,
     organizationScope,
     selectedOrganizationId: auth.orgId,
-    organizationIds: organizationScope?.organizationIds ?? (auth.orgId ? [auth.orgId] : []),
+    organizationIds: auth.orgId ? [auth.orgId] : [],
     systemActor: false,
   }
 

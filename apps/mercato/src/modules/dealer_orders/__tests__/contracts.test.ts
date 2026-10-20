@@ -332,3 +332,20 @@ describe('assignmentListQuerySchema — status filter', () => {
     expect(result.status).toBeUndefined()
   })
 })
+
+// ---------------------------------------------------------------------------
+// Gap 1 fix — dealer_orders.dealer_access must be granted to BOTH dealer
+// roles (FEAT-009: staff can view/update assigned orders, unlike the
+// commissions/payouts dealer_access grants which are owner-only). This is
+// the exact cell from CONTRACT-HANDOFF.md's permission matrix
+// ("dealer_orders.dealer_access" → owner ✓, staff ✓ after TASK-02).
+// ---------------------------------------------------------------------------
+
+describe('setup.defaultRoleFeatures — Gap 1 fix (dealer_access grants)', () => {
+  it('grants dealer_orders.dealer_access to both dealer:owner and dealer:staff', async () => {
+    const { setup } = await import('../setup')
+    const { DEALER_OWNER_ROLE, DEALER_STAFF_ROLE } = await import('../lib/constants')
+    expect(setup.defaultRoleFeatures?.[DEALER_OWNER_ROLE]).toContain('dealer_orders.dealer_access')
+    expect(setup.defaultRoleFeatures?.[DEALER_STAFF_ROLE]).toContain('dealer_orders.dealer_access')
+  })
+})

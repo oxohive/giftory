@@ -61,6 +61,13 @@ export const updateAssignmentStatusSchema = strippedScope
       message: 'Dealers may only transition to: acknowledged, in_production, ready_for_dispatch, dispatched',
     }),
     note: z.string().trim().max(500).optional().nullable(),
+    /**
+     * Optimistic-concurrency version check (repo convention: editable
+     * records expose `updated_at`; clients send it back; a mismatch is a
+     * 409). Optional and backward compatible — see
+     * `commands/assignments.ts`'s `executeUpdateStatus`.
+     */
+    updatedAt: z.string().datetime().optional(),
   })
   .omit({ tenantId: true, organizationId: true })
   .superRefine((data, ctx) => {
@@ -74,10 +81,20 @@ export type UpdateAssignmentStatusInput = z.infer<typeof updateAssignmentStatusS
 
 // ── Shared list query ─────────────────────────────────────────────────────────
 
+/**
+ * `sortField` defaults to `assignedAt` (existing behavior, unchanged) but a
+ * caller may request server-side sorting by `requiredBy` (the production
+ * deadline) — TASK-09's "assigned orders list" needs deadline-ordered
+ * results across every page, which is only correct when the database does
+ * the ordering; sorting a single already-paginated page client-side would
+ * silently be wrong the moment there is more than one page.
+ */
 export const assignmentListQuerySchema = z.object({
   dealerProfileId: uuidSchema.optional(),
   orderId: uuidSchema.optional(),
   status: z.enum(ASSIGNMENT_STATUSES).optional(),
+  sortField: z.enum(['assignedAt', 'requiredBy']).optional().default('assignedAt'),
+  sortDir: z.enum(['asc', 'desc']).optional().default('desc'),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
 })

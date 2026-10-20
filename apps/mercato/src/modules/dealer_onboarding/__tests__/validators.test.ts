@@ -5,8 +5,9 @@ import {
   dealerResubmitSchema,
   adminRejectSchema,
   adminApplicationsListSchema,
+  DEALER_DOCUMENT_MIME_PATTERN,
 } from '../data/validators'
-import { DEALER_BUSINESS_TYPES, DEALER_DOCUMENT_TYPES, DEALER_KYC_STATUSES, MAX_DOCUMENT_SIZE_BYTES } from '../lib/constants'
+import { DEALER_BUSINESS_TYPES, DEALER_DOCUMENT_TYPES, DEALER_KYC_STATUSES } from '../lib/constants'
 
 const VALID_UUID = 'a1b2c3d4-e5f6-4789-8abc-def012345678'
 
@@ -123,12 +124,19 @@ describe('dealerRegisterSchema', () => {
 // dealerDocumentUploadSchema
 // ---------------------------------------------------------------------------
 
+// Real file bytes travel server-side only as the command's own `buffer`
+// field — the schema no longer accepts a client-supplied `storageKey`,
+// `fileSizeBytes`, or `mimeType` (those are now derived from the actually-
+// uploaded bytes by `attachmentService.createScoped`; see
+// `commands/documents.ts` and `documents.commands.test.ts`). mime-type and
+// size allowlisting also moved out of this schema into the command, which
+// validates against the real buffer (`DEALER_DOCUMENT_MIME_PATTERN`,
+// `MAX_DOCUMENT_SIZE_BYTES`) rather than a client-declared field.
 const validDocument = {
   documentType: 'gst_certificate' as const,
-  storageKey: 'kyc/tenant-1/org-1/gst_certificate.pdf',
   fileName: 'gst_certificate.pdf',
-  fileSizeBytes: 512_000,
-  mimeType: 'application/pdf',
+  declaredMimeType: 'application/pdf',
+  buffer: Buffer.from('%PDF-1.4 fake'),
 }
 
 describe('dealerDocumentUploadSchema', () => {
@@ -146,30 +154,32 @@ describe('dealerDocumentUploadSchema', () => {
     expect(dealerDocumentUploadSchema.safeParse({ ...validDocument, documentType: 'bank_statement' }).success).toBe(false)
   })
 
-  it('accepts image mime types', () => {
-    for (const mimeType of ['image/jpeg', 'image/png', 'image/webp', 'image/tiff']) {
-      expect(dealerDocumentUploadSchema.safeParse({ ...validDocument, mimeType }).success).toBe(true)
+  it('rejects a missing/non-Buffer file', () => {
+    expect(dealerDocumentUploadSchema.safeParse({ ...validDocument, buffer: undefined }).success).toBe(false)
+    expect(dealerDocumentUploadSchema.safeParse({ ...validDocument, buffer: 'not-a-buffer' }).success).toBe(false)
+  })
+
+  it('normalizes an empty declaredMimeType to null and allows omitting it entirely', () => {
+    const result = dealerDocumentUploadSchema.safeParse({ ...validDocument, declaredMimeType: '' })
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data.declaredMimeType).toBeNull()
+
+    const { declaredMimeType, ...withoutMimeType } = validDocument
+    expect(dealerDocumentUploadSchema.safeParse(withoutMimeType).success).toBe(true)
+  })
+})
+
+describe('DEALER_DOCUMENT_MIME_PATTERN', () => {
+  it('matches pdf and the allowed image types', () => {
+    for (const mimeType of ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/tiff']) {
+      expect(DEALER_DOCUMENT_MIME_PATTERN.test(mimeType)).toBe(true)
     }
   })
 
   it('rejects unsupported mime types', () => {
     for (const mimeType of ['image/gif', 'text/plain', 'application/zip', 'video/mp4']) {
-      expect(dealerDocumentUploadSchema.safeParse({ ...validDocument, mimeType }).success).toBe(false)
+      expect(DEALER_DOCUMENT_MIME_PATTERN.test(mimeType)).toBe(false)
     }
-  })
-
-  it('rejects file size above 10 MB', () => {
-    expect(dealerDocumentUploadSchema.safeParse({ ...validDocument, fileSizeBytes: MAX_DOCUMENT_SIZE_BYTES + 1 }).success).toBe(false)
-  })
-
-  it('rejects zero-byte files', () => {
-    expect(dealerDocumentUploadSchema.safeParse({ ...validDocument, fileSizeBytes: 0 }).success).toBe(false)
-  })
-
-  it('coerces fileSizeBytes from a string', () => {
-    const result = dealerDocumentUploadSchema.safeParse({ ...validDocument, fileSizeBytes: '102400' })
-    expect(result.success).toBe(true)
-    if (result.success) expect(result.data.fileSizeBytes).toBe(102_400)
   })
 })
 

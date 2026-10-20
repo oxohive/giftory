@@ -48,8 +48,16 @@ export class DealerLedgerEntry {
   @Property({ name: 'note', type: 'text', nullable: true })
   note?: string | null
 
-  @Property({ name: 'created_by', type: 'uuid' })
-  createdBy!: string
+  /**
+   * Null for system-triggered entries (e.g. the commission-credit subscriber
+   * firing on `commission.snapshot_created`) — there is no real authenticated
+   * user to attribute them to. Never stamp a non-UUID sentinel like the
+   * literal string "system" here: the column is `uuid` and Postgres rejects
+   * it outright (confirmed live — every commission-earned credit silently
+   * failed to insert until this was made nullable).
+   */
+  @Property({ name: 'created_by', type: 'uuid', nullable: true })
+  createdBy?: string | null
 
   @Property({ name: 'created_at', type: Date, onCreate: () => new Date() })
   createdAt: Date = new Date()

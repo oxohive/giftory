@@ -4,6 +4,7 @@ import type { OpenApiRouteDoc } from '@open-mercato/shared/lib/openapi'
 import { z } from 'zod'
 import { DealerOrderAssignment } from '../../../data/entities'
 import { serializeAssignment } from '../../../commands/assignments'
+import { resolveOwnDealerProfileId } from '../../../commands/shared'
 import { assignmentListQuerySchema } from '../../../data/validators'
 import { adminHandler } from '../../../lib/http'
 import { dealerOrderTag } from '../../openapi'
@@ -16,25 +17,30 @@ export const metadata = {
 /**
  * GET /api/dealer/orders — assignments visible to the authenticated dealer.
  *
- * FEAT-009 integration note: once dealer RBAC ships, resolve the calling
- * user's `dealer_profile_id` from their organization membership and filter
- * automatically. Until then the caller must supply `dealerProfileId` as a
- * query param.
+ * `dealerProfileId` is always derived from the caller's authenticated
+ * tenant + organization scope; a caller-supplied `dealerProfileId` query
+ * param (if present) is ignored — it can never be used to read another
+ * dealer's assignments. Fails closed (404) if the caller's org has no
+ * approved dealer profile.
  */
 export const GET = adminHandler('dealer.orders.list', async ({ req, container, scope }) => {
   const em = container.resolve<EntityManager>('em')
   const url = new URL(req.url)
   const query = assignmentListQuerySchema.parse(Object.fromEntries(url.searchParams))
+  const dealerProfileId = await resolveOwnDealerProfileId(em, scope.organizationId, scope.tenantId)
 
   const where: FilterQuery<DealerOrderAssignment> = {
     tenantId: scope.tenantId,
+    dealerProfileId,
     deletedAt: null,
   } as FilterQuery<DealerOrderAssignment>
-  if (query.dealerProfileId) (where as Record<string, unknown>).dealerProfileId = query.dealerProfileId
   if (query.status) (where as Record<string, unknown>).status = query.status
 
   const [items, total] = await em.findAndCount(DealerOrderAssignment, where, {
-    orderBy: { assignedAt: 'DESC' },
+    // Server-side sort across the WHOLE result set, not just the returned
+    // page — a client sorting only its current page would be silently wrong
+    // once there is more than one page of assignments.
+    orderBy: { [query.sortField]: query.sortDir.toUpperCase() } as Record<string, 'ASC' | 'DESC'>,
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
   })
@@ -49,7 +55,9 @@ export const openApi: OpenApiRouteDoc = {
     GET: {
       summary: "List dealer's assigned orders",
       tags: [dealerOrderTag],
-      query: assignmentListQuerySchema,
+      // dealerProfileId is always derived from the session; omit it from the
+      // documented query surface so clients don't assume it has any effect.
+      query: assignmentListQuerySchema.omit({ dealerProfileId: true }),
       responses: [
         {
           status: 200,

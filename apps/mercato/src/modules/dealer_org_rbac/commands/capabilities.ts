@@ -2,7 +2,7 @@ import { z } from 'zod'
 import type { EntityManager } from '@mikro-orm/postgresql'
 import type { CommandHandler, CommandRuntimeContext } from '@open-mercato/shared/lib/commands'
 import { registerCommand } from '@open-mercato/shared/lib/commands'
-import { badRequest } from '@open-mercato/shared/lib/crud/errors'
+import { badRequest, conflict } from '@open-mercato/shared/lib/crud/errors'
 import { resolveTranslations } from '@open-mercato/shared/lib/i18n/server'
 import { DealerCapability } from '../data/entities'
 import { capabilitiesUpsertSchema } from '../data/validators'
@@ -47,6 +47,14 @@ export async function executeCapabilitiesUpsert(
   const existing = await findCapabilityByProfile(em, dealerProfileId, tenantId)
 
   if (existing) {
+    // Optimistic-concurrency check (repo convention): only enforced when the
+    // caller actually sends `updatedAt` — an older client that never fetched
+    // it keeps today's last-write-wins behavior; a client built against this
+    // version gets a real 409 instead of silently clobbering a concurrent
+    // edit (e.g. the owner and a staff session both editing capabilities).
+    if (parsed.updatedAt !== undefined && existing.updatedAt.toISOString() !== parsed.updatedAt) {
+      throw conflict(translate('dealer_org.errors.capabilitiesVersionMismatch', 'Capabilities were updated by someone else; reload and try again'))
+    }
     existing.productTypeCodes = parsed.productTypeCodes
     existing.printingMethods = parsed.printingMethods as string[]
     existing.maxDailyCapacity = parsed.maxDailyCapacity

@@ -14,7 +14,15 @@
       "roleNotFound": "Required dealer role not found; ensure tenant setup has run",
       "invalidGstin": "GSTIN must match the format 00AAAAA0000A1Z1",
       "invalidPan": "PAN must match the format AAAAA0000A",
-      "rejectionReasonRequired": "A rejection reason is required"
+      "rejectionReasonRequired": "A rejection reason is required",
+      "invalidRequest": "Invalid request",
+      "requestFailed": "Request failed",
+      "internal": "Something went wrong. Please try again."
+    },
+    "validation": {
+      "fileRequired": "A file is required",
+      "fileTooLarge": "File exceeds the maximum upload size of 10 MB",
+      "unsupportedMimeType": "Unsupported file type. Use PDF, JPEG, PNG, WEBP or TIFF."
     },
     "audit": {
       "register": "Dealer self-registration",
@@ -40,6 +48,18 @@
       "pan_card": "PAN Card",
       "address_proof": "Address Proof"
     },
+    "email": {
+      "approved": {
+        "subject": "Your dealer application has been approved",
+        "body": "Your dealer application has been approved. Log in to the dealer portal to manage your profile, staff and orders.",
+        "cta": "Log in to the dealer portal"
+      },
+      "rejected": {
+        "subject": "Your dealer application needs attention",
+        "body": "Your dealer application was not approved. Reason: {reason}. Log in to review the details and resubmit your application.",
+        "cta": "Log in to review and resubmit"
+      }
+    },
     "notifications": {
       "applicationReceived": {
         "title": "Application received",
@@ -52,6 +72,76 @@
       "applicationRejected": {
         "title": "Application rejected",
         "body": "Your dealer application has been rejected. Please review the reason and resubmit."
+      }
+    },
+    "admin": {
+      "title": "Dealer applications",
+      "nav": {
+        "group": "Dealer Applications"
+      },
+      "businessName": "Business name",
+      "contactEmail": "Contact email",
+      "phone": "Phone",
+      "businessType": "Business type",
+      "city": "City",
+      "state": "State",
+      "pincode": "Pincode",
+      "gstin": "GSTIN",
+      "pan": "PAN",
+      "kycStatus": "KYC status",
+      "searchPlaceholder": "Search business name or contact email",
+      "empty": "No applications match these filters.",
+      "review": "Review application",
+      "loading": "Loading application…",
+      "loadError": "Unable to load this record. Check your access and try again.",
+      "retry": "Retry",
+      "notFound": "Application not found",
+      "forbidden": "You don't have permission to review applications.",
+      "conflict": "This application was already reviewed by someone else — showing the latest status.",
+      "entityTypeLabel": "Dealer application",
+      "rejectionReasonLabel": "Rejection reason",
+      "resubmittedNotice": "This application was previously reviewed and has been resubmitted since its last rejection.",
+      "detail": {
+        "page": {
+          "title": "Dealer application review"
+        }
+      },
+      "sections": {
+        "businessDetails": "Business details",
+        "documents": "KYC documents"
+      },
+      "documents": {
+        "empty": "No documents uploaded yet.",
+        "download": "Download",
+        "errorForbidden": "You don't have permission to download this document.",
+        "errorNotFound": "Document not found",
+        "errorGeneric": "Could not download this document"
+      },
+      "actions": {
+        "approve": "Approve",
+        "approving": "Approving…",
+        "reject": "Reject",
+        "rejecting": "Rejecting…",
+        "cancel": "Cancel"
+      },
+      "approveDialog": {
+        "title": "Approve this application?",
+        "text": "The dealer will be able to log in to the dealer portal and manage their profile, staff and orders.",
+        "submit": "Approve",
+        "success": "Application approved",
+        "error": "Could not approve this application"
+      },
+      "rejectDialog": {
+        "title": "Reject this application",
+        "description": "The dealer will receive an email with this reason and can log in to review and resubmit their application.",
+        "reasonLabel": "Reason",
+        "reasonPlaceholder": "Why is this application being rejected?",
+        "submit": "Reject application",
+        "success": "Application rejected",
+        "error": {
+          "generic": "Could not reject this application",
+          "missingReason": "A reason is required"
+        }
       }
     }
   }

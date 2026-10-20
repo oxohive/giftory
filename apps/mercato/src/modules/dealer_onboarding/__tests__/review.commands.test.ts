@@ -10,13 +10,6 @@ jest.mock('@open-mercato/shared/lib/commands/scope', () => ({
   ensureOrganizationScope: () => undefined,
 }))
 
-// Dynamic import inside scopeDealerRoleToOrg — mock it so the entity
-// constructor is available without a real DB connection.
-jest.mock('@open-mercato/core/modules/auth/data/entities', () => ({
-  Role: class MockRole {},
-  RoleAcl: class MockRoleAcl {},
-}))
-
 import { executeApprove, executeReject } from '../commands/review'
 
 // ---------------------------------------------------------------------------
@@ -130,10 +123,7 @@ describe('executeApprove', () => {
   it('approves an under_review profile and calls directory.organizations.update', async () => {
     const em = makeEm()
     const commandBus = makeCommandBus()
-    // findProfileById → profile; Role lookup → null (scopeDealerRoleToOrg exits early)
-    em.findOne
-      .mockResolvedValueOnce(makeProfile({ kycStatus: 'under_review' }))
-      .mockResolvedValueOnce(null)
+    em.findOne.mockResolvedValueOnce(makeProfile({ kycStatus: 'under_review' }))
 
     const ctx = makeCtx(em, commandBus)
     const result = await executeApprove({ id: VALID_UUID }, ctx)
@@ -149,45 +139,18 @@ describe('executeApprove', () => {
     )
   })
 
-  it('does not call auth.role-acl.update when the dealer:owner role does not exist', async () => {
+  // Approval deliberately never touches `dealer:owner`'s RoleAcl (no
+  // auth.role-acl.update call at all) — see the comment on DEALER_OWNER_ROLE
+  // (lib/constants.ts) for why. `dealer:owner` is one shared, tenant-wide
+  // role; a prior version of this flow tried to org-restrict it per approval,
+  // which denied any still-pending dealer access to their own data the
+  // moment a different dealer in the tenant was approved first. Isolation is
+  // enforced entirely at the command/data layer (every dealer-facing command
+  // scopes its queries by the caller's own organizationId), not here.
+  it('never calls auth.role-acl.update', async () => {
     const em = makeEm()
     const commandBus = makeCommandBus()
-    em.findOne
-      .mockResolvedValueOnce(makeProfile({ kycStatus: 'under_review' }))
-      .mockResolvedValueOnce(null) // Role not found
-
-    const ctx = makeCtx(em, commandBus)
-    await executeApprove({ id: VALID_UUID }, ctx)
-
-    const calls = (commandBus.execute as jest.Mock).mock.calls
-    const roleAclCall = calls.find((c) => c[0] === 'auth.role-acl.update')
-    expect(roleAclCall).toBeUndefined()
-  })
-
-  it('calls auth.role-acl.update when role is found and org is not yet in ACL', async () => {
-    const em = makeEm()
-    const commandBus = makeCommandBus()
-    em.findOne
-      .mockResolvedValueOnce(makeProfile({ kycStatus: 'under_review' }))
-      .mockResolvedValueOnce({ id: 'role-1', name: 'dealer:owner' }) // Role found
-      .mockResolvedValueOnce({ organizationsJson: [] })               // RoleAcl — org not included
-
-    const ctx = makeCtx(em, commandBus)
-    await executeApprove({ id: VALID_UUID }, ctx)
-
-    const calls = (commandBus.execute as jest.Mock).mock.calls
-    const roleAclCall = calls.find((c) => c[0] === 'auth.role-acl.update')
-    expect(roleAclCall).toBeDefined()
-    expect(roleAclCall![1].input.organizations).toContain(ORG_ID)
-  })
-
-  it('skips auth.role-acl.update when the org is already in the ACL', async () => {
-    const em = makeEm()
-    const commandBus = makeCommandBus()
-    em.findOne
-      .mockResolvedValueOnce(makeProfile({ kycStatus: 'under_review' }))
-      .mockResolvedValueOnce({ id: 'role-1', name: 'dealer:owner' })
-      .mockResolvedValueOnce({ organizationsJson: [ORG_ID] }) // Org already present
+    em.findOne.mockResolvedValueOnce(makeProfile({ kycStatus: 'under_review' }))
 
     const ctx = makeCtx(em, commandBus)
     await executeApprove({ id: VALID_UUID }, ctx)

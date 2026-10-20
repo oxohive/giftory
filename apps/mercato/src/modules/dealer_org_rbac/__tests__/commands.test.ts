@@ -69,7 +69,14 @@ function makeEm() {
 
 function makeCommandBus() {
   return {
-    execute: jest.fn<() => Promise<{ result: { id: string } }>>().mockResolvedValue({ result: { id: 'new-user-id' } }),
+    // Matches `auth.users.create`'s real return shape (`{ user, warning }` —
+    // @open-mercato/core's commands/users.ts), not a flat `{ id }`. The old
+    // mock matched a buggy call site instead of the real contract, which
+    // hid a real bug (`result.id` was always `undefined`) rather than
+    // catching it — fixed alongside that bug.
+    execute: jest
+      .fn<() => Promise<{ result: { user: { id: string }; warning?: string } }>>()
+      .mockResolvedValue({ result: { user: { id: 'new-user-id' } } }),
   }
 }
 

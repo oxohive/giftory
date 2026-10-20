@@ -5,10 +5,11 @@ import { registerCommand } from '@open-mercato/shared/lib/commands'
 import { badRequest } from '@open-mercato/shared/lib/crud/errors'
 import { resolveTranslations } from '@open-mercato/shared/lib/i18n/server'
 import { DealerProfile } from '../data/entities'
-import { DEALER_APPROVE_COMMAND, DEALER_REJECT_COMMAND, DEALER_OWNER_ROLE } from '../lib/constants'
+import { DEALER_APPROVE_COMMAND, DEALER_REJECT_COMMAND } from '../lib/constants'
 import { resolveCommandScope } from '../lib/scope'
 import { findProfileById, serializeDealerProfile, executeOmCommand } from './shared'
 import type { SerializedDealerProfile } from './register'
+import eventsConfig from '../events'
 
 const approveSchema = z.object({
   id: z.string().uuid(),
@@ -48,9 +49,6 @@ export async function executeApprove(rawInput: unknown, ctx: CommandRuntimeConte
     { ...ctx, auth: { ...ctx.auth, tenantId: scope.tenantId, isSuperAdmin: true, sub: 'system' } as typeof ctx.auth, systemActor: true },
   )
 
-  // Scope the dealer:owner role to this organization only.
-  await scopeDealerRoleToOrg(ctx.container, scope.tenantId, profile.organizationId, ctx)
-
   const reviewerId = ctx.auth?.sub ?? null
   profile.kycStatus = 'approved'
   profile.reviewedBy = reviewerId
@@ -59,6 +57,15 @@ export async function executeApprove(rawInput: unknown, ctx: CommandRuntimeConte
   profile.rejectionReason = null
   profile.updatedAt = new Date()
   await em.flush()
+
+  // Notifies the dealer by email (see `subscribers/notify-dealer-on-approval.ts`)
+  // that they can now log in. Persistent — retried on failure, not swallowed.
+  await eventsConfig.emit('dealer_onboarding.profile.approved', {
+    id: profile.id,
+    tenantId: profile.tenantId,
+    organizationId: profile.organizationId,
+    contactEmail: profile.contactEmail,
+  })
 
   return profile
 }
@@ -102,6 +109,16 @@ export async function executeReject(rawInput: unknown, ctx: CommandRuntimeContex
   profile.updatedAt = new Date()
   await em.flush()
 
+  // Notifies the dealer by email (see `subscribers/notify-dealer-on-rejection.ts`)
+  // with the reason and a link to log in and resubmit.
+  await eventsConfig.emit('dealer_onboarding.profile.rejected', {
+    id: profile.id,
+    tenantId: profile.tenantId,
+    organizationId: profile.organizationId,
+    contactEmail: profile.contactEmail,
+    reason: parsed.reason,
+  })
+
   return profile
 }
 
@@ -120,43 +137,6 @@ const rejectCommand: CommandHandler<Record<string, unknown>, DealerProfile> = {
       snapshotAfter: { ...snap, rejectionReason: (input as Record<string, unknown>).reason as string },
     }
   },
-}
-
-/**
- * Scope the dealer:owner role to the given organization via auth.role-acl.update.
- * After this, the role's permissions only fire when the request is scoped to the
- * dealer's org (ADR-003).
- */
-async function scopeDealerRoleToOrg(
-  container: import('awilix').AwilixContainer,
-  tenantId: string,
-  organizationId: string,
-  ctx: import('@open-mercato/shared/lib/commands').CommandRuntimeContext,
-): Promise<void> {
-  const em = container.resolve<EntityManager>('em')
-  const { Role, RoleAcl } = await import('@open-mercato/core/modules/auth/data/entities')
-
-  const role = await em.findOne(Role, { name: DEALER_OWNER_ROLE, tenantId, deletedAt: null })
-  if (!role) return
-
-  const acl = await em.findOne(RoleAcl, { role: role.id, tenantId } as Parameters<typeof em.findOne>[1])
-  const existingOrgs: string[] = Array.isArray((acl as { organizationsJson?: string[] } | null)?.organizationsJson)
-    ? ((acl as { organizationsJson: string[] }).organizationsJson as string[])
-    : []
-
-  if (!existingOrgs.includes(organizationId)) {
-    await executeOmCommand(
-      container,
-      'auth.role-acl.update',
-      {
-        roleId: role.id,
-        tenantId,
-        organizations: [...existingOrgs, organizationId],
-        features: ['dealer_onboarding.view_own', 'dealer_onboarding.submit'],
-      },
-      { ...ctx, auth: { ...ctx.auth, tenantId, isSuperAdmin: true, sub: 'system' } as typeof ctx.auth, systemActor: true },
-    )
-  }
 }
 
 registerCommand(approveCommand)

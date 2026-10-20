@@ -41,7 +41,11 @@ const creditCommissionCommand: CommandHandler<Record<string, unknown>, DealerLed
     const parsed = creditCommissionSchema.parse(rawInput)
     const scope = resolveCommandScope(ctx, rawInput as Record<string, unknown>)
     const de = ctx.container.resolve<DataEngine>('dataEngine')
-    const userId = ctx.auth?.sub ?? 'system'
+    // This command is always system-triggered (the credit-on-snapshot subscriber),
+    // never called with a real authenticated user — `created_by` is nullable for
+    // exactly this case. Do not substitute a sentinel like "system": the column is
+    // `uuid` and a non-UUID string there fails the insert outright.
+    const userId = ctx.auth?.sub && ctx.auth.sub !== 'system' ? ctx.auth.sub : null
 
     const entry = await de.createOrmEntity({
       entity: DealerLedgerEntry,
@@ -55,7 +59,7 @@ const creditCommissionCommand: CommandHandler<Record<string, unknown>, DealerLed
         referenceType: 'order_commission_snapshot',
         referenceId: parsed.snapshotId,
         note: null,
-        createdBy: String(userId),
+        createdBy: userId,
       },
     })
 

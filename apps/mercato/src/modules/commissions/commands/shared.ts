@@ -1,7 +1,10 @@
+import type { FilterQuery } from '@mikro-orm/postgresql'
 import type { CommandRuntimeContext } from '@open-mercato/shared/lib/commands'
 import { ensureTenantScope } from '@open-mercato/shared/lib/commands/scope'
-import { badRequest } from '@open-mercato/shared/lib/crud/errors'
+import { badRequest, notFound } from '@open-mercato/shared/lib/crud/errors'
+import { resolveTranslations } from '@open-mercato/shared/lib/i18n/server'
 import type { CommissionRule, OrderCommissionSnapshot } from '../data/entities'
+import type { DealerProfile } from '@/modules/dealer_onboarding/data/entities'
 
 export type CommissionScope = { tenantId: string; organizationId: string }
 
@@ -73,4 +76,31 @@ export function serializeCommissionSnapshot(s: OrderCommissionSnapshot): Seriali
     ruleId: s.ruleId ?? null,
     snapshottedAt: s.snapshottedAt instanceof Date ? s.snapshottedAt.toISOString() : String(s.snapshottedAt),
   }
+}
+
+/**
+ * Derive the calling dealer's own `dealerProfileId` from their authenticated
+ * tenant + organization scope — never from a caller-supplied value. Fails
+ * closed (404) when no profile exists for this org, or when it exists but
+ * isn't `approved`.
+ */
+export async function resolveOwnDealerProfileId(
+  em: import('@mikro-orm/postgresql').EntityManager,
+  organizationId: string,
+  tenantId: string,
+): Promise<string> {
+  const { DealerProfile } = await import('@/modules/dealer_onboarding/data/entities')
+  const { translate } = await resolveTranslations()
+  const profile = await em.findOne(DealerProfile, {
+    organizationId,
+    tenantId,
+    kycStatus: 'approved',
+    deletedAt: null,
+  } as FilterQuery<DealerProfile>)
+  if (!profile) {
+    throw notFound(
+      translate('commissions.errors.dealerNotFound', 'No approved dealer profile for this organization'),
+    )
+  }
+  return String(profile.id)
 }

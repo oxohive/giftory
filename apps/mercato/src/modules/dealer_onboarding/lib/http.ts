@@ -5,7 +5,7 @@ import { isCrudHttpError } from '@open-mercato/shared/lib/crud/errors'
 import { resolveTranslations } from '@open-mercato/shared/lib/i18n/server'
 import { createLogger } from '@open-mercato/shared/lib/logger'
 import { getAuthFromRequest, type AuthContext } from '@open-mercato/shared/lib/auth/server'
-import { resolveOrganizationScopeForRequest, type OrganizationScope } from '@open-mercato/core/modules/directory/utils/organizationScope'
+import type { OrganizationScope } from '@open-mercato/core/modules/directory/utils/organizationScope'
 
 const logger = createLogger('dealer_onboarding').child({ component: 'http' })
 
@@ -55,9 +55,21 @@ export function dealerHandler(
     try {
       const container = await createRequestContainer()
       const auth = await getAuthFromRequest(req)
-      const organizationScope = auth
-        ? await resolveOrganizationScopeForRequest(req, container, auth).catch(() => null)
-        : null
+      // Every dealer-facing route derives its target organization directly from the
+      // caller's own `auth.orgId` (never from a broader resolved scope), matching
+      // dealer_orders/commissions/payouts's `organizationScope: null` pattern. This used
+      // to call `resolveOrganizationScopeForRequest`, which reads the SHARED, tenant-wide
+      // `dealer:owner` role's `RoleAcl.organizations_json` — but that mechanism is built
+      // for parent/child org hierarchies, not flat sibling dealer orgs added one at a
+      // time: the approval flow unioned each newly-approved dealer's org into that one
+      // shared list, so any still-pending dealer whose own org wasn't in the union yet
+      // got denied access to their OWN data (confirmed live: a real second dealer's KYC
+      // upload 403'd the moment the first dealer in the tenant was approved). Every
+      // dealer_onboarding/dealer_org_rbac command already scopes its own queries by the
+      // caller's own tenantId/organizationId (see `findOwnProfile` and friends), so this
+      // RoleAcl-based check was a redundant, mis-scoped gate, not the thing actually
+      // enforcing dealer-to-dealer isolation.
+      const organizationScope: OrganizationScope | null = null
       return await handler({ req, ctx, container, translate, auth, organizationScope })
     } catch (err) {
       if (err instanceof DealerApiError) {

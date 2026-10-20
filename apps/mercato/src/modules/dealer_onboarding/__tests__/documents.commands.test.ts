@@ -19,13 +19,13 @@ import { executeUploadDocument } from '../commands/documents'
 const TENANT_ID  = 'aaaaaaaa-0000-4000-a000-000000000001'
 const ORG_ID     = 'bbbbbbbb-0000-4000-a000-000000000002'
 const PROFILE_ID = 'cccccccc-0000-4000-a000-000000000003'
+const ATTACHMENT_ID = 'dddddddd-0000-4000-a000-000000000004'
 
 const VALID_INPUT = {
   documentType: 'gst_certificate' as const,
-  storageKey: 'uploads/dealer/gst.pdf',
   fileName: 'gst.pdf',
-  fileSizeBytes: 512_000,
-  mimeType: 'application/pdf',
+  declaredMimeType: 'application/pdf',
+  buffer: Buffer.from('%PDF-1.4 fake pdf bytes'),
 }
 
 // ---------------------------------------------------------------------------
@@ -64,9 +64,9 @@ function makeDocument(overrides: Partial<DealerKycDocument> = {}): DealerKycDocu
     dealerProfileId: PROFILE_ID,
     tenantId: TENANT_ID,
     documentType: 'gst_certificate',
-    storageKey: 'uploads/dealer/gst.pdf',
+    storageKey: ATTACHMENT_ID,
     fileName: 'gst.pdf',
-    fileSizeBytes: 512_000,
+    fileSizeBytes: VALID_INPUT.buffer.length,
     mimeType: 'application/pdf',
     uploadedAt: new Date('2026-01-01'),
     createdAt: new Date('2026-01-01'),
@@ -89,11 +89,30 @@ function makeDataEngine(returnDoc: DealerKycDocument) {
   }
 }
 
-function makeCtx(em = makeEm(), de = makeDataEngine(makeDocument())) {
+function makeAttachmentService(overrides: Partial<{ createScoped: jest.Mock; releaseScoped: jest.Mock }> = {}) {
+  return {
+    createScoped: jest.fn().mockResolvedValue({
+      id: ATTACHMENT_ID,
+      url: `/api/attachments/file/${ATTACHMENT_ID}`,
+      fileName: VALID_INPUT.fileName,
+      mimeType: VALID_INPUT.declaredMimeType,
+      fileSize: VALID_INPUT.buffer.length,
+    }),
+    releaseScoped: jest.fn().mockResolvedValue(undefined),
+    ...overrides,
+  }
+}
+
+function makeCtx(
+  em = makeEm(),
+  de = makeDataEngine(makeDocument()),
+  attachmentService = makeAttachmentService(),
+) {
   const container = {
     resolve: jest.fn((id: string) => {
       if (id === 'em') return em
       if (id === 'dataEngine') return de
+      if (id === 'attachmentService') return attachmentService
       throw new Error(`Unknown service: ${id}`)
     }),
   }
@@ -118,6 +137,15 @@ describe('executeUploadDocument', () => {
     const ctx = makeCtx(em)
     await expect(
       executeUploadDocument({ ...VALID_INPUT, documentType: 'invalid_type' }, ctx),
+    ).rejects.toThrow()
+  })
+
+  it('throws ZodError when no file buffer is provided', async () => {
+    const em = makeEm()
+    em.findOne.mockResolvedValueOnce(makeProfile())
+    const ctx = makeCtx(em)
+    await expect(
+      executeUploadDocument({ ...VALID_INPUT, buffer: undefined }, ctx),
     ).rejects.toThrow()
   })
 
@@ -146,17 +174,68 @@ describe('executeUploadDocument', () => {
     )
   })
 
-  it('creates a document when no prior document of that type exists', async () => {
+  it('rejects a file larger than the 10 MB cap before uploading any bytes', async () => {
+    const em = makeEm()
+    em.findOne.mockResolvedValueOnce(makeProfile({ kycStatus: 'under_review' }))
+    const attachmentService = makeAttachmentService()
+    const ctx = makeCtx(em, undefined, attachmentService)
+    const oversized = { ...VALID_INPUT, buffer: Buffer.alloc(10 * 1024 * 1024 + 1) }
+    await expect(executeUploadDocument(oversized, ctx)).rejects.toThrow(/10 MB/)
+    expect(attachmentService.createScoped).not.toHaveBeenCalled()
+  })
+
+  it('rejects an unsupported declared mime type before uploading any bytes', async () => {
+    const em = makeEm()
+    em.findOne.mockResolvedValueOnce(makeProfile({ kycStatus: 'under_review' }))
+    const attachmentService = makeAttachmentService()
+    const ctx = makeCtx(em, undefined, attachmentService)
+    const badType = { ...VALID_INPUT, declaredMimeType: 'application/x-executable' }
+    await expect(executeUploadDocument(badType, ctx)).rejects.toThrow(/Unsupported file type/)
+    expect(attachmentService.createScoped).not.toHaveBeenCalled()
+  })
+
+  it('releases the attachment and rejects when the sniffed mime type is not allowed', async () => {
+    const em = makeEm()
+    em.findOne.mockResolvedValueOnce(makeProfile({ kycStatus: 'under_review' }))
+    const attachmentService = makeAttachmentService({
+      createScoped: jest.fn().mockResolvedValue({
+        id: ATTACHMENT_ID,
+        url: `/api/attachments/file/${ATTACHMENT_ID}`,
+        fileName: VALID_INPUT.fileName,
+        mimeType: 'application/x-sharedlib', // sniffed mime differs from the declared one
+        fileSize: VALID_INPUT.buffer.length,
+      }),
+    })
+    const ctx = makeCtx(em, undefined, attachmentService)
+    await expect(executeUploadDocument(VALID_INPUT, ctx)).rejects.toThrow(/Unsupported file type/)
+    expect(attachmentService.releaseScoped).toHaveBeenCalledTimes(1)
+  })
+
+  it('uploads real bytes via attachmentService.createScoped and persists the returned attachment id as storageKey', async () => {
     const newDoc = makeDocument()
     const em = makeEm()
     const de = makeDataEngine(newDoc)
+    const attachmentService = makeAttachmentService()
     // profile found; no existing doc
     em.findOne.mockResolvedValueOnce(makeProfile({ kycStatus: 'under_review' })).mockResolvedValueOnce(null)
 
-    const ctx = makeCtx(em, de)
+    const ctx = makeCtx(em, de, attachmentService)
     const result = await executeUploadDocument(VALID_INPUT, ctx)
 
-    expect(de.createOrmEntity).toHaveBeenCalledTimes(1)
+    expect(attachmentService.createScoped).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: TENANT_ID,
+        organizationId: ORG_ID,
+        recordId: PROFILE_ID,
+        fileName: VALID_INPUT.fileName,
+        buffer: VALID_INPUT.buffer,
+      }),
+    )
+    expect(de.createOrmEntity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ storageKey: ATTACHMENT_ID }),
+      }),
+    )
     expect(result.id).toBe(newDoc.id)
     // under_review stays under_review — no flush for status advance
     expect(em.flush).toHaveBeenCalledTimes(0)

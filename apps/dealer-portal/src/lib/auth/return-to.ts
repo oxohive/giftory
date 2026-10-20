@@ -1,0 +1,33 @@
+/**
+ * Safe return-URL handling for the login flow. `returnTo` arrives as an untrusted query
+ * parameter (`/login?returnTo=...`) — this is the open-redirect guard: only a same-origin,
+ * root-relative path is ever accepted, mirroring the backend's own `sanitizeRedirectPath`
+ * (@open-mercato/core's `auth` module, `lib/safeRedirect.ts`) rather than inventing a different
+ * policy for this app.
+ */
+const MAX_LENGTH = 512
+const CONTROL_CHARS = /[\x00-\x1f]/
+const SCHEME_LIKE = /^\/[a-zA-Z][a-zA-Z0-9+.-]*:/
+
+export function sanitizeReturnTo(raw: string | null | undefined, fallback = '/'): string {
+  if (!raw) return fallback
+  if (raw.length > MAX_LENGTH) return fallback
+  // Must start with exactly one '/' — rejects absolute URLs (`https://evil.com`), protocol-
+  // relative payloads (`//evil.com`, which the browser resolves as same-scheme absolute), and
+  // backslash variants some browsers normalize to forward slashes.
+  if (!raw.startsWith('/')) return fallback
+  if (raw.startsWith('//')) return fallback
+  if (raw.includes('\\')) return fallback
+  if (SCHEME_LIKE.test(raw)) return fallback
+  if (CONTROL_CHARS.test(raw)) return fallback
+  try {
+    const resolved = new URL(raw, 'http://dealer-portal.invalid')
+    if (resolved.origin !== 'http://dealer-portal.invalid') return fallback
+    // Reject `//` anywhere in the resolved pathname — the same traversal/open-redirect bypass
+    // vector `sanitizeRedirectPath` rejects (e.g. `/backend//evil.com`).
+    if (resolved.pathname.includes('//')) return fallback
+    return resolved.pathname + resolved.search + resolved.hash
+  } catch {
+    return fallback
+  }
+}

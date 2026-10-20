@@ -73,15 +73,33 @@ export type DealerRegisterInput = z.infer<typeof dealerRegisterSchema>
 // Document upload
 // ---------------------------------------------------------------------------
 
+/**
+ * Allowed KYC document mime types. Applied both to the client-declared
+ * `Content-Type` (reject obviously-wrong uploads before spending storage)
+ * and to the mime type actually sniffed from the file bytes by the
+ * attachments module's upload service (defense in depth — never trust a
+ * client-declared mime type alone).
+ */
+export const DEALER_DOCUMENT_MIME_PATTERN = /^(application\/pdf|image\/(jpeg|png|webp|tiff))$/
+
+/**
+ * Validates the metadata captured once a KYC document's bytes have actually
+ * been uploaded to private object storage via the attachments module — see
+ * `commands/documents.ts`. There is no client-supplied `storageKey` here:
+ * the attachment id is generated server-side by `attachmentService.createScoped`
+ * and is never chosen by the caller.
+ */
 export const dealerDocumentUploadSchema = z.object({
   documentType: z.enum(DEALER_DOCUMENT_TYPES),
-  storageKey: trimmedText(1, 1024),
   fileName: trimmedText(1, 255),
-  fileSizeBytes: z.coerce.number().int().min(1).max(MAX_DOCUMENT_SIZE_BYTES),
-  mimeType: z
+  declaredMimeType: z
     .string()
     .trim()
-    .regex(/^(application\/pdf|image\/(jpeg|png|webp|tiff))$/, 'dealer_onboarding.validation.unsupportedMimeType'),
+    .max(255)
+    .nullable()
+    .optional()
+    .transform((v) => (v && v.length > 0 ? v : null)),
+  buffer: z.custom<Buffer>((v) => Buffer.isBuffer(v), 'dealer_onboarding.validation.fileRequired'),
 })
 
 export type DealerDocumentUploadInput = z.infer<typeof dealerDocumentUploadSchema>

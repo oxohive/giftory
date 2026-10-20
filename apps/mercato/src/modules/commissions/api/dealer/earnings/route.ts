@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { OrderCommissionSnapshot } from '../../../data/entities'
 import { commissionSnapshotListSchema } from '../../../data/validators'
 import { adminHandler } from '../../../lib/http'
-import { serializeCommissionSnapshot } from '../../../commands/shared'
+import { serializeCommissionSnapshot, resolveOwnDealerProfileId } from '../../../commands/shared'
 import { dealerEarningsTag, pagedSnapshotsSchema } from '../../openapi'
 
 export const metadata = {
@@ -16,18 +16,21 @@ export const metadata = {
 /**
  * GET /api/dealer/earnings — commission snapshots for the authenticated dealer.
  *
- * FEAT-009 integration note: once dealer RBAC ships, resolve dealerProfileId
- * from the session; until then the caller supplies it as a query param.
+ * `dealerProfileId` is always derived from the caller's authenticated
+ * tenant + organization scope; a caller-supplied `dealerProfileId` query
+ * param (if present) is ignored. Fails closed (404) if the caller's org has
+ * no approved dealer profile.
  */
 export const GET = adminHandler('dealer.earnings.list', async ({ req, container, scope }) => {
   const url = new URL(req.url)
   const query = commissionSnapshotListSchema.parse(Object.fromEntries(url.searchParams))
 
   const em = container.resolve<EntityManager>('em')
+  const dealerProfileId = await resolveOwnDealerProfileId(em, scope.organizationId, scope.tenantId)
   const where: FilterQuery<OrderCommissionSnapshot> = {
     tenantId: scope.tenantId,
+    dealerProfileId,
   } as FilterQuery<OrderCommissionSnapshot>
-  if (query.dealerProfileId) (where as Record<string, unknown>).dealerProfileId = query.dealerProfileId
   if (query.orderId) (where as Record<string, unknown>).orderId = query.orderId
   if (query.assignmentId) (where as Record<string, unknown>).assignmentId = query.assignmentId
 
