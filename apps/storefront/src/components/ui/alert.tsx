@@ -10,11 +10,13 @@ const styles = {
 } as const
 
 export function Alert({
+  id,
   tone = 'info',
   title,
   children,
   className,
 }: {
+  id?: string
   tone?: keyof typeof styles
   title?: ReactNode
   children?: ReactNode
@@ -23,6 +25,7 @@ export function Alert({
   const { icon: Icon, className: toneClass } = styles[tone]
   return (
     <div
+      id={id}
       role={tone === 'error' ? 'alert' : 'status'}
       className={cn('flex gap-3 rounded-md border p-4 text-sm text-foreground', toneClass, className)}
     >
