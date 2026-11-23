@@ -1,6 +1,6 @@
 # P2-UI-18: Delivery documentation and deployment readiness
 
-- Status: Planned; implementation not started
+- Status: In progress. Documentation was delivered 2026-11-23 (WS-G, branch `m1/ws-g`). Deployment-readiness items need a human and are listed in DELIVERY.md. See Agent handoff.
 - Owner lane: A
 - Depends on: P2-UI-17
 - Owned paths: tasks/phase-2-ui/; phase2 status specs; README documentation; deployment configuration only in separately reviewed implementation changes

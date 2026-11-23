@@ -1,6 +1,6 @@
 # P2-UI-00: Contract audit and implementation preflight
 
-- Status: Review; audit complete, awaiting coordinator verification (see Agent handoff below)
+- Status: Done (2026-11-23 review). The audit was delivered in `90cea7e`. Its critical gaps 1–3 (missing dealer ACL grants, ACL clobbering, and caller-supplied `dealerProfileId`) were fixed by P2-UI-02/03. Known gaps 2–7 in `docs/dealer-marketplace-api.md` are still open on `main`.
 - Owner lane: A
 - Depends on: None
 - Owned paths: Planning documents under tasks/phase-2-ui/ only
@@ -26,6 +26,7 @@ Read [README.md](README.md) before starting. Dependencies must have verified han
 ## Agent handoff
 
 - Status: Review
+- Status review (2026-11-23, WS-G): the status line at the top of this file supersedes the status above. It was re-checked against git history and the 12/12 integration journey. Per-task evidence is in the README task index.
 - Changed files:
   - `tasks/phase-2-ui/API-CONTRACTS.md` (new)
   - `tasks/phase-2-ui/CONTRACT-HANDOFF.md` (new)

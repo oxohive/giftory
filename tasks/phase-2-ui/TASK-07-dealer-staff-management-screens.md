@@ -1,6 +1,6 @@
 # P2-UI-07: Dealer staff management screens
 
-- Status: Review; implementation complete
+- Status: Implemented (`1a6cfb1`, backend fix `dc1d076`). The 12/12 journey on 2026-10-20 exercised invite, password setup, deactivate, and the re-login block through the API. The screens have not been browser-tested.
 - Owner lane: B
 - Depends on: P2-UI-01, P2-UI-03, P2-UI-04
 - Owned paths: apps/dealer-portal/src/app/(portal)/staff/; src/components/staff/; src/lib/features/staff/
@@ -24,6 +24,7 @@ Read [README.md](README.md) before starting. Dependencies must have verified han
 ## Agent handoff
 
 - Status: Review; implementation complete, no backend changes made (this task is UI-only, consuming the already-implemented P2-UI-03 endpoints).
+- Status review (2026-11-23, WS-G): the status line at the top of this file supersedes the status above. It was re-checked against git history and the 12/12 integration journey. Per-task evidence is in the README task index.
 
 - Changed files:
   - `apps/dealer-portal/src/lib/features/staff/types.ts` — `DealerStaffMember`/`StaffListResponse`/invite-deactivate response types, verified against the real `dealerStaffMemberWireSchema`/`staffListResponseSchema`/etc. in `apps/mercato/src/modules/dealer_org_rbac/api/openapi.ts`.

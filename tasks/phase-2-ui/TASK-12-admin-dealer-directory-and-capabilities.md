@@ -1,6 +1,6 @@
 # P2-UI-12: Admin dealer directory and capabilities
 
-- Status: Review; implementation complete, pending integration verification (TASK-17)
+- Status: Implemented (`ed4c729`). Unit and static tests only. The admin dealer directory and admin capabilities API were not exercised by the 12/12 journey, and the screens have not been browser-tested.
 - Owner lane: D
 - Depends on: P2-UI-00, P2-UI-03
 - Owned paths: dealer_org_rbac/backend/; dealer_org_rbac/components/; dealer_org_rbac/i18n/ under apps/mercato/src/modules/
@@ -25,6 +25,7 @@ Read [README.md](README.md) before starting. Dependencies must have verified han
 ## Agent handoff
 
 - Status: Implementation complete. All Work and Acceptance items addressed within owned paths. Full apps/mercato jest suite green before and after; no regressions.
+- Status review (2026-11-23, WS-G): the status line at the top of this file supersedes the status above. It was re-checked against git history and the 12/12 integration journey. Per-task evidence is in the README task index.
 
 - Changed files:
   - `apps/mercato/src/modules/dealer_org_rbac/backend/dealers/page.tsx` (new) — directory list page, `/backend/dealers`.

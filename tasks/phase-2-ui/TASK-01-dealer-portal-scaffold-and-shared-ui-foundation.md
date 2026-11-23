@@ -1,6 +1,6 @@
 # P2-UI-01: Dealer portal scaffold and shared UI foundation
 
-- Status: Planned; implementation not started
+- Status: Implemented (`99d79f8`, allowlist fix `a886c33`). On 2026-11-23, `apps/dealer-portal` typecheck, lint (0 errors), `npm test` (300/300) and `npm run build` all passed locally. Not browser-tested.
 - Owner lane: A
 - Depends on: P2-UI-00
 - Owned paths: apps/dealer-portal root config, src/app/layout.tsx, src/app/globals.css, src/components/ui/, src/components/layout/, src/lib/http/, src/lib/money/; packages/ui/; packages/api-client/; shared dependency files
@@ -26,6 +26,7 @@ Read [README.md](README.md) before starting. Dependencies must have verified han
 ## Agent handoff
 
 - Status: Review
+- Status review (2026-11-23, WS-G): the status line at the top of this file supersedes the status above. It was re-checked against git history and the 12/12 integration journey. Per-task evidence is in the README task index.
 - Changed files:
   - `packages/ui/` — rebuilt from the bare scaffold into the shared component/formatting library: `src/cn.ts`, `src/money.ts` (kept, added `formatBps`), `src/datetime.ts` (new: `formatDate`/`formatDateTime`, pure), `src/status-tone.ts` (new, pure) + `src/status-badge.tsx`, `src/feedback.tsx` (`EmptyState`/`ErrorNotice`/`LoadingState`/`PermissionDenied`/`SessionExpired`), `src/table.tsx`, `src/pagination-math.ts` (pure) + `src/pagination.tsx`, `src/button.tsx`, `src/form.tsx` (`Field`/`Input`/`Textarea`/`Select`/`Checkbox`/`Label`), `src/dialog.tsx`, `src/index.tsx` (aggregator — every prior export, `StatusBadge`/`EmptyState`/`ErrorNotice`/`formatDate`/`formatMoney`/`toMinorUnits`/`toMajorUnits`, is still exported with the same signature), `package.json` (added `test` script + the five small runtime deps: radix dialog/label/slot, cva, clsx, tailwind-merge, lucide-react — versions pinned to what the storefront already uses; added `react`/`@types/react` as devDependencies so the package typechecks on its own node_modules, since TS/Turbopack resolve a `file:`-linked package's own deps from its real path, not the consuming app's), `tests/*.test.mjs` (new — see Commands below). The two-entry `exports` map (`.`, `./money`) is unchanged, per the CONTRACT-HANDOFF freeze.
   - `packages/api-client/` — `src/index.ts` rewritten: `ApiError` now carries `status`/`code`/`details`/`requiredFeatures` matching API-CONTRACTS.md's verified error shapes exactly (the previous scaffold read a nonexistent `body.fieldErrors`; the real 422 shape is `details:[{path,message}]`), added `isUnauthorized`/`isForbidden`/`isValidation`/`isRateLimited`/`isNetworkError` and `buildQuery`; extended `DealerProfile`/`Capability`(renamed `DealerCapabilities`)/`Assignment` to the full serialized shape from API-CONTRACTS.md and added `DealerOrgProfile` (explicitly flagged as provisional beyond `capabilities` — see inline comment), `CommissionRule`, `CommissionSnapshot`, `LedgerEntry`, `LedgerBalance`, `AuthProfile`, `DealerDocument`, plus the real status-enum unions (`KycStatus`, `AssignmentStatus`, `PrintingMethod`, `LedgerEntryType`/`Direction`). `package.json` adds a `test` script. `tests/request.test.mjs` new.
