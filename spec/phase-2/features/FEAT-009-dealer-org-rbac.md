@@ -2,7 +2,7 @@
 
 - **Feature ID:** FEAT-009
 - **Phase:** 2
-- **Status:** Draft
+- **Status:** Implemented (status re-checked 2026-11-23). The code is on `main` (PR #2). The API-level integration journey passed 12/12 on 2026-10-20 in a disposable local environment. The `dealer_onboarding`/`dealer_org_rbac`/`payouts` migrations are not yet applied to real databases, and no screen has been browser-tested. See [docs/phase-2-status.md](../../../docs/phase-2-status.md). The live run checked same-tenant cross-dealer isolation; a second tenant has not been tested. The admin directory uses one `dealer_org.admin` feature for both view and edit.
 - **Objective:** Model dealers as organizations within Open Mercato, define their roles and permissions, and configure their production capabilities.
 - **Business Value:** Without a proper organization model and access control, dealers cannot have isolated data, and the admin cannot restrict what each dealer sees or does.
 - **Scope:** Dealer organization creation on approval, dealer roles (owner, staff), permission scopes, capability configuration (product types, printing methods, capacity).

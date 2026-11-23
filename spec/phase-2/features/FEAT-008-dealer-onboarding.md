@@ -2,7 +2,7 @@
 
 - **Feature ID:** FEAT-008
 - **Phase:** 2
-- **Status:** Implemented
+- **Status:** Implemented (status re-checked 2026-11-23). The code is on `main` (PR #2). The API-level integration journey passed 12/12 on 2026-10-20 in a disposable local environment. The `dealer_onboarding`/`dealer_org_rbac`/`payouts` migrations are not yet applied to real databases, and no screen has been browser-tested. See [docs/phase-2-status.md](../../../docs/phase-2-status.md). Known gaps 5 (KYC decrypt scope) and 7 (caller-chosen `organizationId` on register) are open.
 - **Objective:** Allow a dealer (a printing/production business) to self-register on the platform, submit KYC documents, and be approved by an admin before receiving order assignments.
 - **Business Value:** Dealers are the fulfillment layer for all customizable gifts. Without verified, approved dealers, no order can be produced.
 - **Scope:** Dealer self-registration, KYC document submission, admin review + approval/rejection, dealer profile management.

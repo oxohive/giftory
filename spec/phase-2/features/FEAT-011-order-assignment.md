@@ -2,7 +2,7 @@
 
 - **Feature ID:** FEAT-011
 - **Phase:** 2
-- **Status:** Draft
+- **Status:** Implemented (status re-checked 2026-11-23). The code is on `main` (PR #2). The API-level integration journey passed 12/12 on 2026-10-20 in a disposable local environment. The `dealer_onboarding`/`dealer_org_rbac`/`payouts` migrations are not yet applied to real databases, and no screen has been browser-tested. See [docs/phase-2-status.md](../../../docs/phase-2-status.md). Two requirements are only partly met. Req 2: the assignment UI lists all approved dealers and only *hints* at capability fit. Req 8: `Idempotency-Key` is required but not consumed (known gap 2).
 - **Objective:** Allow an admin to assign a paid order (or individual order line items) to an approved dealer, triggering the production workflow.
 - **Business Value:** Order assignment is the bridge between a customer purchase and physical production — without it, paid orders sit in limbo.
 - **Scope:** Admin assignment UI, assignment entity, dealer notification, dealer portal order visibility.
