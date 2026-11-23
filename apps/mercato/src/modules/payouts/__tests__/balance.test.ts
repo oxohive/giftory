@@ -130,7 +130,7 @@ describe('balanceFromRow — balance fields per entry type (Known gap #4)', () =
 
 describe('loadDealerBalance', () => {
   it('runs the shared balance SQL scoped by tenant + dealer and maps the row', async () => {
-    const execute = jest.fn(async () => [{ total_earned: '100000', total_credited: '105000', total_debited: '40000' }])
+    const execute = jest.fn(async (_sql: string, _params: unknown[]) => [{ total_earned: '100000', total_credited: '105000', total_debited: '40000' }])
     const balance = await loadDealerBalance({ execute } as never, TENANT_ID, DEALER_ID)
     expect(execute).toHaveBeenCalledWith(DEALER_BALANCE_SQL, [TENANT_ID, DEALER_ID])
     expect(balance).toEqual({ pendingAmount: 65000, totalEarned: 100000, totalCredited: 105000, totalDebited: 40000 })

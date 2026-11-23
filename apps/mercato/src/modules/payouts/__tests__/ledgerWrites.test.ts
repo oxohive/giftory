@@ -9,8 +9,8 @@ jest.mock('@open-mercato/shared/lib/commands/scope', () => ({
   ensureOrganizationScope: () => undefined,
 }))
 
-const mockEmit = jest.fn(async () => undefined)
-jest.mock('../events', () => ({ __esModule: true, default: { emit: (...args: unknown[]) => mockEmit(...(args as [])) } }))
+const mockEmit = jest.fn(async (_eventId: string, _payload: Record<string, unknown>) => undefined)
+jest.mock('../events', () => ({ __esModule: true, default: { emit: (...args: unknown[]) => mockEmit(...(args as [string, Record<string, unknown>])) } }))
 
 import {
   DEALER_LEDGER_LOCK_SQL,
@@ -49,7 +49,7 @@ function makeHarness(opts: {
   let committed = false
   const pending = opts.pendingAmount ?? 0
   const tem = {
-    execute: jest.fn(async (sql: string) => {
+    execute: jest.fn(async (sql: string, _params?: unknown[]) => {
       if (sql === DEALER_LEDGER_LOCK_SQL) {
         calls.push('lock')
         return [{}]
@@ -60,7 +60,7 @@ function makeHarness(opts: {
       }
       throw new Error(`unexpected SQL: ${sql}`)
     }),
-    findOne: jest.fn(async (entity: unknown) => {
+    findOne: jest.fn(async (entity: unknown, _where?: Record<string, unknown>) => {
       calls.push(entity === PayoutsIdempotencyKey ? 'findKey' : 'findOther')
       return opts.consumedKey ? { id: 'existing' } : null
     }),
