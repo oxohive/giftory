@@ -62,33 +62,33 @@ export type ComputedLedgerBalance = {
 }
 
 /**
- * Mirrors the exact formula computed server-side in
- * `payouts/api/admin/dealers/[id]/ledger/balance/route.ts` (and the dealer
- * equivalent), so the admin UI's own derived reconciliation check — and this
- * file's unit tests — exercise the same arithmetic the backend ships, not a
- * hand-picked approximation:
+ * Mirrors the exact formula computed server-side in `payouts/lib/balance.ts`
+ * (used by both balance routes and the payout balance guard), so the admin
+ * UI's own derived reconciliation check — and this file's unit tests —
+ * exercise the same arithmetic the backend ships:
  *
- *   total_earned   = SUM(amount) WHERE direction = 'credit' AND entry_type = 'commission_earned'
- *   total_debited  = SUM(amount) WHERE direction = 'debit'
- *   pendingAmount  = total_earned - total_debited
+ *   totalEarned    = SUM(amount) WHERE direction = 'credit' AND entry_type = 'commission_earned'
+ *   totalDebited   = SUM(amount) WHERE direction = 'debit'
+ *   pendingAmount  = SUM(amount) WHERE direction = 'credit' - totalDebited
  *
- * Note the deliberate asymmetry (tracked as a backend gap, not something
- * this UI task may silently "fix"): an `adjustment_credit` entry increases
- * `pendingAmount` (it isn't a debit) but does NOT increase `totalEarned`
- * (only `commission_earned` credits do). All amounts are integers; every
- * operation here is integer addition/subtraction.
+ * So an `adjustment_credit` raises `pendingAmount` but not `totalEarned`
+ * (lifetime commission only), and an `adjustment_debit` lowers
+ * `pendingAmount` only. All amounts are integers; every operation here is
+ * integer addition/subtraction.
  */
 export function computeLedgerBalanceFromEntries(entries: LedgerBalanceEntryLike[]): ComputedLedgerBalance {
   let totalEarned = 0
+  let totalCredited = 0
   let totalDebited = 0
   for (const entry of entries) {
     const amount = Number.isSafeInteger(entry.amount) ? entry.amount : 0
-    if (entry.direction === 'credit' && entry.entryType === 'commission_earned') {
-      totalEarned += amount
+    if (entry.direction === 'credit') {
+      totalCredited += amount
+      if (entry.entryType === 'commission_earned') totalEarned += amount
     }
     if (entry.direction === 'debit') {
       totalDebited += amount
     }
   }
-  return { pendingAmount: totalEarned - totalDebited, totalEarned, totalDebited }
+  return { pendingAmount: totalCredited - totalDebited, totalEarned, totalDebited }
 }

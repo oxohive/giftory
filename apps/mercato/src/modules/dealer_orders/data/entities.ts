@@ -1,4 +1,4 @@
-import { Entity, Index, PrimaryKey, Property } from '@mikro-orm/decorators/legacy'
+import { Entity, Index, PrimaryKey, Property, Unique } from '@mikro-orm/decorators/legacy'
 import type { AssignmentStatus } from '../lib/constants'
 
 /**
@@ -63,4 +63,60 @@ export class DealerOrderAssignment {
 
   @Property({ name: 'deleted_at', type: Date, nullable: true })
   deletedAt?: Date | null
+}
+
+/**
+ * Replay store for `Idempotency-Key` on the admin assignment writes
+ * (`POST`/`PUT /admin/orders/{id}/assignment`). One row per key, scoped to the
+ * caller's tenant + organization — the same mechanism as `storefront_checkouts`
+ * (unique scoped key + SHA-256 request hash + claim, then stored outcome).
+ *
+ * Lifecycle: inserted as `processing` before the command runs (the claim);
+ * set to `completed` with the response once it succeeds; deleted if the
+ * command fails, so a failed attempt never consumes the key. A `processing`
+ * claim older than the stale window (crashed request) can be taken over by a
+ * retry with the same payload. See `lib/idempotency.ts`.
+ */
+@Entity({ tableName: 'dealer_order_idempotency_keys' })
+@Unique({ name: 'dealer_order_idempotency_keys_scope_key_uniq', properties: ['tenantId', 'organizationId', 'idempotencyKey'] })
+export class DealerOrderIdempotencyKey {
+  @PrimaryKey({ type: 'uuid', defaultRaw: 'gen_random_uuid()' })
+  id!: string
+
+  @Property({ name: 'tenant_id', type: 'uuid' })
+  tenantId!: string
+
+  @Property({ name: 'organization_id', type: 'uuid' })
+  organizationId!: string
+
+  @Property({ name: 'idempotency_key', type: 'text' })
+  idempotencyKey!: string
+
+  /** `assign` | `reassign` */
+  @Property({ name: 'operation', type: 'text' })
+  operation!: string
+
+  /** SHA-256 of the canonical request (operation + order + normalized body). */
+  @Property({ name: 'request_hash', type: 'text' })
+  requestHash!: string
+
+  /** `processing` | `completed` */
+  @Property({ name: 'status', type: 'text' })
+  status: string = 'processing'
+
+  @Property({ name: 'claimed_at', type: Date })
+  claimedAt: Date = new Date()
+
+  @Property({ name: 'response_status', type: 'int', nullable: true })
+  responseStatus?: number | null
+
+  /** Exact JSON body returned to the first caller; replayed verbatim. */
+  @Property({ name: 'response_body', type: 'json', nullable: true })
+  responseBody?: Record<string, unknown> | null
+
+  @Property({ name: 'created_at', type: Date, onCreate: () => new Date() })
+  createdAt: Date = new Date()
+
+  @Property({ name: 'updated_at', type: Date, onUpdate: () => new Date() })
+  updatedAt: Date = new Date()
 }

@@ -22,6 +22,8 @@ import { useDialogKeyHandler } from '@open-mercato/ui/hooks/useDialogKeyHandler'
 import { useT } from '@open-mercato/shared/lib/i18n/context'
 import { submitRecordPayout } from './ledgerActions'
 import { createSubmitGuard } from './submitGuard'
+import { createIdempotencyKeyHolder } from './idempotencyKey'
+import { formatPaise } from './money'
 
 const INR_CURRENCIES: AmountCurrency[] = [{ code: 'INR', symbol: '₹', label: 'Indian Rupee' }]
 
@@ -42,6 +44,8 @@ export function RecordPayoutDialog({
   const [fieldError, setFieldError] = React.useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const guardRef = React.useRef(createSubmitGuard())
+  // One Idempotency-Key per dialog session — reused on resubmits, released on close/success.
+  const idempotencyKeyRef = React.useRef(createIdempotencyKeyHolder())
   const mutationContextId = `payouts-record-payout:${dealerProfileId}`
   const { runMutation } = useGuardedMutation<{ formId: string; resourceKind: string }>({
     contextId: mutationContextId,
@@ -53,6 +57,7 @@ export function RecordPayoutDialog({
       setAmountRaw('')
       setNote('')
       setFieldError(null)
+      idempotencyKeyRef.current.release()
     }
     onOpenChange(next)
   }, [onOpenChange])
@@ -66,7 +71,11 @@ export function RecordPayoutDialog({
         const call = await runMutation({
           operation: () => apiCallOrThrow<{ id: string }>(
             `/api/payouts/admin/dealers/${encodeURIComponent(dealerProfileId)}/ledger/payout`,
-            { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) },
+            {
+              method: 'POST',
+              headers: { 'content-type': 'application/json', 'Idempotency-Key': idempotencyKeyRef.current.current() },
+              body: JSON.stringify(body),
+            },
             { errorMessage: t('payouts.admin.recordPayoutDialog.error.generic', 'Could not record this payout') },
           ),
           context: { formId: mutationContextId, resourceKind: 'payouts.dealer_ledger_entry' },
@@ -91,6 +100,22 @@ export function RecordPayoutDialog({
     }
     if (result.error.code === 'missing_note') {
       setFieldError(t('payouts.admin.recordPayoutDialog.error.missingReference', 'A payment reference is required'))
+      return
+    }
+    if (result.error.code === 'insufficient_balance') {
+      setFieldError(
+        result.error.availableAmount === null
+          ? t('payouts.admin.recordPayoutDialog.error.insufficientBalance', "This payout exceeds the dealer's available balance")
+          : t(
+              'payouts.admin.recordPayoutDialog.error.insufficientBalanceWithAmount',
+              "This payout exceeds the dealer's available balance of {{amount}}",
+              { amount: formatPaise(result.error.availableAmount, 'INR') },
+            ),
+      )
+      return
+    }
+    if (result.error.code === 'idempotency_conflict') {
+      flash(t('payouts.admin.ledgerDialog.error.idempotencyConflict', 'An earlier attempt from this dialog may already have been recorded. Close the dialog and check the ledger before trying again.'), 'error')
       return
     }
     // request_failed: server rejected it (validation) or the call failed outright.

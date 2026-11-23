@@ -6,23 +6,12 @@ import type { CommandBus, CommandRuntimeContext } from '@open-mercato/shared/lib
 import { isCrudHttpError } from '@open-mercato/shared/lib/crud/errors'
 import { resolveTranslations } from '@open-mercato/shared/lib/i18n/server'
 import { createLogger } from '@open-mercato/shared/lib/logger'
+import { DealerOrdersError, type Translate, type RouteCtx } from './errors'
 
 const logger = createLogger('dealer_orders').child({ component: 'http' })
 
-export type Translate = (key: string, fallback: string, vars?: Record<string, string | number>) => string
-export type RouteCtx = { params?: Record<string, string | string[]> }
-
-export class DealerOrdersError extends Error {
-  constructor(
-    readonly status: number,
-    readonly code: string,
-    message: string,
-    readonly extra?: Record<string, unknown>,
-  ) {
-    super(message)
-    this.name = 'DealerOrdersError'
-  }
-}
+export { DealerOrdersError } from './errors'
+export type { Translate, RouteCtx } from './errors'
 
 export function errorResponse(status: number, code: string, message: string, extra?: Record<string, unknown>): NextResponse {
   return NextResponse.json({ error: message, code, ...(extra ?? {}) }, { status })
@@ -121,16 +110,4 @@ export async function readJsonBody(req: Request): Promise<unknown> {
   } catch {
     return {}
   }
-}
-
-export function requireIdempotencyKey(req: Request, translate: Translate): string {
-  const key = req.headers.get('Idempotency-Key')
-  if (!key || key.trim().length === 0) {
-    throw new DealerOrdersError(
-      400,
-      'idempotency_key_required',
-      translate('dealer_orders.errors.idempotencyKeyRequired', 'Idempotency-Key header is required for this operation'),
-    )
-  }
-  return key.trim()
 }
