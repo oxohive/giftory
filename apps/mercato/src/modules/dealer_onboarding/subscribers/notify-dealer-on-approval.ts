@@ -35,6 +35,5 @@ export default async function onDealerProfileApproved(
   })
   logger.info('dealer_onboarding.profile.approved — approval email sent', {
     dealerProfileId: payload.id,
-    tenantId: payload.tenantId,
   })
 }

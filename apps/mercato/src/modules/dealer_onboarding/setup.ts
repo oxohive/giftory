@@ -21,7 +21,7 @@ async function ensureDealerRoles(em: import('@mikro-orm/postgresql').EntityManag
     } as FilterQuery<typeof Role.prototype>)
     if (!existing) {
       em.create(Role, { name: roleName, tenantId })
-      logger.debug('Creating dealer role', { tenantId, roleName })
+      logger.debug('Creating dealer role', { roleName })
     }
   }
   await em.flush()
