@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals'
 import { readFileSync, readdirSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, sep } from 'node:path'
 
 /**
  * Commission snapshots are immutable by design — frozen at assignment
@@ -23,7 +23,9 @@ function readSourcesRecursive(dir: string, out: Array<{ file: string; source: st
       if (entry.name === '__tests__') continue
       readSourcesRecursive(full, out)
     } else if (entry.name.endsWith('.ts') || entry.name.endsWith('.tsx')) {
-      out.push({ file: full, source: readFileSync(full, 'utf8') })
+      // Store a POSIX-style path so the `endsWith('dir/file')` lookups below
+      // match on Windows too, where `join` produces backslash separators.
+      out.push({ file: full.split(sep).join('/'), source: readFileSync(full, 'utf8') })
     }
   }
   return out
