@@ -49,6 +49,26 @@ phases:
       - yarn test --no-coverage --passWithNoTests
       - cd $CODEBUILD_SRC_DIR
 
+      # Shared packages used by dealer-portal and storefront. Their tests use
+      # only node:test and Node's built-in TypeScript stripping: no install.
+      - echo "=== Running tests (packages/api-client, packages/ui) ==="
+      - cd packages/api-client
+      - npm test
+      - cd $CODEBUILD_SRC_DIR/packages/ui
+      - npm test
+      - cd $CODEBUILD_SRC_DIR
+
+      # Dealer portal unit tests. No package-lock.json is committed (the root
+      # .gitignore excludes it), so `npm ci` cannot run; `npm install` resolves
+      # package.json and links the file: deps on ../../packages/*.
+      # --ignore-scripts: the tests need no install scripts, and skipping them
+      # keeps third-party postinstall code out of a job holding deploy rights.
+      - echo "=== Running tests (dealer-portal) ==="
+      - cd apps/dealer-portal
+      - npm install --no-audit --no-fund --ignore-scripts
+      - npm test
+      - cd $CODEBUILD_SRC_DIR
+
   build:
     commands:
       - echo "=== Building Docker image ==="
