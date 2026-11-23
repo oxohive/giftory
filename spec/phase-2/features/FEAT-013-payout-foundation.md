@@ -2,7 +2,7 @@
 
 - **Feature ID:** FEAT-013
 - **Phase:** 2
-- **Status:** Draft
+- **Status:** Implemented (status re-checked 2026-11-23). The code is on `main` (PR #2). The API-level integration journey passed 12/12 on 2026-10-20 in a disposable local environment. The `dealer_onboarding`/`dealer_org_rbac`/`payouts` migrations are not yet applied to real databases, and no screen has been browser-tested. See [docs/phase-2-status.md](../../../docs/phase-2-status.md). Partial: req 5 (a running balance per ledger entry) is not implemented, only the aggregate balance. Payouts have no balance guard (known gap 3), and `adjustment_credit` is excluded from `pendingAmount` (known gap 4).
 - **Objective:** Build an append-only ledger that records every commission earned and every payout made, so that dealer balances are always reconcilable without relying on the payment provider as the source of truth.
 - **Business Value:** A durable ledger prevents disputes, enables audits, and is a prerequisite for any payout mechanism — automated or manual. Building it in Phase 2 means payouts can be added in Phase 9 without a data migration.
 - **Scope:** Ledger entity, credit entries on commission snapshot, debit entries on manual payout marks, balance query, admin manual payout recording.

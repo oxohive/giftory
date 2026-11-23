@@ -2,7 +2,7 @@
 
 - **Feature ID:** FEAT-010
 - **Phase:** 2
-- **Status:** Draft
+- **Status:** Implemented (status re-checked 2026-11-23): `apps/dealer-portal`, 18 pages. Status updates happen on `/orders/[id]` rather than a separate `/status` page. The code is on `main` (PR #2). The API-level integration journey passed 12/12 on 2026-10-20 in a disposable local environment. The `dealer_onboarding`/`dealer_org_rbac`/`payouts` migrations are not yet applied to real databases, and no screen has been browser-tested. See [docs/phase-2-status.md](../../../docs/phase-2-status.md). Requirement 6 is partial: `dealer_order.status_updated` is emitted, but no notification worker consumes it.
 - **Objective:** Give dealers a dedicated web application to view assigned orders, update production status, and manage their profile and capabilities.
 - **Business Value:** Without a portal, dealers have no structured way to receive orders or report progress — all coordination would be manual and untracked.
 - **Scope:** New `apps/dealer-portal` Next.js app; authentication; dashboard; assigned order list; order detail; production status updates; profile and capability management.

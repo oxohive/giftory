@@ -1,6 +1,6 @@
 # P2-UI-08: Dealer dashboard
 
-- Status: Planned; implementation not started
+- Status: Implemented (`f8e1d8a`, allowlist fix `a886c33`). The dashboard endpoint returned 200 in the 12/12 journey on 2026-10-20 (the counts were not asserted). The screen has not been browser-tested.
 - Owner lane: C
 - Depends on: P2-UI-01, P2-UI-03, P2-UI-04
 - Owned paths: apps/dealer-portal/src/app/(portal)/page.tsx; src/components/dashboard/; src/lib/features/dashboard/
@@ -24,6 +24,7 @@ Read [README.md](README.md) before starting. Dependencies must have verified han
 ## Agent handoff
 
 - Status: Review
+- Status review (2026-11-23, WS-G): the status line at the top of this file supersedes the status above. It was re-checked against git history and the 12/12 integration journey. Per-task evidence is in the README task index.
 
 - **Scope note (blocker found, not fixable from this task's owned paths):** `GET
   /api/dealer_orders/dealer/dashboard` — the real aggregate endpoint this task is required to use

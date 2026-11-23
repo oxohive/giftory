@@ -1,6 +1,6 @@
 # Phase 2 — Dealer Marketplace
 
-- **Status:** Planning
+- **Status:** Implemented on `main` (PR #2). Not yet complete: migrations are unapplied in real environments, there has been no browser test, and US-005 is not Done. See [docs/phase-2-status.md](../../docs/phase-2-status.md) (re-checked 2026-11-23).
 - **Depends on:** Phase 1 complete (US-002 passing)
 - **Goal:** Enable dealers to onboard, receive manual order assignments, and earn commission — the fulfillment backbone for customizable gifts.
 
@@ -26,20 +26,22 @@ Phase 2 MVP delivers:
 
 | ID | Feature | Status |
 |---|---|---|
-| [FEAT-008](features/FEAT-008-dealer-onboarding.md) | Dealer Onboarding & KYC | Draft |
-| [FEAT-009](features/FEAT-009-dealer-org-rbac.md) | Dealer Organization & RBAC | Draft |
-| [FEAT-010](features/FEAT-010-dealer-portal.md) | Dealer Portal App | Draft |
-| [FEAT-011](features/FEAT-011-order-assignment.md) | Manual Order Assignment | Draft |
-| [FEAT-012](features/FEAT-012-commission-engine.md) | Commission Engine | Draft |
-| [FEAT-013](features/FEAT-013-payout-foundation.md) | Payout Foundation (Ledger) | Draft |
+| [FEAT-008](features/FEAT-008-dealer-onboarding.md) | Dealer Onboarding & KYC | Implemented (some requirements partial; see the feature file) |
+| [FEAT-009](features/FEAT-009-dealer-org-rbac.md) | Dealer Organization & RBAC | Implemented (some requirements partial; see the feature file) |
+| [FEAT-010](features/FEAT-010-dealer-portal.md) | Dealer Portal App | Implemented (some requirements partial; see the feature file) |
+| [FEAT-011](features/FEAT-011-order-assignment.md) | Manual Order Assignment | Implemented (some requirements partial; see the feature file) |
+| [FEAT-012](features/FEAT-012-commission-engine.md) | Commission Engine | Implemented (some requirements partial; see the feature file) |
+| [FEAT-013](features/FEAT-013-payout-foundation.md) | Payout Foundation (Ledger) | Implemented (some requirements partial; see the feature file) |
 
 ## User Stories
 
 | ID | Story | Status |
 |---|---|---|
-| [US-005](stories/US-005-dealer-marketplace-foundation.md) | Dealer Marketplace Foundation | Proposed |
+| [US-005](stories/US-005-dealer-marketplace-foundation.md) | Dealer Marketplace Foundation | Implemented, not yet Done (see story) |
 
-## Open Decisions (must resolve before implementation)
+## Open Decisions (originally "must resolve before implementation")
+
+Implementation went ahead anyway. As of 2026-11-23, ADR-001 and ADR-002 are still `Proposed`, and ADR-003 is `Accepted`.
 
 | # | Decision | ADR |
 |---|---|---|
@@ -54,4 +56,4 @@ Phase 2 MVP delivers:
 |---|---|
 | `apps/dealer-portal` | Dealer-facing Next.js app (port 3200) |
 | `packages/ui` | Shared design system (storefront + dealer portal) |
-| `packages/api-client` | Generated typed API client |
+| `packages/api-client` | Hand-written typed client for the dealer portal's BFF proxy (not generated) |

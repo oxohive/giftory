@@ -5,6 +5,32 @@
 **Dealer portal:** (separate app — port 3200 in dev)  
 **Recommended tool:** Postman, Insomnia, or `curl`
 
+> **Execution status (updated 2026-11-23). Read this first.**
+>
+> - **Nobody has executed this checklist against the dev environment above.** Every box is still unticked on purpose.
+> - The automated 12-step journey `apps/mercato/src/modules/dealer_orders/__integration__/dealer-marketplace-journey.spec.ts` passed **12/12 on 2026-10-20**. It ran against a *disposable local* Postgres and production build (`yarn test:integration:ephemeral`), not against `BASE_URL`. Items it exercised are marked:
+>   - **[auto: covered]**: asserted by that run
+>   - **[auto: partial — …]**: only partly asserted, or asserted by a different route or shape
+>   - Unmarked items were not exercised by any live run.
+> - Two kinds of evidence don't appear here. Unit tests, which are not live evidence, are not counted. Items marked **[expected to fail on `main`]** hit a known gap from [docs/dealer-marketplace-api.md](dealer-marketplace-api.md#known-gaps).
+> - What the run did not cover: real payment capture (the "paid" order was a direct SQL insert), real email delivery, commission rules (none existed, so the snapshot was 0 bps), reassign and cancel, adjustments, any admin list or detail endpoint, and any browser UI.
+> - Details: [tasks/phase-2-ui/VERIFICATION.md](../tasks/phase-2-ui/VERIFICATION.md).
+>
+> **This guide has inaccuracies against the code on `main`.** They were checked on 2026-11-23 and the request examples below have not been rewritten, so correct for them when running it:
+>
+> 1. **Every path needs its module prefix.** Real routes are `/api/<module>/<path>`:
+>    - `/api/dealer/onboarding/*` and `/api/admin/dealers/applications*` → `/api/dealer_onboarding/...`
+>    - `/api/admin/dealers`, `.../capabilities`, `/api/dealer/profile*` and `/api/dealer/staff*` → `/api/dealer_org_rbac/...`
+>    - `/api/admin/orders/:id/assignment` and `/api/dealer/orders*` → `/api/dealer_orders/...`. The admin per-dealer list is `/api/dealer_orders/admin/dealers/:dealerId/orders`.
+>    - `/api/admin/commission/*`, `/api/admin/orders/:id/commission`, `/api/admin/dealers/:id/commission` and `/api/dealer/earnings*` → `/api/commissions/...`
+>    - `/api/admin/dealers/:id/ledger*` and `/api/dealer/ledger*` → `/api/payouts/...`
+> 2. **Authentication uses cookies, not `Authorization: Bearer`.** The automated run logged in with a form-encoded `POST /api/auth/login` (`email`, `password`) and sent back the `auth_token`/`session_token` cookies. Bearer-token use was not checked. A dealer owner has no password until they complete the invite email's link (`POST /api/auth/reset/confirm`).
+> 3. **KYC upload (§1.3) is `multipart/form-data`** with fields `documentType` and `file`. The JSON `storageKey` body shown is no longer accepted.
+> 4. **Dealer routes ignore any `dealerProfileId` query parameter.** The dealer id comes from the session. The `?dealerProfileId=` examples in §3.5, §4.5 and §5.5 are obsolete, and cross-dealer checks need a second dealer's own login.
+> 5. **The health route is `/api/healthz`.** That is the route the ECS health check uses. No `/api/health` route exists in `apps/mercato/src`.
+> 6. **The dev database lacked the dealer tables** at the last check (2026-10-20). Until the `dealer_onboarding`/`dealer_org_rbac` migrations are applied there, Section 1 will fail at the first step. See [tasks/phase-2-ui/DELIVERY.md](../tasks/phase-2-ui/DELIVERY.md).
+
+
 ---
 
 ## How to Use This Guide
@@ -56,8 +82,8 @@ Content-Type: application/json
 }
 ```
 
-- [ ] Response is `201 Created`
-- [ ] Body contains `{ id: "<profile_uuid>" }` — save this as `PROFILE_UUID`
+- [ ] Response is `201 Created` **[auto: covered]**
+- [ ] Body contains `{ id: "<profile_uuid>" }` — save this as `PROFILE_UUID` **[auto: covered]**
 - [ ] `kycStatus` in response (if returned) is `pending_verification`
 
 **Step 2 — Duplicate registration is blocked**
@@ -116,8 +142,8 @@ Content-Type: application/json
 }
 ```
 
-- [ ] Response is `201 Created` with `{ id: "<doc_uuid>" }`
-- [ ] `GET /api/dealer/onboarding/status` now shows `kycStatus: "under_review"` (auto-advanced from `pending_verification`)
+- [ ] Response is `201 Created` with `{ id: "<doc_uuid>" }` **[auto: partial — multipart `documentType` + `file` upload, not the JSON body shown above]**
+- [ ] `GET /api/dealer/onboarding/status` now shows `kycStatus: "under_review"` (auto-advanced from `pending_verification`) **[auto: partial — implied: approval, which requires `under_review`, succeeded right after upload. The status endpoint was not read]**
 - [ ] `documents` array now contains 1 entry with `documentType: "gst_certificate"`
 
 **Step 2 — Upload a PAN card**
@@ -191,7 +217,7 @@ Content-Type: application/json
 }
 ```
 
-- [ ] Response is `200 OK` with `{ ok: true }`
+- [ ] Response is `200 OK` with `{ ok: true }` **[auto: partial — 200 asserted, body not checked]**
 - [ ] `GET /api/dealer/onboarding/status` now shows `kycStatus: "rejected"`
 - [ ] `rejectionReason` is set to the reason provided
 - [ ] Rejecting an already-rejected dealer returns `400 Bad Request`
@@ -220,7 +246,7 @@ Content-Type: application/json
 }
 ```
 
-- [ ] Response is `200 OK` with `{ ok: true }`
+- [ ] Response is `200 OK` with `{ ok: true }` **[auto: partial — 200 asserted, with a `{ note }` body instead of the field edits shown]**
 - [ ] `GET /api/dealer/onboarding/status` shows `kycStatus: "under_review"` again
 - [ ] `businessName` and `city` are updated; other fields unchanged
 - [ ] Resubmit when status is `under_review` returns `400 Bad Request` ("Only rejected applications can be resubmitted")
@@ -236,11 +262,11 @@ POST {BASE_URL}/api/admin/dealers/applications/{PROFILE_UUID}/approve
 Authorization: Bearer <admin_token>
 ```
 
-- [ ] Response is `200 OK` with `{ ok: true }`
+- [ ] Response is `200 OK` with `{ ok: true }` **[auto: partial — 200 asserted, body not checked]**
 - [ ] `GET /api/admin/dealers/applications/{PROFILE_UUID}` shows `kycStatus: "approved"`
 - [ ] `approvedAt` is set to a recent timestamp
 - [ ] Approving an already-approved dealer returns `400 Bad Request`
-- [ ] Approving a `pending_verification` application returns `400 Bad Request` ("Only applications under review can be approved")
+- [ ] Approving a `pending_verification` application returns `400 Bad Request` ("Only applications under review can be approved") **[auto: covered]**
 - [ ] The dealer's OM organization is now **active** (check via admin `directory/organizations` if accessible)
 
 Save the `PROFILE_UUID` — you will need it throughout all remaining sections.
@@ -324,8 +350,8 @@ Content-Type: application/json
 }
 ```
 
-- [ ] Response is `200 OK` with updated capabilities
-- [ ] Dealer staff token (not owner) gets `403 Forbidden`
+- [ ] Response is `200 OK` with updated capabilities **[auto: partial — 200 asserted, body not checked]**
+- [ ] Dealer staff token (not owner) gets `403 Forbidden` **[auto: covered]**
 
 ---
 
@@ -342,8 +368,8 @@ Content-Type: application/json
 }
 ```
 
-- [ ] Response is `201 Created` with `{ userId: "<uuid>", email: "staff@testgifts.in" }`
-- [ ] Invite email arrives at `staff@testgifts.in`
+- [ ] Response is `201 Created` with `{ userId: "<uuid>", email: "staff@testgifts.in" }` **[auto: partial — 201 and `userId` asserted, `email` field not checked]**
+- [ ] Invite email arrives at `staff@testgifts.in` **[auto: partial — invite captured by the test email channel, not a real inbox]**
 - [ ] Invalid email format returns `400 Bad Request`
 - [ ] Dealer staff token gets `403 Forbidden` (only owner can invite)
 
@@ -379,9 +405,9 @@ Content-Type: application/json
 }
 ```
 
-- [ ] Response is `201 Created` with `{ id: "<assignment_uuid>" }` — save as `ASSIGNMENT_UUID`
+- [ ] Response is `201 Created` with `{ id: "<assignment_uuid>" }` — save as `ASSIGNMENT_UUID` **[auto: partial — 201 + `id` asserted. The "paid" order was inserted directly into Postgres; no real payment]**
 - [ ] **Missing `Idempotency-Key` header** returns `400 Bad Request`
-- [ ] **Same `Idempotency-Key`** sent again returns the same `{ id }` (idempotent — not a second assignment)
+- [ ] **Same `Idempotency-Key`** sent again returns the same `{ id }` (idempotent — not a second assignment) **[expected to fail on `main` — known gap 2: `Idempotency-Key` is not consumed]**
 - [ ] Assigning an **unpaid** order returns `400 Bad Request`
 - [ ] Dealer assignment email is received at `dealer@testgifts.in`
 
@@ -423,7 +449,7 @@ GET {BASE_URL}/api/dealer/orders?dealerProfileId={PROFILE_UUID}
 Authorization: Bearer <dealer_owner_token>
 ```
 
-- [ ] Assignment appears in list with `status: "assigned"`
+- [ ] Assignment appears in list with `status: "assigned"` **[auto: partial — presence asserted, `status` value not checked]**
 
 **Step 2 — Acknowledge the order**
 
@@ -438,7 +464,7 @@ Content-Type: application/json
 }
 ```
 
-- [ ] Response is `200 OK`
+- [ ] Response is `200 OK` **[auto: covered]**
 - [ ] `GET /api/dealer/orders/{ASSIGNMENT_UUID}` shows `status: "acknowledged"`
 
 **Step 3 — Move through the full production flow**
@@ -451,12 +477,12 @@ Repeat the status update POST for each stage:
 | `ready_for_dispatch` | No note required |
 | `dispatched` | Include courier details in note |
 
-- [ ] `in_production` update succeeds
-- [ ] `ready_for_dispatch` update succeeds
-- [ ] `dispatched` update succeeds
+- [ ] `in_production` update succeeds **[auto: covered]**
+- [ ] `ready_for_dispatch` update succeeds **[auto: covered]**
+- [ ] `dispatched` update succeeds **[auto: covered]**
 - [ ] `GET /api/admin/orders/{ORDER_UUID}/assignment` shows `status: "dispatched"`
 - [ ] Dealer cannot set an **invalid status** (e.g. `"approved"`) — returns `400 Bad Request`
-- [ ] Dealer cannot view another dealer's assignment by guessing a UUID — returns `404 Not Found`
+- [ ] Dealer cannot view another dealer's assignment by guessing a UUID — returns `404 Not Found` **[auto: covered]**
 
 ---
 
@@ -581,7 +607,7 @@ GET {BASE_URL}/api/admin/orders/{ORDER_UUID}/commission
 Authorization: Bearer <admin_token>
 ```
 
-- [ ] Response is `200 OK` with snapshot data
+- [ ] Response is `200 OK` with snapshot data **[auto: partial — a snapshot row was confirmed directly in Postgres; this endpoint was not called]**
 - [ ] `rateBps` reflects the correct rule priority (product-type rule if matched, dealer rule otherwise, platform default as fallback)
 - [ ] `commissionAmount` is an integer (INR paise)
 - [ ] An unassigned order returns `404 Not Found`
@@ -607,9 +633,9 @@ GET {BASE_URL}/api/dealer/earnings?dealerProfileId={PROFILE_UUID}
 Authorization: Bearer <dealer_owner_token>
 ```
 
-- [ ] Returns list of commission snapshots visible to this dealer
+- [ ] Returns list of commission snapshots visible to this dealer **[auto: covered]**
 - [ ] Dealer staff token also works (earnings are view-only)
-- [ ] Dealer cannot see another dealer's earnings (try a different `dealerProfileId`)
+- [ ] Dealer cannot see another dealer's earnings (try a different `dealerProfileId`) **[auto: partial — B's own list excluded A's commission. The dealer id now comes from the session, so a `dealerProfileId` param is not accepted]**
 
 ```
 GET {BASE_URL}/api/dealer/earnings/{ASSIGNMENT_UUID}
@@ -645,7 +671,7 @@ Authorization: Bearer <admin_token>
 ```
 
 - [ ] Returns paged list of ledger entries
-- [ ] At least one `commission_earned` entry with `direction: "credit"`
+- [ ] At least one `commission_earned` entry with `direction: "credit"` **[auto: partial — a `commission_earned` row was confirmed directly in Postgres; this endpoint was not called]**
 - [ ] Filter `?entryType=commission_earned` works
 - [ ] Filter `?direction=credit` works
 
@@ -680,7 +706,7 @@ Content-Type: application/json
 
 > `50000` paise = ₹500
 
-- [ ] Response is `201 Created` with `{ id: "<ledger_entry_uuid>" }`
+- [ ] Response is `201 Created` with `{ id: "<ledger_entry_uuid>" }` **[auto: covered]**
 - [ ] `GET /api/admin/dealers/{PROFILE_UUID}/ledger` now has a `payout_disbursed` debit entry
 - [ ] `GET /api/admin/dealers/{PROFILE_UUID}/ledger/balance` — `pendingAmount` decreased by ₹500
 - [ ] `totalEarned` is **unchanged** (payout reduces pending, not earnings)
@@ -708,7 +734,7 @@ Content-Type: application/json
 
 - [ ] Response is `201 Created`
 - [ ] Ledger shows `adjustment_credit` entry
-- [ ] Balance `pendingAmount` increased by ₹100
+- [ ] Balance `pendingAmount` increased by ₹100 **[expected to fail on `main` — known gap 4: `adjustment_credit` is excluded from `pendingAmount`]**
 
 **Debit adjustment:**
 
@@ -750,12 +776,12 @@ GET {BASE_URL}/api/dealer/ledger/balance?dealerProfileId={PROFILE_UUID}
 Authorization: Bearer <dealer_owner_token>
 ```
 
-- [ ] Returns `{ pendingAmount, totalEarned, currencyCode: "INR" }`
+- [ ] Returns `{ pendingAmount, totalEarned, currencyCode: "INR" }` **[auto: partial — 200 asserted, body shape not checked]**
 - [ ] Amounts match admin view exactly
 
 **Access control:**
 
-- [ ] Dealer cannot view another dealer's ledger (use a different `dealerProfileId` — returns `403` or `404`)
+- [ ] Dealer cannot view another dealer's ledger (use a different `dealerProfileId` — returns `403` or `404`) **[auto: partial — dealer B's own balance was 0 after A's commission. The dealer id comes from the session; the ledger list was not called]**
 - [ ] Dealer staff token can also view ledger (read-only access)
 
 ---
@@ -764,18 +790,18 @@ Authorization: Bearer <dealer_owner_token>
 
 Run the complete flow once without interruption to verify all pieces connect.
 
-- [ ] **Register** a fresh dealer via `POST /api/dealer/onboarding/register`
-- [ ] **Upload** two KYC documents — confirm status auto-advances to `under_review`
-- [ ] **Approve** the dealer via `POST /api/admin/dealers/applications/:id/approve`
-- [ ] **Set capabilities** via `PUT /api/admin/dealers/:id/capabilities`
-- [ ] **Invite staff** via `POST /api/dealer/staff/invite` — confirm email arrives
+- [ ] **Register** a fresh dealer via `POST /api/dealer/onboarding/register` **[auto: covered]**
+- [ ] **Upload** two KYC documents — confirm status auto-advances to `under_review` **[auto: partial — one document per dealer, not two]**
+- [ ] **Approve** the dealer via `POST /api/admin/dealers/applications/:id/approve` **[auto: covered]**
+- [ ] **Set capabilities** via `PUT /api/admin/dealers/:id/capabilities` **[auto: partial — set through the dealer-owner endpoint `PUT /api/dealer_org_rbac/dealer/profile/capabilities`, not the admin one]**
+- [ ] **Invite staff** via `POST /api/dealer/staff/invite` — confirm email arrives **[auto: partial — invite email captured by the test channel, not a real inbox]**
 - [ ] **Create commission rule** for this dealer via `POST /api/admin/commission/rules`
-- [ ] **Assign a paid order** to the dealer via `POST /api/admin/orders/:id/assignment` (include `Idempotency-Key`)
-- [ ] **Confirm commission snapshot** auto-created: `GET /api/admin/orders/:id/commission`
-- [ ] **Confirm ledger credit** auto-created: `GET /api/admin/dealers/:id/ledger`
-- [ ] **Dealer acknowledges** the order: `POST /api/dealer/orders/:id/status` → `acknowledged`
-- [ ] **Dealer dispatches**: advance status through `in_production` → `ready_for_dispatch` → `dispatched`
-- [ ] **Record payout** via `POST /api/admin/dealers/:id/ledger/payout`
+- [ ] **Assign a paid order** to the dealer via `POST /api/admin/orders/:id/assignment` (include `Idempotency-Key`) **[auto: covered]**
+- [ ] **Confirm commission snapshot** auto-created: `GET /api/admin/orders/:id/commission` **[auto: partial — confirmed directly in Postgres]**
+- [ ] **Confirm ledger credit** auto-created: `GET /api/admin/dealers/:id/ledger` **[auto: partial — confirmed directly in Postgres]**
+- [ ] **Dealer acknowledges** the order: `POST /api/dealer/orders/:id/status` → `acknowledged` **[auto: covered]**
+- [ ] **Dealer dispatches**: advance status through `in_production` → `ready_for_dispatch` → `dispatched` **[auto: covered]**
+- [ ] **Record payout** via `POST /api/admin/dealers/:id/ledger/payout` **[auto: covered]**
 - [ ] **Confirm balance** reduced: `GET /api/admin/dealers/:id/ledger/balance`
 - [ ] **Dealer views final balance** via `GET /api/dealer/ledger/balance` — matches admin view
 
@@ -807,8 +833,8 @@ Run the complete flow once without interruption to verify all pieces connect.
 
 ### Idempotency
 
-- [ ] `POST /api/admin/orders/:id/assignment` with the same `Idempotency-Key` sent twice returns the same `{ id }` and does NOT create a second assignment
-- [ ] `POST /api/admin/orders/:id/assignment` with a **different** `Idempotency-Key` creates a new assignment (first one auto-cancelled as a reassignment)
+- [ ] `POST /api/admin/orders/:id/assignment` with the same `Idempotency-Key` sent twice returns the same `{ id }` and does NOT create a second assignment **[expected to fail on `main` — known gap 2]**
+- [ ] `POST /api/admin/orders/:id/assignment` with a **different** `Idempotency-Key` creates a new assignment (first one auto-cancelled as a reassignment) **[expected to fail on `main` — known gap 2]**
 - [ ] Missing `Idempotency-Key` on assignment POST returns `400 Bad Request`
 
 ---

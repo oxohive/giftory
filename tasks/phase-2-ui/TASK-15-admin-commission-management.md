@@ -1,6 +1,6 @@
 # P2-UI-15: Admin commission management
 
-- Status: Review; implementation complete, pending coordinator verification
+- Status: Implemented (`c3068b6`). Unit and static tests only. The commission rules API was not exercised by the 12/12 journey, which created no rule (the snapshot resolved to 0 bps). The screens have not been browser-tested.
 - Owner lane: E
 - Depends on: P2-UI-00, P2-UI-02
 - Owned paths: commissions/backend/; commissions/components/; commissions/widgets/; commissions/i18n/ under apps/mercato/src/modules/
@@ -25,6 +25,7 @@ Read [README.md](README.md) before starting. Dependencies must have verified han
 ## Agent handoff
 
 - Status: Complete — ready for coordinator review
+- Status review (2026-11-23, WS-G): the status line at the top of this file supersedes the status above. It was re-checked against git history and the 12/12 integration journey. Per-task evidence is in the README task index.
 
 - Changed files (28 new, 1 modified; all within this task's owned paths):
   - `commissions/i18n/en.json` (modified — added ~95 keys under `commissions.admin.*`)

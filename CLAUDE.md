@@ -7,7 +7,7 @@ Gift marketplace built on Open Mercato 0.8.0. See [docs/architecture.md](docs/ar
 ```
 apps/mercato/       # Backend + admin (Open Mercato), port 3000
 apps/storefront/    # Customer storefront (Next.js), port 3100 — deployed to Vercel
-apps/dealer-portal/ # Dealer-facing portal (Next.js) — deployed to Vercel, calls apps/mercato's API directly
+apps/dealer-portal/ # Dealer-facing portal (Next.js) — deployed to Vercel, calls apps/mercato's API through its own server-side BFF proxy (`src/app/api/om/[...path]`)
 apps/mobile/        # Customer storefront (Expo/React Native), Phase 1 port — guest-only, Razorpay only, verified live on a physical device (catalog/cart/nav); Razorpay payment itself not yet verified (see apps/mobile/README.md)
 infra/              # OpenTofu (Terraform) — AWS ECS Fargate + CodeBuild CI/CD + S3 + Vercel + DNS
 docs/             # Architecture and decision documents

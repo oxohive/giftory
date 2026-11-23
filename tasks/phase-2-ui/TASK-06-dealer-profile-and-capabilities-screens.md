@@ -1,6 +1,6 @@
 # P2-UI-06: Dealer profile and capabilities screens
 
-- Status: Planned; implementation not started
+- Status: Implemented (`9dc442f`). Owner capabilities PUT (200) and the staff 403 were exercised by the 12/12 journey on 2026-10-20. The screens have not been browser-tested.
 - Owner lane: B
 - Depends on: P2-UI-01, P2-UI-03, P2-UI-04
 - Owned paths: apps/dealer-portal/src/app/(portal)/profile/; src/components/profile/; src/lib/features/profile/
@@ -25,6 +25,7 @@ Read [README.md](README.md) before starting. Dependencies must have verified han
 ## Agent handoff
 
 - Status: Implementation complete. All Work and Acceptance items addressed within owned paths. Full apps/dealer-portal test suite green before and after; no regressions.
+- Status review (2026-11-23, WS-G): the status line at the top of this file supersedes the status above. It was re-checked against git history and the 12/12 integration journey. Per-task evidence is in the README task index.
 
 - Changed files:
   - `apps/dealer-portal/src/app/(portal)/profile/page.tsx` (new) — `/profile`: read-only business profile + read-only capabilities summary, visible to both roles.

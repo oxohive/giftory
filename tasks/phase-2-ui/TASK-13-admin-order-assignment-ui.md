@@ -1,6 +1,6 @@
 # P2-UI-13: Admin order assignment UI
 
-- Status: Planned; implementation not started
+- Status: Implemented (`7609228`). Assignment POST with `Idempotency-Key` (201) was exercised by the 12/12 journey on 2026-10-20. Reassign, cancel, history and the injected admin tab itself were not exercised.
 - Owner lane: D
 - Depends on: P2-UI-00, P2-UI-02, P2-UI-03
 - Owned paths: dealer_orders/backend/; dealer_orders/components/; dealer_orders/widgets/; dealer_orders/i18n/ under apps/mercato/src/modules/
@@ -26,6 +26,7 @@ Read [README.md](README.md) before starting. Dependencies must have verified han
 ## Agent handoff
 
 - Status: Done (implementation + unit verification); live end-to-end browser verification not performed — see Blockers
+- Status review (2026-11-23, WS-G): the status line at the top of this file supersedes the status above. It was re-checked against git history and the 12/12 integration journey. Per-task evidence is in the README task index.
 - Changed files:
   - `dealer_orders/widgets/injection-table.ts` (new) — registers the tab at `sales.document.detail.order:tabs`, priority -4 (ahead of commissions' -5)
   - `dealer_orders/widgets/injection/order-assignment-tab/widget.ts` (new), `widget.client.tsx` (new) — the tab itself: current assignment, assign/reassign/cancel actions, collapsible history

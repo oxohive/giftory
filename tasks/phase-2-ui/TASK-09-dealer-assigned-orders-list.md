@@ -1,6 +1,6 @@
 # P2-UI-09: Dealer assigned orders list
 
-- Status: Review
+- Status: Implemented (`316b58b`). The 12/12 journey on 2026-10-20 checked that the list includes the dealer's own assignment and excludes other dealers'. The screen has not been browser-tested.
 - Owner lane: C
 - Depends on: P2-UI-01, P2-UI-02, P2-UI-03, P2-UI-04
 - Owned paths: apps/dealer-portal/src/app/(portal)/orders/page.tsx; src/components/orders/list/; src/lib/features/orders/list.ts
@@ -24,6 +24,7 @@ Read [README.md](README.md) before starting. Dependencies must have verified han
 ## Agent handoff
 
 - Status: Review
+- Status review (2026-11-23, WS-G): the status line at the top of this file supersedes the status above. It was re-checked against git history and the 12/12 integration journey. Per-task evidence is in the README task index.
 
 ### What was built
 
