@@ -1,4 +1,13 @@
-# Runbook — apply the three Phase 2 migrations to the shared dev database
+# Runbook — apply the pending Phase 2 + Milestone 1 migrations to the shared dev database
+
+This covers five migrations:
+
+- **Three from Phase 2, already on `main` and already deployed code:** `dealer_onboarding`,
+  `dealer_org_rbac`, and `payouts` (`created_by` nullable).
+- **Two from WS-A (money safety), on `milestone-1-hardening` only:** `payouts` and
+  `dealer_orders` idempotency-key tables.
+
+All five are additive.
 
 Written by WS-E (Milestone 1 overnight run, 2026-11-23). Nothing in this runbook has been run
 against the shared dev database: the agents had no access to it, by design. Every step below
@@ -7,7 +16,8 @@ Supabase), set up to look like each state the dev database could be in. The resu
 [WS-E-migrations-isolation-e2e.md](WS-E-migrations-isolation-e2e.md).
 
 **Time needed:** about 20 minutes, most of it reading output. The migrations themselves take
-a few seconds. They only create three empty tables and relax one `NOT NULL`.
+a few seconds. They only create five empty tables (three dealer tables, two idempotency
+tables) and relax one `NOT NULL`.
 
 ---
 
@@ -18,9 +28,29 @@ a few seconds. They only create three empty tables and relax one `NOT NULL`.
 | `dealer_onboarding` | `Migration20261013232854_dealer_onboarding` | `CREATE TABLE dealer_profiles`, `dealer_kyc_documents` + 3 indexes |
 | `dealer_org_rbac` | `Migration20261013232900_dealer_org_rbac` | `CREATE TABLE dealer_capabilities` + 1 index |
 | `payouts` | `Migration20261020123600_payouts` | `ALTER TABLE dealer_ledger_entries ALTER COLUMN created_by DROP NOT NULL` |
+| `payouts` (WS-A) | `Migration20261123120000_payouts` | `CREATE TABLE payouts_idempotency_keys` + `UNIQUE (tenant_id, organization_id, idempotency_key)`. Replay store for `Idempotency-Key` on the admin payout/adjustment routes. Hand-written. |
+| `dealer_orders` (WS-A) | `Migration20261123174400_dealer_orders` | `CREATE TABLE dealer_order_idempotency_keys` + `UNIQUE (tenant_id, organization_id, idempotency_key)`. Replay store for the admin assign/reassign routes. Migrator-generated. |
 
-All three are already on `main`, so the backend running on ECS already depends on them. Until
-they are applied:
+`yarn db:migrate` runs modules alphabetically, and each module's migrations in name order.
+The order is `dealer_onboarding` → `dealer_orders` (WS-A) → `dealer_org_rbac` → `payouts`
+`…20123600` → `payouts` `…23120000` (WS-A). None depends on another, so the order doesn't matter
+for correctness.
+
+**The first three are already on `main`**, so the backend running on ECS depends on them today.
+
+**The two WS-A tables are only needed by `milestone-1-hardening` code.** Its payout, adjustment,
+assign and reassign routes fail with `relation … does not exist` until those tables exist.
+Because a push to `main` deploys automatically, apply them **before (or in the same sitting as)
+merging `milestone-1-hardening` into `main`**. The currently deployed `main` code never touches
+these tables, so creating them early is harmless.
+
+**Recommended:** do one run from an up-to-date `milestone-1-hardening` checkout (all five
+migrations), immediately before merging it to `main`. If you want the dealer flows on the
+deployed backend fixed sooner, run once from `main` now (three pending) and again from
+`milestone-1-hardening` before the merge (two pending). The procedure is identical; only the
+lister's expected output differs.
+
+Until the first three are applied:
 
 - dealer registration, KYC upload and capability setup fail with `relation "dealer_profiles" does not exist`;
 - every system-generated `commission_earned` ledger credit fails on the `created_by NOT NULL` constraint.
@@ -34,7 +64,14 @@ run `yarn db:migrate`.
 - **Correct against the entities.** A schema-diff of each module's `data/entities.ts` against
   the database the migrations produced shows **no drift** for `dealer_onboarding` or
   `dealer_org_rbac`. For `payouts` the only difference is cosmetic: the DB has
-  `created_at DEFAULT now()` and the entity doesn't declare it.
+  `created_at DEFAULT now()` and the entity doesn't declare it. That applies to both
+  `dealer_ledger_entries` and the new `payouts_idempotency_keys`.
+- **WS-A tables, checked against `milestone-1-hardening`'s entities:** `payouts_idempotency_keys`
+  matches apart from the cosmetic `created_at` default above. `dealer_order_idempotency_keys`
+  matches exactly. The only `dealer_orders` drift is the pre-existing, harmless
+  `dealer_order_assignments.status SET DEFAULT 'assigned'`, which WS-A deliberately left out.
+  No money columns. Both tables have the `(tenant_id, organization_id, idempotency_key)` unique
+  constraint the replay logic relies on.
 - **Money columns:** none of the three new tables holds money. `dealer_ledger_entries.amount` is
   `numeric(18,0)` and is not touched. (Separate finding: the `commissions` **entity** declares
   `subtotal_amount`/`commission_amount` as `integer` while the table is `numeric(18,0)`. The next
@@ -75,10 +112,17 @@ So the dev DB is most likely in one of these states. Step 2 tells you which one:
 
 ## 1. Prerequisites
 
-- A checkout of **`main`**, the code that is actually deployed (`git checkout main && git pull`).
-  Do not run this from `milestone-1-hardening` or a workstream branch: those may carry new
-  migrations of their own. Run the lister (step 2b) on the branch you merge later, and repeat
-  this runbook for whatever it shows.
+- A checkout of the branch you are about to deploy:
+  - `milestone-1-hardening` (all five migrations, recommended, right before merging it to
+    `main`), or
+  - `main` (the three Phase 2 migrations only).
+
+  Always trust the lister (step 2b) over this document. If other workstreams have merged
+  more migrations by then, it lists them too, and `yarn db:migrate` would apply them. Read any
+  migration this runbook doesn't name before applying.
+- **Run `yarn generate` after checking out or merging** (step 4 does it). `milestone-1-hardening`
+  adds new entities (`PayoutsIdempotencyKey`, `DealerOrderIdempotencyKey`), and the generated
+  registries under `.mercato/generated` are gitignored. A stale checkout won't know about them.
 - `apps/mercato/.env` holds the dev `DATABASE_URL` (this is what `yarn db:migrate` uses).
   If it points at the Supabase **transaction pooler** (port `6543`), use the **direct**
   connection (port `5432`, or the session pooler) for `pg_dump` and `db:migrate`.
@@ -105,6 +149,7 @@ select t.name as relation,
 from (values ('dealer_profiles'), ('dealer_kyc_documents'), ('dealer_capabilities'),
              ('dealer_order_assignments'), ('commission_rules'), ('order_commission_snapshots'),
              ('dealer_ledger_entries'),
+             ('payouts_idempotency_keys'), ('dealer_order_idempotency_keys'),
              ('mikro_orm_migrations_dealer_onboarding'), ('mikro_orm_migrations_dealer_org_rbac'),
              ('mikro_orm_migrations_dealer_orders'), ('mikro_orm_migrations_commissions'),
              ('mikro_orm_migrations_payouts')) as t(name)
@@ -126,7 +171,13 @@ order by 1;
 ```
 
 Expected for state A: `dealer_onboarding` and `dealer_org_rbac` → `tracking_table_exists = false`;
-`payouts` → only `Migration20261012000000_payouts`.
+`payouts` → only `Migration20261012000000_payouts`; `dealer_orders` → only
+`Migration20261010000000_dealer_orders`.
+
+In Q1, `payouts_idempotency_keys` and `dealer_order_idempotency_keys` must show
+`exists = false`: they have never been applied anywhere. If either exists while its migration
+name is missing from Q2, **stop**. It was created outside the migration system; compare it with
+the migration file before going further, the same way as §5.
 
 **Q3: if any of the three new tables already exist, does their shape match the migration?**
 (Returns no rows when none of them exist. Every returned row must say `ok`.)
@@ -294,19 +345,26 @@ cd apps/mercato
 node "$TEMP/list-pending-migrations.mjs"
 ```
 
-**Expected output for state A** (this is the actual output from the rehearsal against a copy
-built to look like the dev DB):
+**Expected output for state A from a `milestone-1-hardening` checkout.** This is the actual
+output of the rehearsal against a copy built to look like the dev DB:
 
 ```
 dealer_onboarding  (tracking table does not exist yet)
    PENDING                Migration20261013232854_dealer_onboarding
+dealer_orders
+   PENDING                Migration20261123174400_dealer_orders
 dealer_org_rbac  (tracking table does not exist yet)
    PENDING                Migration20261013232900_dealer_org_rbac
 payouts
    PENDING                Migration20261020123600_payouts
+   PENDING                Migration20261123120000_payouts
 
-Total pending: 3
+Total pending: 5
 ```
+
+From a `main` checkout, the two WS-A lines (`…174400_dealer_orders`, `…23120000_payouts`) are
+absent and the total is 3. After a `main` run, a `milestone-1-hardening` run shows only those
+two (total 2).
 
 - **Anything else listed as PENDING** (another `@app` module like `storefront`/`gift_catalog`,
   or a core Open Mercato module after a package upgrade) will **also** be applied by
@@ -348,19 +406,22 @@ States A and B. For state C, do §5 first.
 
 ```bash
 cd apps/mercato
-yarn generate          # local only; keeps generated registries in sync with this checkout
+yarn install           # after merging: dependencies may have changed
+yarn generate          # REQUIRED after merging milestone-1-hardening (new entities); local only
 yarn db:migrate        # uses DATABASE_URL from apps/mercato/.env
 ```
 
-Expected tail of the output (rehearsal, state A):
+Expected tail of the output (rehearsal, state A, `milestone-1-hardening` checkout):
 
 ```
  commissions: no pending migrations
  dealer_onboarding: 1 migration applied
- dealer_orders: no pending migrations
+ dealer_orders: 1 migration applied
  dealer_org_rbac: 1 migration applied
- payouts: 1 migration applied
+ payouts: 2 migrations applied
 ```
+
+From `main` you will see `dealer_orders: no pending migrations` and `payouts: 1 migration applied`.
 
 On Windows you may also see lines like
 `[query_index] Could not read reindex declarations from ...: Cannot find package 'src'`.
@@ -446,10 +507,22 @@ doing this.
 ## 6. Verify
 
 1. Lister (2b) → `Total pending: 0`.
-2. Q1 → the three tables exist. Q2 → the three names recorded. Q3 → every row `ok`.
-   Q4 → `is_nullable = YES`.
-3. Q5 → roles and permissions present (otherwise §7).
-4. Functional smoke test, optional but recommended. On the deployed admin, open
+2. Q1 → the three dealer tables exist, plus (`milestone-1-hardening` run)
+   `payouts_idempotency_keys` and `dealer_order_idempotency_keys`. Q2 → all names recorded:
+   `payouts` shows `…12000000`, `…20123600`, `…23120000`; `dealer_orders` shows `…10000000`,
+   `…23174400`. Q3 → every row `ok`. Q4 → `is_nullable = YES`.
+3. WS-A unique constraints are present (the replay logic depends on them):
+
+   ```sql
+   select conrelid::regclass::text as table_name, conname
+   from pg_constraint
+   where conname in ('payouts_idempotency_keys_scope_key_uniq', 'dealer_order_idempotency_keys_scope_key_uniq')
+   order by 1;
+   ```
+
+   Expect 2 rows.
+4. Q5 → roles and permissions present (otherwise §7).
+5. Functional smoke test, optional but recommended. On the deployed admin, open
    *Dealers → Applications* (it should load, empty). On the dealer portal, register a test
    dealer through an invite link and check the application appears. Delete or reject it
    afterwards.
@@ -496,6 +569,20 @@ column, so rolling back breaks the deployed backend again.
   drop table if exists dealer_profiles;
   delete from mikro_orm_migrations_dealer_org_rbac  where name = 'Migration20261013232900_dealer_org_rbac';
   delete from mikro_orm_migrations_dealer_onboarding where name = 'Migration20261013232854_dealer_onboarding';
+  commit;
+  ```
+
+- **WS-A idempotency tables:** these have a real `down()` (`DROP TABLE IF EXISTS`). Only roll
+  them back together with reverting the `milestone-1-hardening` code. The new payout and
+  assignment routes require them. Dropping them only loses stored replay records, never ledger
+  or assignment data. By hand:
+
+  ```sql
+  begin;
+  drop table if exists payouts_idempotency_keys;
+  drop table if exists dealer_order_idempotency_keys;
+  delete from mikro_orm_migrations_payouts       where name = 'Migration20261123120000_payouts';
+  delete from mikro_orm_migrations_dealer_orders where name = 'Migration20261123174400_dealer_orders';
   commit;
   ```
 
