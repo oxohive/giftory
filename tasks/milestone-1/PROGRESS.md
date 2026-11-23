@@ -1,85 +1,108 @@
 # Milestone 1 — Close out Phase 2 + testing baseline
 
-Overnight run started 2026-11-23. Branch: `milestone-1-hardening` (pushed to GitHub, **not merged to `main`, not deployed**).
+Overnight run, 2026-11-23. Branch: **`milestone-1-hardening`**, pushed to GitHub (`origin/milestone-1-hardening`). It is **not merged to `main` and not deployed**: CodeBuild only triggers on `refs/heads/main`.
 
-**Read this file first.** The summary below is filled in at the end of the run; each workstream has its own handoff file in this folder with full detail.
+**Read this file first.** Each workstream has a detailed handoff file in this folder.
 
 ## Morning summary
 
-_(filled in when the run finishes)_
+All 7 workstreams finished and are merged into `milestone-1-hardening`. Every suite that can run without Docker passes on the merged branch:
+
+| Suite (run on the merged branch, Windows) | Before tonight | Now |
+|---|---|---|
+| `apps/mercato` unit tests (`yarn test`) | 638 tests, 1 failing on Windows | **1,101 passed, 0 failed, 2 `it.todo`** (90 suites) |
+| `apps/mercato` typecheck | 147 errors (pre-existing) | 146 (0 new, 1 fixed) |
+| `apps/mercato` lint | 0 errors | 0 errors (9 pre-existing warnings) |
+| `apps/dealer-portal` tests (`npm test`) | 300 | **300 passed** |
+| `apps/dealer-portal` accessibility (`npm run test:a11y`, new) | didn't exist | **160 passed** (18 pages, 65 states, light + dark) |
+| `apps/dealer-portal` build + typecheck | — | build OK, typecheck clean (see the note on `packages/ui` deps below) |
+| `packages/api-client` / `packages/ui` tests | not in CI | 8/8, 15/15 (now in CI) |
+| `apps/mobile` jest + tsc | never run | 44/44 passed, tsc clean (WS-D, in its worktree) |
+| **End-to-end / integration** (dealer journey, new isolation spec, Phase 1 regression) | — | **NOT RUN.** Docker Desktop was off all night |
+
+**What got fixed**
+- **Money (WS-A):** duplicate assignment, payout and adjustment requests are now safely replayed instead of executed twice. Payouts can't exceed the dealer's balance, even when two arrive at once (proven on a throwaway Postgres). The balance math is fixed for `adjustment_credit`.
+- **KYC/security (WS-B):** the admin dealer-application detail route, which almost certainly returns **500 today**, is fixed and now decrypts with the correct scope. KYC document reads are proven tenant-, dealer- and partition-confined. The registration invite link is hardened without breaking existing links. Tenant ids are removed from logs.
+- **Phase 1 (WS-C):** Phase 1 tests went from 113 to 381. One display bug fixed: the order page could show tax/shipping/subtotal ₹0.01 different from checkout.
+- **CI (WS-D):** the Windows test bug is fixed. CI now also runs the dealer-portal and shared-package tests before the Docker build. New [docs/testing.md](../../docs/testing.md).
+- **Accessibility (WS-F):** 55 of 130 page scans failed before; all pass now. Fixes cover contrast, labels, focus handling and screen-reader announcements. Also fixed: a wrong password said "session expired".
+- **Docs (WS-G + coordinator):** stale status docs and task statuses corrected. New [DELIVERY.md](../phase-2-ui/DELIVERY.md) (P2-UI-18). [dealer-marketplace-api.md](../../docs/dealer-marketplace-api.md) known gaps updated.
+- **Migrations (WS-E):** [RUNBOOK-migrations.md](RUNBOOK-migrations.md) covers all **5** pending migrations, rehearsed on throwaway databases. A new cross-tenant isolation spec checks ~75 routes.
+
+**Most important things found**
+1. **GSTIN/PAN are almost certainly stored unencrypted** on dev. The encryption config had a typo and never applied. The code is fixed, but turning encryption on needs DB steps (below).
+2. **Dealer invite emails probably never send.** `infra/ecs.tf` has no email provider, from-address, `APP_URL` or `DEALER_PORTAL_BASE_URL`. Not checked against the live task definition.
+3. **Deploys never run migrations.** 5 are pending, and WS-A's payout/adjustment/assignment routes **fail until theirs are applied**.
+4. Admin routes accept a dealer from **another tenant** (orphan rows, no data leak). Logged as known gap 8; not fixed.
+5. `commissions` entity money columns are declared `integer` but the table is `numeric(18,0)`. **Never accept a `db:generate` that downgrades them.**
+
+## What you need to do
+
+### Before merging `milestone-1-hardening` to `main` (merging deploys)
+1. **Review the branch** on GitHub, especially `buildspec.yml` (production CI) and the money/KYC changes.
+2. **Start Docker Desktop and run the end-to-end tests** (never run tonight):
+   `cd apps/mercato && yarn test:integration:ephemeral src/modules/dealer_orders/__integration__`. Expect 22 passed; one deliberate `test.fail()` counts as a pass. Expect a few test-side fixes on the first run (WS-B's registration change may affect the registration step). Then run the Phase 1 regression using the steps in [WS-E](WS-E-migrations-isolation-e2e.md). Its seeding needs an explicit **local** `DATABASE_URL`, because `.env` points at Supabase.
+3. **Check root org `5e4fe2d8-…` has no parent and is active.** Otherwise WS-B makes existing dealer invite links return 404.
+4. **Apply the migrations with [RUNBOOK-migrations.md](RUNBOOK-migrations.md)**, right before merging (expect 5 pending). Read-only pre-checks first, then a backup. Handle "relation already exists" and missing `dealer:owner`/`dealer:staff` roles as the runbook says. Afterwards run `yarn mercato auth sync-role-acls`, and run `yarn generate` after merging.
+5. **Tell anyone with scripts** that payout/adjustment POSTs now require `Idempotency-Key` (16–128 chars of `A-Za-z0-9_-:.`).
+
+### Production checks
+6. **Encryption for GSTIN/PAN.** Exact SQL and steps are in [WS-B](WS-B-kyc-security.md): confirm with the read-only SQL, check that a real `TENANT_DATA_ENCRYPTION_KEY` (or Vault) is in SSM, add the targeted tenant-wide map row for `dealer_onboarding:dealer_profile` only (**not** a blanket `seed-encryption --tenant`), restart, then run `entities rotate-encryption-key --dry-run` and then for real. Note: other data in dealer orgs (dealer users' email/name, audit snapshots) is probably unencrypted too.
+7. **Dealer invite emails.** Check the live ECS task definition for the email/base-URL env vars, and add them through a reviewed Terraform change. Add `DEALER_PORTAL_BASE_URL` to `.env.example`.
+8. Decide **how migrations run on deploy**; today nothing runs them.
+9. Reconcile `infra/vercel.tf` with the real Vercel project (`giftory`, plus the `packages/ui` install command), then import it or drop the resource.
+10. Check that the backend trusts the dealer portal's forwarded client IP; otherwise all dealers share one 5/hour registration rate-limit bucket.
+11. Run the smoke test in [DELIVERY.md](../phase-2-ui/DELIVERY.md) §5.3 after deploying.
+
+### Decisions
+12. **ADR-001** (region/currency) and **ADR-002** (payout provider): both still "Proposed".
+13. **Invite links:** move to admin-issued, single-use, expiring invite tokens? (Design in [WS-B](WS-B-kyc-security.md).) Also: is the unauthenticated `409 email already registered` acceptable, given it reveals which emails are registered?
+14. **Known gap 8 / F4:** validate that admin-supplied dealer ids belong to the caller's tenant (and are approved, for assignment). Recommended: yes.
+15. `totalEarned`: keep it as commission only (current), or make it net of adjustments?
+16. Block a payment retry while an earlier attempt is only `authorized`? Only matters if manual capture is ever enabled.
+17. Storefront address commands can't check the tenant (the storefront system context has no tenant id). Plan a separate reviewed change.
+18. **Lockfiles:** the root `.gitignore` excludes `package-lock.json`, so CI can't use `npm ci`. Recommendation: commit lockfiles, switch CI to `npm ci --ignore-scripts`, then add storefront typecheck/lint, the a11y suite and mobile tests (as a separate job) to CI.
+19. Accessibility, design call: the brass colour and input borders are slightly darker for contrast. Check that's acceptable for the brand. Three low-severity items are listed in [WS-F](WS-F-accessibility.md).
+
+### Small follow-ups
+- Do a real screen-reader pass (NVDA/VoiceOver) on the dealer portal; only automated/scripted checks ran.
+- Fix the generic 401 "session expired" message in `packages/api-client` (WS-F worked around it in the login form only).
+- `commissions` entity money columns: declare them as `numeric(18,0)` to match the table (F5).
+- Add the new Phase 1 test files to the Evidence sections of FEAT-003/004/006.
+- **Local setup note:** `apps/dealer-portal` needs `npm install --prefix ../../packages/ui --legacy-peer-deps` (as on Vercel) before `npm run build` / `npm run typecheck` work locally. With that done, typecheck is clean.
+- Clean up the worktrees when you're done reviewing: `git worktree remove C:\Users\danie\Gift-App-wt\ws-a` (… `ws-g`), then `git branch -D m1/ws-a` (…). The merged branch has everything.
 
 ## Ground rules for this run (agreed before starting)
 
 | Topic | Decision |
 |---|---|
-| Shared dev database (Supabase) | **Code only.** No migrations applied, no tenants created. Migrations are reviewed and a runbook is written for you to run. |
+| Shared dev database (Supabase) | **Code only.** No migrations applied, no tenants created. The agents that needed a DB used throwaway local Postgres instances. |
 | Git | All work on `milestone-1-hardening`, committed as `jasperdanny`, pushed to GitHub. `main` untouched → no AWS deploy. |
-| Infrastructure (Terraform / ECS / Vercel) | **No changes.** No `tofu import/apply`; no calls to the live dev backend. End-to-end tests only against a local backend. |
+| Infrastructure (Terraform / ECS / Vercel) | **No changes.** No `tofu import/apply`; no calls to the live dev backend. |
 | New code | Every behaviour change ships with tests. |
 
 ## Workstreams
 
-| ID | Workstream | Handoff file | Status |
+| ID | Workstream | Handoff file | Result |
 |---|---|---|---|
-| WS-A | Money safety: idempotency replay, payout balance guard, adjustment balance math (known gaps 2–4) | [WS-A-money-safety.md](WS-A-money-safety.md) | **Merged** — all three gaps fixed. Concurrency was proven on a throwaway local Postgres (5 simultaneous payouts against the balance → exactly the right number succeed). **Adds 2 migrations; the payout, adjustment and assignment routes fail until they're applied** |
-| WS-B | KYC/security hardening: PII encryption scope, upload `storageKey` validation, register `organizationId` trust (known gaps 5–7) | [WS-B-kyc-security.md](WS-B-kyc-security.md) | **Merged** — gap 5 fixed (also fixed an admin-detail route that almost certainly returns 500 today), gap 6 verified already fixed and now tested, gap 7 hardened without breaking invite links; tenant ids removed from logs. **Found: GSTIN/PAN are almost certainly stored unencrypted today** (see your actions) |
-| WS-C | Phase 1 backend unit tests: cart, checkout, Stripe, gift catalog, storefront API | [WS-C-phase1-tests.md](WS-C-phase1-tests.md) | **Merged** — Phase 1 tests went from 11 suites/113 tests to 26 suites/381 tests. One real bug fixed: the order page rounded amounts differently from checkout, so tax/shipping/subtotal could be off by ₹0.01 (display only). Two gaps recorded as `it.todo` |
-| WS-D | Test tooling + CI: Windows path test fix, dealer-portal tests in CI, mobile test run | [WS-D-test-ci.md](WS-D-test-ci.md) | **Merged** — mercato 638/638, dealer-portal 300/300, packages 8/8 + 15/15, mobile 44/44; CI now runs package + dealer-portal tests |
-| WS-E | Migrations review + runbook, second-tenant isolation test, local end-to-end + Phase 1 regression runs | [WS-E-migrations-isolation-e2e.md](WS-E-migrations-isolation-e2e.md) | **Merged, but the end-to-end runs didn't happen (Docker was off).** [RUNBOOK-migrations.md](RUNBOOK-migrations.md) covers all 5 migrations and was rehearsed on throwaway DBs. A new isolation spec checks ~75 routes across 2 tenants / 3 dealers; it typechecks but has **never run against a live backend** |
-| WS-F | Dealer portal accessibility pass | [WS-F-accessibility.md](WS-F-accessibility.md) | Running |
-| WS-G | Docs: P2-UI-18 delivery docs, stale status docs, task statuses | [WS-G-docs.md](WS-G-docs.md) | **Merged** — statuses corrected, new `tasks/phase-2-ui/DELIVERY.md`; P2-UI-18 stays In progress (needs you) |
-
-## Things only you can do (collected from all workstreams)
-
-_(being collected as workstreams finish — final, de-duplicated list goes here at the end)_
-
-From WS-G (docs):
-- Apply the three pending migrations after a backup, then run `yarn mercato auth sync-role-acls` (runbook coming from WS-E).
-- **Likely production bug:** `infra/ecs.tf` sets no `APP_URL`, `DEALER_PORTAL_BASE_URL`, email provider or from-address. If the live ECS task matches, new dealers never get their invite email and can't set a password. Check the live task definition.
-- Deploys never run migrations (`CMD yarn start`, no migrate step in `buildspec.yml`): decide how migrations get applied on deploy.
-- `infra/vercel.tf` doesn't match the real Vercel project (named `giftory-dealer-portal` instead of `giftory`; install command missing the `packages/ui` install). Reconcile, then import it or drop the resource.
-- Run the smoke test in `tasks/phase-2-ui/DELIVERY.md` §5.3.
-- Decide ADR-001 (region/currency) and ADR-002 (payout provider). Both are still "Proposed".
-
-From WS-A (money safety):
-- Apply its 2 new migrations (idempotency tables) **before or together with** deploying this branch; the runbook covers them. Run `yarn generate` after merging.
-- **Breaking API change** for any outside script: payout and adjustment POSTs now need `Idempotency-Key`, and keys must be 16–128 chars of `A-Za-z0-9_-:.`.
-- Product call: keep `totalEarned` as commission only (current), or make it net of adjustments.
-- Visible effect: any dealer on dev with existing `adjustment_credit` rows will see their pending balance go up (that's the fix).
-
-From WS-E (migrations / isolation / e2e):
-- **Follow [RUNBOOK-migrations.md](RUNBOOK-migrations.md)** from this branch right before merging to `main` (expect 5 pending). Start with its read-only pre-checks: if tables already exist without tracking rows, `yarn db:migrate` stops with "relation already exists", and the runbook has the tested fix. It also checks for missing `dealer:owner`/`dealer:staff` roles (Q5, fix in §7).
-- With Docker Desktop running: `cd apps/mercato && yarn test:integration:ephemeral src/modules/dealer_orders/__integration__` (expect 22 passed; one deliberate `test.fail()` counts as a pass). Expect a few test-side fixes on the first run; WS-B's registration change may need the registration step updated.
-- Run the Phase 1 regression suite using the steps in the WS-E handoff. Its seeding commands need an explicit local `DATABASE_URL`, because the real `.env` points at Supabase.
-- Decide on **F4**: admin routes accept a dealer from another tenant (orphan rows, no data leak). Now known gap 8 in `docs/dealer-marketplace-api.md`.
-- **F5, watch out:** the `commissions` entity declares money columns as `integer`, but the table is `numeric(18,0)`. The next `yarn db:generate` will propose downgrading them; **never accept that**. Fix the entity instead.
-
-From WS-B (KYC/security). Exact SQL and commands are in [WS-B-kyc-security.md](WS-B-kyc-security.md):
-- **GSTIN/PAN encryption is probably off.** Run the read-only SQL to confirm. Then check that a real `TENANT_DATA_ENCRYPTION_KEY` (or Vault) is in SSM, not the `.env.example` fallback. Add the targeted tenant-wide encryption map row for `dealer_onboarding:dealer_profile` only; do **not** run a blanket `seed-encryption --tenant`. Restart, then run `yarn mercato entities rotate-encryption-key --tenant <id> --dry-run`, then run it for real.
-- Wider gap (not fixed): other data written in dealer orgs is probably unencrypted too, including dealer users' email/name and audit-log snapshots containing GSTIN/PAN.
-- **Check before deploying WS-B:** root org `5e4fe2d8-…` must have no parent and be active, or existing dealer invite links will start returning 404.
-- Decide: admin-issued single-use invite tokens (design in the handoff), and whether the unauthenticated `409 email already registered` response is acceptable (it reveals whether an email is registered).
-- Check that the backend trusts the dealer portal's forwarded client IP. Otherwise all dealers share one 5-per-hour registration rate-limit bucket.
-
-From WS-C (Phase 1 tests):
-- Decide: should a payment retry be blocked while an earlier attempt is only `authorized`? It can't happen with today's automatic capture, but it becomes a double-charge risk if manual capture is ever turned on.
-- Storefront address commands check the owner's organization but not the tenant, because the storefront system context carries no tenant id. Fixing that changes every storefront system command, so plan it as a separate reviewed change.
-- Stripe webhook and session logic lives in the upstream `@open-mercato/gateway-stripe` package and isn't unit-tested in this repo; only our side of it is.
-- Optional: add the new test files to the Evidence sections of FEAT-003/004/006 in `spec/phase-1/`.
-
-From WS-D (tests/CI):
-- Review the `buildspec.yml` change before it reaches `main`; the first CodeBuild run is the real test of the dealer-portal install.
-- Decide on lockfiles. The root `.gitignore` excludes `package-lock.json`, so CI can't use `npm ci`. Recommendation: commit lockfiles, switch CI to `npm ci --ignore-scripts`, then add storefront typecheck/lint to CI.
-- Dealer-portal `npm run typecheck` fails, and did before this run: TypeScript follows `@gift/ui` into `packages/ui`, which has no `node_modules`. Suggested fix: try `"preserveSymlinks": true`.
-- Mobile tests belong in a separate CI job; the Expo install takes about 2.5 minutes.
+| WS-A | Money safety (known gaps 2–4) | [WS-A-money-safety.md](WS-A-money-safety.md) | Merged. Idempotent assignment/payout/adjustment writes, concurrency-safe payout balance guard, balance math fixed. Adds 2 migrations |
+| WS-B | KYC/security (known gaps 5–7) | [WS-B-kyc-security.md](WS-B-kyc-security.md) | Merged. Admin detail 500 + decryption scope fixed, encryption-map id fixed, KYC reads proven confined, registration hardened, logs cleaned |
+| WS-C | Phase 1 backend unit tests | [WS-C-phase1-tests.md](WS-C-phase1-tests.md) | Merged. 113 → 381 tests, 1 display rounding bug fixed, 2 gaps as `it.todo` |
+| WS-D | Test tooling + CI | [WS-D-test-ci.md](WS-D-test-ci.md) | Merged. Windows test fix, package + dealer-portal tests in CI, mobile tests run, `docs/testing.md` |
+| WS-E | Migrations runbook, isolation spec, e2e | [WS-E-migrations-isolation-e2e.md](WS-E-migrations-isolation-e2e.md) | Merged. Runbook for 5 migrations, cross-tenant isolation spec. **E2E not run (no Docker)** |
+| WS-F | Dealer portal accessibility | [WS-F-accessibility.md](WS-F-accessibility.md) | Merged. 160/160 automated a11y checks, `npm run test:a11y` |
+| WS-G | Docs and status cleanup | [WS-G-docs.md](WS-G-docs.md) | Merged. Statuses corrected, DELIVERY.md, testing guide annotated |
 
 ## Log
 
-- 2026-11-23 — Branch created, workstreams launched in parallel, each in its own git worktree at `C:\Users\danie\Gift-App-wt\ws-a` … `ws-g` on branches `m1/ws-a` … `m1/ws-g` (the automatic worktree feature failed on a `c:` vs `C:` path check, so they were created by hand). The coordinator merges each into `milestone-1-hardening` after re-running the tests.
-- WS-G finished → merged (docs only, 34 files). It found that known gap 6 (KYC `storageKey`) looks already fixed in code and that a `money.ts` comment contradicts the balance math; both were forwarded to WS-B and WS-A while they were still running.
+- 2026-11-23 — Branch created, workstreams launched in parallel, each in its own git worktree at `C:\Users\danie\Gift-App-wt\ws-a` … `ws-g` on branches `m1/ws-a` … `m1/ws-g` (the automatic worktree feature failed on a `c:` vs `C:` path check, so they were created by hand). The coordinator merged each into `milestone-1-hardening` after re-running the tests.
+- WS-G finished → merged (docs only, 34 files). It found that known gap 6 (KYC `storageKey`) looked already fixed and that a `money.ts` comment contradicted the balance math; both were forwarded to WS-B and WS-A while they were still running (both confirmed and handled).
 - WS-D finished → `buildspec.yml` diff reviewed (new steps run before the Docker build, CodeBuild already on Node 24) → merged.
-- WS-B finished → merged. Combined branch: `yarn test` in `apps/mercato` **686/686 passing, 69 suites** (Windows).
-- WS-C finished → reviewed its only production change (2 lines in `storefront/lib/orders.ts`, now rounding through `round2()`/`orderTotals()` like checkout) → merged. Combined branch: **84 suites, 952 passed, 2 todo, 0 failed**.
-- WS-A finished → told WS-E about its 2 new migrations (WS-E added them to the runbook) → merged → `yarn generate` OK, **90 suites, 1101 passed, 2 todo, 0 failed**; typecheck 146 errors (baseline 147, so 0 new and 1 fewer).
-- WS-E finished → merged (new files only). Tests unchanged at 1101 passing; lint 0 errors / 9 pre-existing warnings.
-- Coordinator updated `docs/dealer-marketplace-api.md`: known gaps 2–7 rewritten from the WS-A/WS-B handoffs, new gap 8 (WS-E F4), and the balance math, payout, adjustment and assignment sections brought up to date.
+- WS-B finished → merged. `apps/mercato`: 686/686 passing.
+- WS-C finished → its only production change reviewed (2 lines in `storefront/lib/orders.ts`) → merged. 952 passed, 2 todo.
+- WS-A finished → WS-E told about its 2 new migrations (added to the runbook) → merged → `yarn generate` OK, 1,101 passed, 2 todo; typecheck 146 (baseline 147).
+- WS-E finished → merged (new files only). Lint 0 errors.
+- Coordinator updated `docs/dealer-marketplace-api.md` (known gaps 2–8, balance math, payout/adjustment/assignment sections).
+- Branch pushed to `origin/milestone-1-hardening` as a checkpoint (confirmed the CodeBuild webhook only matches `refs/heads/main`).
+- WS-F finished → merged → dealer-portal `npm test` 300/300, lint 0 errors, build OK (after installing `packages/ui` deps as Vercel does), typecheck clean, `npm run test:a11y` 160/160.
+- Morning summary written; final push.
