@@ -175,8 +175,8 @@ describe('resolveCart — anonymous shoppers', () => {
     expect(cookies[0]!.name).toBe(CART_COOKIE)
     expect(cookies[0]!.maxAge).toBeGreaterThan(0)
     // The raw token only ever reaches the cookie; the database holds its SHA-256.
-    expect((cart as Row).tokenHash).toBe(hashToken(cookies[0]!.value))
-    expect((cart as Row).tokenHash).not.toBe(cookies[0]!.value)
+    expect((cart as unknown as Row).tokenHash).toBe(hashToken(cookies[0]!.value))
+    expect((cart as unknown as Row).tokenHash).not.toBe(cookies[0]!.value)
   })
 
   it('does not create a cart on reads', async () => {
@@ -213,7 +213,7 @@ describe('resolveCart — anonymous shoppers', () => {
     seedCart(em, { tokenHash: hashToken(TOKEN), status: CART_STATUS.converted })
     const { cart } = await resolveCart(em as never, SCOPE, { customer: null, token: TOKEN }, true)
     expect(cart).not.toBeNull()
-    expect((cart as Row).status).toBe('active')
+    expect((cart as unknown as Row).status).toBe('active')
     expect(em.carts).toHaveLength(2)
   })
 })
@@ -264,7 +264,7 @@ describe('resolveCart — signed-in customers (merge on login)', () => {
     const { cart } = await resolveCart(em as never, SCOPE, { customer: CUSTOMER, token: TOKEN }, true)
     expect(cart).not.toBe(someoneElses)
     expect(someoneElses.customerUserId).toBe('bbbbbbbb-0000-4000-8000-000000000002')
-    expect((cart as Row).customerUserId).toBe((CUSTOMER as Row).sub)
+    expect((cart as unknown as Row).customerUserId).toBe((CUSTOMER as Row).sub)
   })
 
   it("does not pick up the customer's cart from another organization", async () => {

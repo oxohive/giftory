@@ -118,6 +118,12 @@ describe('storefront address commands — trust boundary', () => {
     await expect(run(STOREFRONT_ADDRESS_CREATE_COMMAND, { ...fields, tenantId: TENANT, organizationId: ORG })).rejects.toThrow()
     await expect(run(STOREFRONT_ADDRESS_CREATE_COMMAND, { ...fields, ...owner('not-a-uuid') })).rejects.toThrow()
   })
+
+  // Defence-in-depth gap (see WS-C handoff, "Risks"): the storefront system context carries no tenant
+  // (`auth: null`), so `ensureTenantScope` cannot check `owner.tenantId`; only the organization is pinned.
+  // Every route derives both ids from the same resolved shop, so this is not reachable today. Closing it
+  // means giving `systemCommandContext` a tenant, which affects every storefront system command.
+  it.todo('refuses an owner whose tenantId does not match the tenant of the pinned organization')
 })
 
 describe('create', () => {

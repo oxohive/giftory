@@ -8,7 +8,7 @@ import { resolveRazorpayCredentials } from '../lib/credentials'
  * the fixed provider origin. No real network calls are made.
  */
 
-const credentials = resolveRazorpayCredentials({ keyId: 'rzp_test_CLIENT1', keySecret: 'client_secret_value' }, {})
+const credentials = resolveRazorpayCredentials({ keyId: 'rzp_test_CLIENT1', keySecret: 'client_secret_value' }, {} as NodeJS.ProcessEnv)
 const noSleep = async () => undefined
 
 type Reply = { status: number; body: string } | Error
@@ -29,7 +29,7 @@ const order = JSON.stringify({ id: 'order_1', entity: 'order', amount: 100, amou
 
 describe('createRazorpayClient', () => {
   it('refuses to build without API credentials', () => {
-    expect(() => createRazorpayClient(resolveRazorpayCredentials({}, {}))).toThrow('Key ID and Key Secret are required')
+    expect(() => createRazorpayClient(resolveRazorpayCredentials({}, {} as NodeJS.ProcessEnv))).toThrow('Key ID and Key Secret are required')
   })
 
   it('talks only to the fixed Razorpay origin with Basic auth and redirects disabled', async () => {

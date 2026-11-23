@@ -53,7 +53,7 @@ beforeEach(() => {
 describe('listShippingMethods', () => {
   it('reads active INR (or currency-less) methods of this shop only and maps decimal strings', async () => {
     const em = {
-      find: jest.fn(async (_entity: unknown, _where: Row) => [
+      find: jest.fn(async (_entity: unknown, _where: Row, _options?: unknown) => [
         { id: 'm1', code: 'standard', name: 'Standard', baseRateNet: '41.5254', baseRateGross: '49.0000', currencyCode: 'INR', estimatedTransitDays: 5 },
         { id: 'm2', code: 'express', name: 'Express', baseRateNet: '149.0000', baseRateGross: null, currencyCode: null },
       ]),
@@ -111,7 +111,7 @@ describe('quoteShipping', () => {
   it('quotes provider methods through the native calculator with the shop scope, in INR', async () => {
     getShippingProvider.mockReturnValue({ calculate: () => undefined })
     const calculateDocumentTotals = jest.fn(async (_input: Row) => ({ totals: { shippingGrossAmount: 79.0049 } }))
-    const container = { resolve: jest.fn(() => ({ calculateDocumentTotals })) }
+    const container = { resolve: jest.fn((_name: string) => ({ calculateDocumentTotals })) }
     const amount = await quoteShipping(
       container as never,
       SCOPE,

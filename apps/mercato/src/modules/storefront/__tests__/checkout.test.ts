@@ -310,11 +310,11 @@ beforeEach(() => {
     }
     return {}
   })
-  process.env.NODE_ENV = 'test'
+  ;(process.env as Record<string, string | undefined>).NODE_ENV = 'test'
 })
 
 afterEach(() => {
-  process.env.NODE_ENV = ORIGINAL_ENV
+  ;(process.env as Record<string, string | undefined>).NODE_ENV = ORIGINAL_ENV
 })
 
 function orderCreateCalls() {
@@ -715,4 +715,10 @@ describe('retryOrderPayment (declined / abandoned payment)', () => {
     await expect(retry('retry-key-0002-abcdef', GUEST, { cancelUrl: 'https://evil.test/' })).rejects.toMatchObject({ code: 'return_url_not_allowed' })
     expect(loadAccessibleOrder).not.toHaveBeenCalled()
   })
+
+  // Documented in tasks/milestone-1/WS-C-phase1-tests.md ("Risks"): an earlier attempt that is only
+  // `authorized` (manual capture) does not count as money taken, so a second session can be opened.
+  // Storefront sessions use automatic capture today, so `authorized` is transient. Blocking it needs a
+  // product decision (authorizations can expire), so this stays a todo rather than a code change.
+  it.todo('blocks a payment retry while an earlier attempt is authorized but not yet captured (needs product decision)')
 })
