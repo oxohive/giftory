@@ -173,7 +173,7 @@ Serialized assignment: `id, orderId, dealerProfileId, tenantId, organizationId, 
 
 ### `POST /admin/orders/{id}/assignment` — assign
 
-Headers: **`Idempotency-Key` is required** (400 `idempotency_key_required` when missing).
+Headers: **`Idempotency-Key` is required** (400 `idempotency_key_required` when missing). Same key + same body replays the stored response with `Idempotent-Replayed: true`; same key + different body is 409 `idempotency_key_reused`; a duplicate sent while the first is still running is 409 `idempotency_request_in_progress`. The same applies to `PUT` (reassign).
 
 Body: `orderId` (uuid), `dealerProfileId` (uuid), `requiredBy` (`YYYY-MM-DD`, must be in the future).
 
@@ -257,20 +257,19 @@ Rows are **never updated or deleted**; there are no update or delete routes or c
 ### Balance math (both balance routes run identical SQL)
 
 ```
-totalEarned   = Σ amount WHERE direction = 'credit' AND entry_type = 'commission_earned'
-totalDebited  = Σ amount WHERE direction = 'debit'
-pendingAmount = totalEarned - totalDebited
+pendingAmount = Σ amount WHERE direction = 'credit' − Σ amount WHERE direction = 'debit'
+totalEarned   = Σ amount WHERE entry_type = 'commission_earned'
 ```
 
-`pendingAmount` is "earned but not yet paid out". Note the current semantics: `adjustment_credit` is neither added to `totalEarned` nor subtracted, so it does not increase `pendingAmount`; `adjustment_debit` does reduce it and can drive the balance negative. `totalEarned` is lifetime commission only.
+`pendingAmount` is "earned but not yet paid out": commission and adjustment credits, minus payouts and adjustment debits. An `adjustment_debit` can still drive it negative. `totalEarned` is lifetime commission only. One implementation (`payouts/lib/balance.ts`) backs both balance routes and the payout guard; the admin UI mirror (`payouts/components/money.ts`) matches it.
 
 ### `POST .../ledger/payout` — record a payout
 
-Body: `amount` (positive, paise), `note` (1–500 — the payment reference/UTR). `201 {"id"}`. Appends a `payout_disbursed` debit with `referenceType="manual_payout"`. **No balance-sufficiency check and no idempotency key** — this records a payout that happened elsewhere; it does not itself move money. Repeated calls double-debit.
+Body: `amount` (positive, paise), `note` (1–500 — the payment reference/UTR). `201 {"id"}`. Appends a `payout_disbursed` debit with `referenceType="manual_payout"`. This records a payout that happened elsewhere; it does not itself move money. **Requires `Idempotency-Key`**: a retry with the same key replays the original 201. Returns 422 `insufficient_balance` (with `availableAmount`, `requestedAmount` in paise) when the amount exceeds `pendingAmount`. The check and the insert run in one transaction under a per-dealer advisory lock, so concurrent payouts can't both pass.
 
 ### `POST .../ledger/adjustment`
 
-Body: `direction` (`credit|debit`), `amount` (positive, paise), `note` (**required**, 1–500 — the audit reason). `201 {"id"}`.
+Body: `direction` (`credit|debit`), `amount` (positive, paise), `note` (**required**, 1–500 — the audit reason). `201 {"id"}`. **Requires `Idempotency-Key`** (same replay semantics as payouts). Takes the same per-dealer lock, but is not balance-guarded.
 
 ### `GET .../dealer/ledger/balance`
 
@@ -286,7 +285,7 @@ The full chain, driven by persistent event subscribers:
 2. `commissions/subscribers/snapshot-on-assignment.ts` reads the order subtotal (paise) and first line's product type, resolves the rate, writes the immutable snapshot, and emits `commission.snapshot_created`.
 3. `payouts/subscribers/credit-on-snapshot.ts` runs `payouts.ledger.credit_commission`, appending a `commission_earned` credit with `referenceType="order_commission_snapshot"` and `referenceId=<snapshotId>`.
 
-Both subscribers log and swallow errors, so a redelivered event can duplicate a credit; the `referenceType + referenceId` index is not unique. Worth keeping in mind when reasoning about balance accuracy.
+Both subscribers log (without tenant ids) and swallow errors, so a redelivered event can duplicate a credit; the `referenceType + referenceId` index is not unique. Worth keeping in mind when reasoning about balance accuracy.
 
 ---
 
@@ -295,11 +294,10 @@ Both subscribers log and swallow errors, so a redelivered event can duplicate a 
 These are the integration gaps found by the audit. They are tracked as Phase 2 UI prerequisites (see `tasks/phase-2-ui/TASK-02-...md` and `TASK-03-...md`); the UI work must not paper over them with client-side checks.
 
 1. ~~**Dealer-level data isolation is not enforced.**~~ **Fixed.** `dealerProfileId` is no longer accepted as client input on the dealer-facing list routes (orders, earnings, ledger) — the query schema explicitly `.omit({ dealerProfileId: true })`s it, and the route derives the caller's own profile id from `scope.organizationId`/`scope.tenantId` via `resolveOwnDealerProfileId()` instead (see `dealer_orders/api/dealer/orders/route.ts` and the equivalent `commissions`/`payouts` routes for the pattern). `dealer:owner`/`dealer:staff` remain one shared role per tenant — isolation is enforced by this per-route equality check, not by a role-level org allow-list (`role_acls.organizations_json`), which is why ADR-003's "Implementation pattern" section is now partially stale (see the note added there).
-2. **`Idempotency-Key` is checked for presence but never consumed.** Assignment `POST`/`PUT` require the header, but no replay store exists in the command bus, so a duplicate request still executes (the 409 on an existing active assignment is what actually stops most duplicates). Payout and adjustment routes have no key requirement at all.
-3. **Payout recording has no balance guard.** `POST .../ledger/payout` will happily debit more than the dealer has earned.
-4. **`adjustment_credit` does not increase `pendingAmount`** (see balance math above).
-5. **Admin application detail passes the profile id as the encryption-key scope** when decrypting `gstin`/`pan` rather than the organization id.
-6. **`storageKey` on document upload is trusted verbatim** and echoed back to admins, with no verification that it points inside the tenant's own storage.
-7. **Register accepts a client-chosen `organizationId`** on an unauthenticated route (rate-limited to 5/h, and the org must exist, but the tenant selection is caller-controlled).
-
-Items 1–4 are the ones the UI tasks must account for; 5–7 are backend hardening follow-ups.
+2. ~~**`Idempotency-Key` is checked for presence but never consumed.**~~ **Fixed (Milestone 1, WS-A).** Assignment `POST`/`PUT` and payout/adjustment `POST` all require `Idempotency-Key` (16–128 chars of `[A-Za-z0-9_-:.]`, the same rule as storefront checkout; 400 `idempotency_key_required` / `idempotency_key_invalid`). Keys are scoped to the caller's tenant + organization and bound to a SHA-256 of the validated request. Same key + same body replays the stored response (header `Idempotent-Replayed: true`) without executing again; same key + different body is 409 `idempotency_key_reused`; a duplicate while the first assignment request is still running is 409 `idempotency_request_in_progress`. A failed request does not consume its key. Stores: `payouts_idempotency_keys` (written in the same transaction as the ledger entry) and `dealer_order_idempotency_keys` (claim → complete, storefront pattern). `DELETE .../assignment` still takes no key. **Requires two new migrations**; see `tasks/milestone-1/RUNBOOK-migrations.md`.
+3. ~~**Payout recording has no balance guard.**~~ **Fixed (WS-A).** 422 `insufficient_balance` when `amount > pendingAmount`, checked under a per-dealer `pg_advisory_xact_lock`. Adjustments take the same lock but are not guarded (an `adjustment_debit` may still take the balance negative). The ledger remains append-only.
+4. ~~**`adjustment_credit` does not increase `pendingAmount`.**~~ **Fixed (WS-A).** See [Balance math](#balance-math-both-balance-routes-run-identical-sql).
+5. ~~**Admin application detail passes the profile id as the encryption-key scope**~~ **Fixed (WS-B).** The route also had its `findWithDecryption` arguments shifted (it passed the DI container as the entity), so it returned 500. It now uses `findApplicationForReview()` (`dealer_onboarding/lib/applicationReview.ts`), which decrypts with the dealer row's own tenant + organization, the same scope the ORM subscriber encrypts with. **Open follow-up:** GSTIN/PAN were never actually encrypted at rest. The encryption map declared `dealer_onboarding:dealer_profiles` (plural; now fixed to the generated id `dealer_onboarding:dealer_profile`), and maps are only seeded for the root org, not dealer orgs. Turning it on needs a tenant-wide map row plus an `entities rotate-encryption-key` backfill; see `tasks/milestone-1/WS-B-kyc-security.md`.
+6. ~~**`storageKey` on document upload is trusted verbatim**~~ **Fixed.** Upload is a real multipart upload; `storage_key` is the server-generated `attachments.id` (KYC partition `privateAttachments`, dealer tenant + org) and no client key is accepted. Reads go through `attachmentService.readScoped` with owner, partition and private-partition checks. Legacy free-form keys from before the switch get the same 404 as an unknown document (`resolveKycAttachmentId()`).
+7. **Register accepts a client-chosen `organizationId`**: **hardened (WS-B), stronger option pending a decision.** The invite-link org must now be an active root organization that is not a dealer organization (no `dealer_profiles` row). Every ineligible or unknown id gets the identical `404 org_not_found`. Invite links are unchanged. Remaining weakness: the link is a permanent, non-revocable shared secret. Signed, single-use, expiring invite tokens are designed in `tasks/milestone-1/WS-B-kyc-security.md`.
+8. **Admin write routes accept a dealer from another tenant** (found by WS-E, finding F4). Order assign/reassign, commission rule create, payout and adjustment accept a `dealerProfileId` belonging to another tenant, and assignment accepts unapproved dealers. This creates orphan rows but leaks no data across tenants (proven by the isolation spec, which documents the defect with a `test.fail()`). Not fixed yet.
