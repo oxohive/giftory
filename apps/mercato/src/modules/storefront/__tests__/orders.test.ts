@@ -26,6 +26,7 @@ jest.mock('@open-mercato/shared/lib/encryption/find', () => ({
 import { listCustomerOrders, loadAccessibleOrder, resolveRequester, serializeOrderDetail } from '../lib/orders'
 import { ORDER_ACCESS_COOKIE } from '../lib/constants'
 import { generateToken, hashToken, serializeOrderAccess } from '../lib/tokens'
+import { orderTotals } from '../lib/paymentState'
 
 const TENANT = '11111111-1111-4111-8111-111111111111'
 const ORG = '22222222-2222-4222-8222-222222222222'
@@ -263,6 +264,17 @@ describe('serializeOrderDetail', () => {
     expect(pending.status).toBe('pending_payment')
     const failed = await serializeOrderDetail(em as never, SCOPE, order() as never, [checkout({ paymentStatus: 'failed', gatewayTransactionId: 't' }) as never])
     expect(failed.status).toBe('payment_failed')
+  })
+
+  it('rounds half-paise sales amounts exactly like the checkout response (toMinor/fromMinor)', async () => {
+    // Sales stores 4-decimal amounts, so tax can carry half a paisa. The order
+    // page must show the same 2-decimal figures as the placeOrder response,
+    // which rounds through orderTotals() -> round2() -> toMinor().
+    const placed = order({ taxTotalAmount: '1.0050', shippingGrossAmount: '1.0050', subtotalGrossAmount: '11.0100', grandTotalGrossAmount: '11.0100' })
+    const expected = orderTotals(placed)
+    const detail = await serializeOrderDetail(em as never, SCOPE, placed as never, [])
+    expect(expected).toEqual({ subtotal: 10, shipping: 1.01, tax: 1.01, grandTotal: 11.01 })
+    expect({ subtotal: detail.subtotal, shipping: detail.shippingTotal, tax: detail.taxTotal, grandTotal: detail.grandTotal }).toEqual(expected)
   })
 })
 
