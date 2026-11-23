@@ -2,14 +2,18 @@
   "payouts": {
     "errors": {
       "entryNotFound": "Ledger entry not found",
-      "insufficientBalance": "Payout amount exceeds dealer balance",
+      "insufficientBalance": "Payout amount exceeds the dealer's available balance",
       "noteMandatory": "A note is required for adjustment entries",
       "invalidAmount": "Amount must be a positive integer",
       "unauthorized": "Authentication required",
       "orgScopeRequired": "Organization scope required",
       "invalidRequest": "Invalid request",
       "requestFailed": "Request failed",
-      "internal": "Something went wrong"
+      "internal": "Something went wrong",
+      "idempotencyKeyRequired": "Idempotency-Key header is required for this operation",
+      "idempotencyKeyInvalid": "Idempotency-Key must be 16-128 characters of letters, digits, \"-\", \"_\", \":\" or \".\"",
+      "idempotencyKeyReused": "This Idempotency-Key was already used for a different request. Refresh the ledger before trying again.",
+      "idempotencyInProgress": "A request with this Idempotency-Key is still being processed. Retry shortly."
     },
     "audit": {
       "creditCommission": "Credit commission earned",
@@ -56,7 +60,7 @@
         },
         "balance": {
           "pending": "Pending balance",
-          "pendingHint": "Earned but not yet paid out, net of recorded payouts and debit adjustments",
+          "pendingHint": "Owed to the dealer: all credits (commissions and credit adjustments) minus all debits (payouts and debit adjustments)",
           "earned": "Total earned (lifetime)",
           "earnedHint": "Commissions only — unaffected by payouts or adjustments"
         },
@@ -89,7 +93,8 @@
       "ledgerDialog": {
         "moneyNotice": "Giftory has no payment disbursement integration yet. Complete the transfer in your banking system first, then record it here for the ledger.",
         "error": {
-          "invalidAmount": "Enter a whole or 2-decimal rupee amount greater than zero"
+          "invalidAmount": "Enter a whole or 2-decimal rupee amount greater than zero",
+          "idempotencyConflict": "An earlier attempt from this dialog may already have been recorded. Close the dialog and check the ledger before trying again."
         }
       },
       "recordPayoutDialog": {
@@ -102,7 +107,9 @@
         "success": "Payout recorded",
         "error": {
           "generic": "Could not record this payout",
-          "missingReference": "A payment reference is required"
+          "missingReference": "A payment reference is required",
+          "insufficientBalance": "This payout exceeds the dealer's available balance",
+          "insufficientBalanceWithAmount": "This payout exceeds the dealer's available balance of {{amount}}"
         }
       },
       "adjustmentDialog": {

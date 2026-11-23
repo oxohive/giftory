@@ -6,23 +6,12 @@ import type { CommandBus, CommandRuntimeContext } from '@open-mercato/shared/lib
 import { isCrudHttpError } from '@open-mercato/shared/lib/crud/errors'
 import { resolveTranslations } from '@open-mercato/shared/lib/i18n/server'
 import { createLogger } from '@open-mercato/shared/lib/logger'
+import { PayoutsError, type Translate, type RouteCtx } from './errors'
 
 const logger = createLogger('payouts').child({ component: 'http' })
 
-export type Translate = (key: string, fallback: string, vars?: Record<string, string | number>) => string
-export type RouteCtx = { params?: Record<string, string | string[]> }
-
-export class PayoutsError extends Error {
-  constructor(
-    readonly status: number,
-    readonly code: string,
-    message: string,
-    readonly extra?: Record<string, unknown>,
-  ) {
-    super(message)
-    this.name = 'PayoutsError'
-  }
-}
+export { PayoutsError } from './errors'
+export type { Translate, RouteCtx } from './errors'
 
 export function errorResponse(status: number, code: string, message: string, extra?: Record<string, unknown>): NextResponse {
   return NextResponse.json({ error: message, code, ...(extra ?? {}) }, { status })

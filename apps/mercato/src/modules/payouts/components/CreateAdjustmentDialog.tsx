@@ -24,6 +24,7 @@ import { useDialogKeyHandler } from '@open-mercato/ui/hooks/useDialogKeyHandler'
 import { useT } from '@open-mercato/shared/lib/i18n/context'
 import { submitCreateAdjustment } from './ledgerActions'
 import { createSubmitGuard } from './submitGuard'
+import { createIdempotencyKeyHolder } from './idempotencyKey'
 
 const INR_CURRENCIES: AmountCurrency[] = [{ code: 'INR', symbol: '₹', label: 'Indian Rupee' }]
 
@@ -45,6 +46,8 @@ export function CreateAdjustmentDialog({
   const [fieldError, setFieldError] = React.useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const guardRef = React.useRef(createSubmitGuard())
+  // One Idempotency-Key per dialog session — reused on resubmits, released on close/success.
+  const idempotencyKeyRef = React.useRef(createIdempotencyKeyHolder())
   const mutationContextId = `payouts-create-adjustment:${dealerProfileId}`
   const { runMutation } = useGuardedMutation<{ formId: string; resourceKind: string }>({
     contextId: mutationContextId,
@@ -57,6 +60,7 @@ export function CreateAdjustmentDialog({
       setNote('')
       setDirection('credit')
       setFieldError(null)
+      idempotencyKeyRef.current.release()
     }
     onOpenChange(next)
   }, [onOpenChange])
@@ -71,7 +75,11 @@ export function CreateAdjustmentDialog({
         const call = await runMutation({
           operation: () => apiCallOrThrow<{ id: string }>(
             `/api/payouts/admin/dealers/${encodeURIComponent(dealerProfileId)}/ledger/adjustment`,
-            { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) },
+            {
+              method: 'POST',
+              headers: { 'content-type': 'application/json', 'Idempotency-Key': idempotencyKeyRef.current.current() },
+              body: JSON.stringify(body),
+            },
             { errorMessage: t('payouts.admin.adjustmentDialog.error.generic', 'Could not create this adjustment') },
           ),
           context: { formId: mutationContextId, resourceKind: 'payouts.dealer_ledger_entry' },
@@ -96,6 +104,10 @@ export function CreateAdjustmentDialog({
     }
     if (result.error.code === 'missing_note') {
       setFieldError(t('payouts.admin.adjustmentDialog.error.missingReason', 'A reason is required for every adjustment'))
+      return
+    }
+    if (result.error.code === 'idempotency_conflict') {
+      flash(t('payouts.admin.ledgerDialog.error.idempotencyConflict', 'An earlier attempt from this dialog may already have been recorded. Close the dialog and check the ledger before trying again.'), 'error')
       return
     }
     flash(result.error.message || t('payouts.admin.adjustmentDialog.error.generic', 'Could not create this adjustment'), 'error')
