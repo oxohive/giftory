@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server'
 import type { EntityManager } from '@mikro-orm/postgresql'
-import { findWithDecryption } from '@open-mercato/shared/lib/encryption/find'
 import type { OpenApiRouteDoc } from '@open-mercato/shared/lib/openapi'
 import { dealerHandler, readParam } from '../../../../../lib/http'
-import { DealerProfile, DealerKycDocument } from '../../../../../data/entities'
+import { findApplicationForReview } from '../../../../../lib/applicationReview'
 import { adminDealerTag, adminApplicationDetailSchema, commonAdminErrors } from '../../../../openapi'
 import { serializeDealerProfile } from '../../../../../commands/register'
 import { serializeDealerDocument } from '../../../../../commands/documents'
@@ -23,25 +22,19 @@ export const GET = dealerHandler('admin.dealers.applications.get', async ({ req,
 
   const em = container.resolve<EntityManager>('em')
 
-  // Decrypt GSTIN and PAN for admin view.
-  const profiles = await findWithDecryption<DealerProfile>(
-    em,
-    container,
-    DealerProfile,
-    { id, tenantId, deletedAt: null },
-    { tenantId, organizationId: id },
-  )
-  const profile = profiles[0] ?? null
-  if (!profile) {
+  // Decrypt GSTIN and PAN for admin view. Decryption uses the dealer row's own
+  // (tenant, organization) scope — the same scope it was encrypted under —
+  // never the profile id or the reviewer's organization (known gap 5).
+  const application = await findApplicationForReview(em, tenantId, id)
+  if (!application) {
     return NextResponse.json({ error: 'Application not found', code: 'not_found' }, { status: 404 })
   }
-
-  const documents = await em.find(DealerKycDocument, { dealerProfileId: profile.id, deletedAt: null })
+  const { profile, documents } = application
 
   return NextResponse.json({
     ...serializeDealerProfile(profile),
-    gstin: (profile as DealerProfile & { gstin?: string | null }).gstin ?? null,
-    pan: (profile as DealerProfile & { pan?: string | null }).pan ?? null,
+    gstin: profile.gstin ?? null,
+    pan: profile.pan ?? null,
     documents: documents.map(serializeDealerDocument),
   })
 })
