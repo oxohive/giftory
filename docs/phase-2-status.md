@@ -95,12 +95,12 @@ Getting the journey to 12/12 uncovered and fixed seven real bugs, listed in VERI
 3. **No browser test of any Phase 2 screen.** No accessibility, keyboard or responsive pass has been made against the rendered portal or admin pages.
 4. **Isolation between two tenants has not been tested.** Isolation between two dealers in the same tenant has been, and passed.
 5. **The Phase 1 regression suite has not been re-run** since the Phase 2 changes. US-002 is still In Progress.
-6. **Known backend gaps 2–7** ([API reference § Known gaps](dealer-marketplace-api.md#known-gaps)):
+6. **Known backend gaps 2–5 and 7** ([API reference § Known gaps](dealer-marketplace-api.md#known-gaps)):
    - `Idempotency-Key` is required but never consumed
    - no payout balance guard
    - `adjustment_credit` is excluded from `pendingAmount`
    - wrong encryption scope when decrypting KYC fields
-   - `storageKey` is not validated
+   - gap 6 (`storageKey` trusted verbatim) looks already fixed in code: the upload is multipart and stores the server-generated attachment id (`dealer_onboarding/commands/documents.ts`). The API reference has not been updated.
    - register accepts a caller-chosen `organizationId`
 7. **Invite links go to the backend, not the portal.** Owner and staff invite emails link to the backend's own `/reset/<token>` page. The fix lives in `@open-mercato/core`.
 8. **Places where the specs are only partly met:**

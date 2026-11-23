@@ -1,6 +1,6 @@
 # P2-UI-00: Contract audit and implementation preflight
 
-- Status: Done (2026-11-23 review). The audit was delivered in `90cea7e`. Its critical gaps 1–3 (missing dealer ACL grants, ACL clobbering, and caller-supplied `dealerProfileId`) were fixed by P2-UI-02/03. Known gaps 2–7 in `docs/dealer-marketplace-api.md` are still open on `main`.
+- Status: Done (2026-11-23 review). The audit was delivered in `90cea7e`. Its critical gaps 1–3 (missing dealer ACL grants, ACL clobbering, and caller-supplied `dealerProfileId`) were fixed by P2-UI-02/03. Known gaps 2–5 and 7 in `docs/dealer-marketplace-api.md` are still open on `main`. Gap 6 (`storageKey`) looks fixed in code since P2-UI-03.
 - Owner lane: A
 - Depends on: None
 - Owned paths: Planning documents under tasks/phase-2-ui/ only

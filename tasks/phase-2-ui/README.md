@@ -12,12 +12,12 @@ What is still open (each item was checked against `main` at `5bb2a3c`):
 - No test has rendered the dealer-portal or admin pages in a browser. That means no browser-level accessibility or responsive check has been done either.
 - The Phase 1 regression suite has not been re-run since the Phase 2 changes.
 - No test checks isolation between two tenants. Isolation between two dealers in the same tenant passed in the 12/12 run.
-- Known gaps 2–7 in [docs/dealer-marketplace-api.md](../../docs/dealer-marketplace-api.md#known-gaps) are still open:
+- Known gaps 2–5 and 7 in [docs/dealer-marketplace-api.md](../../docs/dealer-marketplace-api.md#known-gaps) are still open:
   - the `Idempotency-Key` header is checked but never consumed
   - payouts have no balance guard
   - `adjustment_credit` is excluded from the balance
   - the KYC decryption scope is wrong
-  - document `storageKey` is not validated
+  - gap 6, the document `storageKey`, looks already fixed in code: the KYC upload has been multipart since P2-UI-03 and stores the server-generated attachment id. The API reference still lists it as open.
   - registration accepts a caller-chosen `organizationId`
 
 A Milestone 1 hardening branch (`milestone-1-hardening`) is working on several of these. It is not merged, and this file does not claim any of its results.
@@ -84,7 +84,7 @@ Statuses below were re-checked on 2026-11-23 against the git history and the cod
 
 | Task | Deliverable | Lane | Depends on | Status | Commits | Evidence from the 12/12 run |
 |---|---|---|---|---|---|---|
-| [P2-UI-00](TASK-00-contract-audit-and-implementation-preflight.md) | Contract audit and implementation preflight | A | none | Done | `90cea7e` | n/a (documentation). Its gaps 1–3 were later fixed by 02/03. Gaps 2–7 in the API reference are still open. |
+| [P2-UI-00](TASK-00-contract-audit-and-implementation-preflight.md) | Contract audit and implementation preflight | A | none | Done | `90cea7e` | n/a (documentation). Its gaps 1–3 were later fixed by 02/03. Gaps 2–5 and 7 in the API reference are still open (gap 6 looks fixed in code). |
 | [P2-UI-01](TASK-01-dealer-portal-scaffold-and-shared-ui-foundation.md) | Dealer portal scaffold and shared UI foundation | A | 00 | Implemented | `99d79f8`, `a886c33` | n/a. `npm run build` and `npm test` (300/300) of `apps/dealer-portal` pass locally (re-run 2026-11-23). |
 | [P2-UI-02](TASK-02-dealer-authorization-and-data-isolation-prerequisite.md) | Dealer authorization and data isolation prerequisite | A | 00 | Implemented, API-verified | `159336b`, `ccd4d0c`, then fixes `70b94d0`, `c4ad820`, `0796a28` | Dealer B, in the same tenant, gets 404 on dealer A's order detail. Dealer A's assignment and earnings are excluded from B's lists. B's balance stays 0. B's status change on A's order is rejected. **A second tenant was never tested.** |
 | [P2-UI-03](TASK-03-missing-ui-data-and-lifecycle-apis.md) | Missing UI data and lifecycle APIs | A | 00, 02 | Implemented, API-verified | `db63874`, `ccd4d0c`, then fixes `849caaa`, `fbe097c`, `dc1d076` | Multipart KYC upload; dashboard 200; staff deactivate, after which the deactivated user can no longer log in; order list. Approval and assignment emails were not asserted. |
