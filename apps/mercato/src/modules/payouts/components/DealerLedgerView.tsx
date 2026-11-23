@@ -220,7 +220,7 @@ export function DealerLedgerView({ dealerProfileId, dealerLabel }: { dealerProfi
               {isBalanceLoading ? '—' : formatPaise(balanceData?.pendingAmount ?? 0, balanceData?.currencyCode ?? 'INR')}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              {t('payouts.admin.ledger.balance.pendingHint', 'Earned but not yet paid out, net of recorded payouts and debit adjustments')}
+              {t('payouts.admin.ledger.balance.pendingHint', 'Owed to the dealer: all credits (commissions and credit adjustments) minus all debits (payouts and debit adjustments)')}
             </p>
           </div>
           <div className="rounded-lg border border-border p-4">

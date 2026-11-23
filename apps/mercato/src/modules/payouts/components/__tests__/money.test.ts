@@ -90,7 +90,7 @@ describe('computeLedgerBalanceFromEntries — mirrors the admin balance route SQ
     expect(result.pendingAmount).toBe(60000)
   })
 
-  it('an adjustment_credit increases pendingAmount without increasing totalEarned (documented backend asymmetry)', () => {
+  it('an adjustment_credit increases pendingAmount without increasing totalEarned (Known gap #4, fixed)', () => {
     const entries = [
       { entryType: 'commission_earned' as const, direction: 'credit' as const, amount: 100000 },
       { entryType: 'adjustment_credit' as const, direction: 'credit' as const, amount: 5000 },
@@ -98,12 +98,8 @@ describe('computeLedgerBalanceFromEntries — mirrors the admin balance route SQ
     const result = computeLedgerBalanceFromEntries(entries)
     // totalEarned counts commission_earned credits only.
     expect(result.totalEarned).toBe(100000)
-    // pendingAmount = totalEarned - totalDebited; an adjustment_credit isn't
-    // a debit, so it never reduces pendingAmount, and since pendingAmount is
-    // derived purely from totalEarned/totalDebited (not from summing all
-    // credits), this entry does not raise it either — exactly mirroring the
-    // real SQL, which never adds it to either side.
-    expect(result.pendingAmount).toBe(100000)
+    // pendingAmount = Σ credits − Σ debits, so the credit adjustment is owed to the dealer.
+    expect(result.pendingAmount).toBe(105000)
   })
 
   it('an adjustment_debit reduces pendingAmount without touching totalEarned', () => {
