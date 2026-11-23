@@ -1,7 +1,7 @@
 'use client'
 
 import { ApiError } from '@gift/api-client'
-import { Button, ErrorNotice, Field, fieldDescribedBy, Input, LoadingState, Select } from '@gift/ui'
+import { Button, ErrorNotice, Field, fieldDescribedBy, focusFirstInvalid, Input, LoadingState, Select } from '@gift/ui'
 import Link from 'next/link'
 import { useEffect, useState, type FormEvent } from 'react'
 import { fetchOnboardingStatus, resubmitApplication, type ResubmitValues } from '@/lib/features/onboarding/api'
@@ -93,11 +93,15 @@ export function ResubmitForm() {
   if (success) {
     return (
       <div className="grid gap-4 text-center">
-        <h1 className="text-lg font-semibold text-foreground">Application resubmitted</h1>
+        {/* The form (and the button that had focus) was just replaced: move focus to the result's
+            heading so keyboard/screen-reader users hear the outcome (WCAG 2.4.3, 4.1.3). */}
+        <h1 ref={(el) => el?.focus()} tabIndex={-1} className="text-lg font-semibold text-foreground focus:outline-none">
+          Application resubmitted
+        </h1>
         <p className="text-sm text-muted-foreground">Your application is back under review.</p>
         <Link
           href="/onboarding/status"
-          className="inline-flex h-10 w-fit items-center justify-self-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          className="inline-flex h-10 w-fit items-center justify-self-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:brightness-90"
         >
           View application status
         </Link>
@@ -122,7 +126,10 @@ export function ResubmitForm() {
       ...(values.pan.trim() ? { pan: values.pan } : {}),
     })
     setFieldErrors(errors)
-    if (Object.keys(errors).length > 0) return
+    if (Object.keys(errors).length > 0) {
+      focusFirstInvalid(e.currentTarget as HTMLFormElement) // WCAG 3.3.1/2.4.3
+      return
+    }
 
     const payload: ResubmitValues = {
       businessName: values.businessName.trim(),
@@ -170,7 +177,7 @@ export function ResubmitForm() {
 
       <p className="text-sm text-muted-foreground">
         Missing or incorrect documents?{' '}
-        <Link href="/onboarding/documents" className="text-primary underline-offset-4 hover:underline">
+        <Link href="/onboarding/documents" className="text-primary underline underline-offset-4 hover:decoration-2">
           Review or replace your KYC documents
         </Link>
         .

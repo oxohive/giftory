@@ -12,6 +12,19 @@ const REASON_COPY: Record<string, string> = {
   'password-updated': 'Your password has been updated. Please sign in.',
 }
 
+/**
+ * The backend answers a wrong email/password with 401, which @gift/api-client's generic message
+ * map turns into "Your session has expired" — wrong and confusing on a sign-in form (WCAG 3.3.1/
+ * 3.3.3: the error must describe what actually went wrong). Map login's own statuses here.
+ */
+function loginErrorMessage(err: unknown): string {
+  if (!(err instanceof ApiError)) return 'Something went wrong. Please try again.'
+  if (err.status === 400) return 'Enter a valid email address and your password.'
+  if (err.status === 401) return 'Invalid email or password.'
+  if (err.status === 403) return 'This account is not authorized to use the dealer portal.'
+  return err.message
+}
+
 export function LoginForm({ returnTo, reason }: { returnTo: string; reason?: string }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -34,7 +47,7 @@ export function LoginForm({ returnTo, reason }: { returnTo: string; reason?: str
       // for the very next Server Component render that decides access.
       window.location.assign(sanitizeReturnTo(returnTo))
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.')
+      setError(loginErrorMessage(err))
       setSubmitting(false)
     }
   }

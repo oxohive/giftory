@@ -57,10 +57,10 @@ export function ApplicationStatus() {
   if (unauthorized) {
     return (
       <div className="grid gap-3 text-center">
-        <p className="text-sm text-muted-foreground">Your session has ended.</p>
+        <h1 className="text-lg font-semibold text-foreground">Your session has ended</h1>
         <Link
           href="/login?returnTo=/onboarding/status"
-          className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:brightness-90"
         >
           Sign in
         </Link>
@@ -90,7 +90,7 @@ export function ApplicationStatus() {
           </p>
           <Link
             href="/onboarding/resubmit"
-            className="inline-flex h-9 w-fit items-center justify-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            className="inline-flex h-9 w-fit items-center justify-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:brightness-90"
           >
             Resubmit application
           </Link>
@@ -100,7 +100,7 @@ export function ApplicationStatus() {
       {status.kycStatus === 'approved' ? (
         <div className="grid gap-2 rounded-md border border-success/40 bg-success/10 p-4">
           <p className="text-sm text-foreground">Your application has been approved.</p>
-          <Link href="/" className="inline-flex h-9 w-fit items-center justify-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+          <Link href="/" className="inline-flex h-9 w-fit items-center justify-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:brightness-90">
             Go to dashboard
           </Link>
         </div>
@@ -111,7 +111,7 @@ export function ApplicationStatus() {
           <p className="text-sm text-foreground">Finish uploading your KYC documents to speed up review.</p>
           <Link
             href="/onboarding/documents"
-            className="inline-flex h-9 w-fit items-center justify-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            className="inline-flex h-9 w-fit items-center justify-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:brightness-90"
           >
             Upload documents
           </Link>

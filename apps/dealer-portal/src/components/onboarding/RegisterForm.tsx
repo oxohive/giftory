@@ -1,7 +1,7 @@
 'use client'
 
 import { ApiError } from '@gift/api-client'
-import { Button, EmptyState, ErrorNotice, Field, fieldDescribedBy, Input, Select } from '@gift/ui'
+import { Button, EmptyState, ErrorNotice, Field, fieldDescribedBy, focusFirstInvalid, Input, Select } from '@gift/ui'
 import Link from 'next/link'
 import { useState, type FormEvent } from 'react'
 import { registerDealer } from '@/lib/features/onboarding/api'
@@ -49,7 +49,7 @@ export function RegisterForm({ organizationId }: { organizationId: string | null
 
   if (!organizationId) {
     return (
-      <EmptyState title="Registration link is incomplete">
+      <EmptyState title="Registration link is incomplete" headingLevel={1}>
         This registration page needs a valid marketplace reference to continue. Please use the
         registration link provided to you, or contact the marketplace for a new one.
       </EmptyState>
@@ -59,7 +59,11 @@ export function RegisterForm({ organizationId }: { organizationId: string | null
   if (success) {
     return (
       <div className="grid gap-4">
-        <h1 className="text-lg font-semibold text-foreground">Registration submitted</h1>
+        {/* The form (and the button that had focus) was just replaced: move focus to the result's
+            heading so keyboard/screen-reader users hear the outcome (WCAG 2.4.3, 4.1.3). */}
+        <h1 ref={(el) => el?.focus()} tabIndex={-1} className="text-lg font-semibold text-foreground focus:outline-none">
+          Registration submitted
+        </h1>
         <p className="text-sm text-foreground">{success}</p>
         <Link href="/login" className="text-sm text-primary underline-offset-4 hover:underline">
           Go to sign in
@@ -75,7 +79,10 @@ export function RegisterForm({ organizationId }: { organizationId: string | null
 
     const errors = validateRegisterForm(values)
     setFieldErrors(errors)
-    if (Object.keys(errors).length > 0) return
+    if (Object.keys(errors).length > 0) {
+      focusFirstInvalid(e.currentTarget as HTMLFormElement) // WCAG 3.3.1/2.4.3
+      return
+    }
 
     if (!organizationId) return
 
@@ -118,7 +125,7 @@ export function RegisterForm({ organizationId }: { organizationId: string | null
       {duplicateEmail ? (
         <p className="text-sm text-muted-foreground">
           Already applied?{' '}
-          <Link href="/login" className="text-primary underline-offset-4 hover:underline">
+          <Link href="/login" className="text-primary underline underline-offset-4 hover:decoration-2">
             Sign in
           </Link>{' '}
           to check your application status.
@@ -265,7 +272,7 @@ export function RegisterForm({ organizationId }: { organizationId: string | null
       </Button>
       <p className="text-center text-sm text-muted-foreground">
         Already have an account?{' '}
-        <Link href="/login" className="text-primary underline-offset-4 hover:underline">
+        <Link href="/login" className="text-primary underline underline-offset-4 hover:decoration-2">
           Sign in
         </Link>
       </p>
