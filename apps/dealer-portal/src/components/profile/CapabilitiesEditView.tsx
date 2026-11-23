@@ -2,10 +2,10 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '@gift/api-client'
-import { Button, ErrorNotice, LoadingState, PermissionDenied, SessionExpired } from '@gift/ui'
+import { Button, ErrorNotice, focusFirstInvalid, LoadingState, PermissionDenied, SessionExpired } from '@gift/ui'
 import { fetchDealerOrgProfile, saveDealerCapabilities } from '@/lib/features/profile/api'
 import { mapCapabilitiesSaveError, type CapabilitiesSaveError } from '@/lib/features/profile/errors'
 import {
@@ -80,23 +80,39 @@ export function CapabilitiesEditView() {
   const dirty = values !== null && original !== null && !areCapabilitiesFormValuesEqual(values, original)
   useUnsavedChangesGuard(dirty, 'You have unsaved capability changes. Leave this page and discard them?')
 
-  if (query.isLoading) return <LoadingState label="Loading your capabilities…" />
+  // The h1 renders in every state so the page always has a heading (WCAG 1.3.1, 2.4.6).
+  const header = (
+    <div>
+      <h1 className="text-2xl font-semibold text-foreground">Edit capabilities</h1>
+      <p className="text-sm text-muted-foreground">
+        These settings help match orders to your production capacity. Business-identity details
+        are not editable here — see{' '}
+        <Link href="/profile" className="text-primary underline underline-offset-4 hover:decoration-2">
+          your profile
+        </Link>
+        .
+      </p>
+    </div>
+  )
 
-  if (query.isError) {
+  if (query.isLoading || query.isError || !values) {
     const err = query.error
-    if (err instanceof ApiError && err.isUnauthorized) {
-      return <SessionExpired onSignIn={() => router.push('/login')} />
+    let body: ReactNode = null
+    if (query.isLoading) body = <LoadingState label="Loading your capabilities…" />
+    else if (err instanceof ApiError && err.isUnauthorized) body = <SessionExpired onSignIn={() => router.push('/login')} />
+    else if (err instanceof ApiError && err.isForbidden) {
+      body = <PermissionDenied message="You do not have permission to manage this organization's capabilities." />
+    } else if (query.isError) {
+      const message = err instanceof Error ? err.message : 'Could not load your capabilities.'
+      body = <ErrorNotice message={message} onRetry={() => void query.refetch()} />
     }
-    if (err instanceof ApiError && err.isForbidden) {
-      return (
-        <PermissionDenied message="You do not have permission to manage this organization's capabilities." />
-      )
-    }
-    const message = err instanceof Error ? err.message : 'Could not load your capabilities.'
-    return <ErrorNotice message={message} onRetry={() => void query.refetch()} />
+    return (
+      <div className="grid max-w-2xl gap-6">
+        {header}
+        {body}
+      </div>
+    )
   }
-
-  if (!values) return null
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
@@ -106,7 +122,10 @@ export function CapabilitiesEditView() {
 
     const errors = validateCapabilitiesForm(values)
     setFieldErrors(errors)
-    if (Object.keys(errors).length > 0) return
+    if (Object.keys(errors).length > 0) {
+      focusFirstInvalid(event.currentTarget as HTMLFormElement)
+      return
+    }
 
     const payload = buildCapabilitiesPayload(values, lastUpdatedAt)
     setSubmitting(true)
@@ -143,22 +162,14 @@ export function CapabilitiesEditView() {
 
   return (
     <div className="grid max-w-2xl gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">Edit capabilities</h1>
-        <p className="text-sm text-muted-foreground">
-          These settings help match orders to your production capacity. Business-identity details
-          are not editable here — see{' '}
-          <Link href="/profile" className="text-primary underline-offset-4 hover:underline">
-            your profile
-          </Link>
-          .
-        </p>
-      </div>
+      {header}
 
+      {/* Always-mounted live region (see StaffListView): announces the save reliably (WCAG 4.1.3). */}
+      <p role="status" className="sr-only">
+        {success ? 'Capabilities saved.' : ''}
+      </p>
       {success ? (
-        <p role="status" className="rounded-md border border-success/40 bg-success/10 p-3 text-sm text-foreground">
-          Capabilities saved.
-        </p>
+        <p className="rounded-md border border-success/40 bg-success/10 p-3 text-sm text-foreground">Capabilities saved.</p>
       ) : null}
 
       {saveError ? (

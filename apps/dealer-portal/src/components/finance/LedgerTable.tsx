@@ -28,6 +28,8 @@ export function LedgerTable({ items, loading }: { items: LedgerEntry[]; loading:
   return (
     <TableContainer>
       <Table>
+        {/* Names the table for screen-reader table navigation (1.3.1). */}
+        <caption className="sr-only">Ledger entries</caption>
         <TableHead>
           <TableRow>
             <TableHeaderCell>Date</TableHeaderCell>

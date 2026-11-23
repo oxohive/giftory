@@ -3,7 +3,7 @@
 import { Menu, Package, X } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState, type ReactNode } from 'react'
+import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { cn } from '@gift/ui'
 import { PortalNav } from './PortalNav'
 import type { DealerRole } from './nav-items'
@@ -20,9 +20,18 @@ export function PortalShell({ role, children }: { role?: DealerRole | null; chil
   const [openAt, setOpenAt] = useState<string | null>(null)
   const open = openAt === pathname
   const setOpen = (next: boolean) => setOpenAt(next ? pathname : null)
+  const toggleRef = useRef<HTMLButtonElement>(null)
+
+  /** Escape closes the drawer and returns focus to its toggle (WCAG 2.1.1, 2.4.3). */
+  function onDrawerKeyDown(event: KeyboardEvent) {
+    if (event.key === 'Escape' && open) {
+      setOpen(false)
+      toggleRef.current?.focus()
+    }
+  }
 
   return (
-    <div className="flex min-h-dvh flex-col lg:flex-row">
+    <div className="flex min-h-dvh flex-col lg:flex-row" onKeyDown={onDrawerKeyDown}>
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-2 focus:z-50 focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground"
@@ -32,6 +41,7 @@ export function PortalShell({ role, children }: { role?: DealerRole | null; chil
 
       <header className="flex items-center justify-between gap-3 border-b border-border bg-surface px-4 py-3 lg:hidden">
         <button
+          ref={toggleRef}
           type="button"
           aria-label={open ? 'Close menu' : 'Open menu'}
           aria-expanded={open}
@@ -48,11 +58,14 @@ export function PortalShell({ role, children }: { role?: DealerRole | null; chil
         <span className="size-9" aria-hidden="true" />
       </header>
 
-      {open ? (
-        <div id="portal-nav-mobile" className="border-b border-border bg-surface px-4 py-3 lg:hidden">
-          <PortalNav role={role} onNavigate={() => setOpen(false)} />
-        </div>
-      ) : null}
+      {/* Always rendered (hidden when closed) so the toggle's aria-controls never points at nothing. */}
+      <div
+        id="portal-nav-mobile"
+        hidden={!open}
+        className="border-b border-border bg-surface px-4 py-3 lg:hidden"
+      >
+        {open ? <PortalNav role={role} onNavigate={() => setOpen(false)} /> : null}
+      </div>
 
       <aside className="hidden w-64 shrink-0 border-r border-border bg-surface px-4 py-6 lg:flex lg:flex-col lg:gap-6">
         <Link href="/" className="flex items-center gap-2 px-2 font-semibold text-foreground">
@@ -62,7 +75,8 @@ export function PortalShell({ role, children }: { role?: DealerRole | null; chil
         <PortalNav role={role} />
       </aside>
 
-      <main id="main" className={cn('min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-10 lg:py-10')}>{children}</main>
+      {/* tabIndex -1: the skip link moves real keyboard focus here, not just the scroll position (2.4.1). */}
+      <main id="main" tabIndex={-1} className={cn('min-w-0 flex-1 px-4 py-6 focus:outline-none sm:px-6 lg:px-10 lg:py-10')}>{children}</main>
     </div>
   )
 }

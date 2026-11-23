@@ -17,21 +17,24 @@ export interface CheckboxOption {
  * that field has no enum behind it at all.
  */
 export function MultiSelectCheckboxGroup({
+  id,
   legend,
   options,
   value,
   onChange,
   disabled,
   columns = 2,
-  describedBy,
+  error,
 }: {
+  /** Base id; the error message is rendered as `${id}-error` and tied to the fieldset. */
+  id: string
   legend: string
   options: CheckboxOption[]
   value: string[]
   onChange: (next: string[]) => void
   disabled?: boolean
   columns?: 2 | 3
-  describedBy?: string
+  error?: string
 }) {
   const selected = new Set(value)
 
@@ -45,23 +48,33 @@ export function MultiSelectCheckboxGroup({
 
   return (
     <fieldset
-      className="rounded-md border border-input bg-surface p-3"
-      aria-describedby={describedBy}
+      id={id}
+      className="grid gap-1.5"
+      aria-describedby={error ? `${id}-error` : undefined}
       disabled={disabled}
     >
-      <legend className="px-1 text-xs font-medium text-muted-foreground">{legend}</legend>
-      <div className={cn('mt-1 grid gap-2', columns === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2')}>
-        {options.map((option) => (
-          <label key={option.value} className="flex items-center gap-2 text-sm text-foreground">
-            <Checkbox
-              checked={selected.has(option.value)}
-              onChange={() => toggle(option.value)}
-              disabled={disabled}
-            />
-            {option.label}
-          </label>
-        ))}
+      {/* Styled like the other fields' <Label> so the group reads as one labelled field. */}
+      <legend className="mb-1.5 text-sm font-medium text-foreground">{legend}</legend>
+      <div className={cn('rounded-md border border-input bg-surface p-3', error && 'border-danger')}>
+        <div className={cn('grid gap-2', columns === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2')}>
+          {options.map((option) => (
+            <label key={option.value} className="flex items-center gap-2 text-sm text-foreground">
+              <Checkbox
+                checked={selected.has(option.value)}
+                onChange={() => toggle(option.value)}
+                disabled={disabled}
+                aria-invalid={error ? true : undefined}
+              />
+              {option.label}
+            </label>
+          ))}
+        </div>
       </div>
+      {error ? (
+        <p id={`${id}-error`} role="alert" className="text-xs font-medium text-danger">
+          {error}
+        </p>
+      ) : null}
     </fieldset>
   )
 }

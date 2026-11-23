@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import type { ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ErrorNotice, LoadingState, PermissionDenied, SessionExpired, StatusBadge, formatDate, formatDateTime } from '@gift/ui'
@@ -39,12 +40,25 @@ export function OrderDetailView({ assignmentId }: { assignmentId: string }) {
     queryFn: () => fetchOrderDetail(assignmentId),
   })
 
-  if (query.isLoading) return <LoadingState label="Loading order…" />
+  // Loading / blocked / failed states still get a page heading (WCAG 1.3.1, 2.4.6).
+  const fallbackShell = (body: ReactNode) => (
+    <div className="grid gap-6">
+      <div>
+        <Link href="/orders" className="text-sm text-muted-foreground underline-offset-4 hover:underline">
+          <span aria-hidden="true">← </span>Back to orders
+        </Link>
+        <h1 className="mt-2 text-lg font-semibold text-foreground">Order details</h1>
+      </div>
+      {body}
+    </div>
+  )
+
+  if (query.isLoading) return fallbackShell(<LoadingState label="Loading order…" />)
 
   if (query.isError) {
     const kind = classifyOrderDetailError(query.error)
-    if (kind === 'unauthorized') return <SessionExpired onSignIn={() => router.push('/login')} />
-    if (kind === 'forbidden') return <PermissionDenied message="You do not have permission to view this order." />
+    if (kind === 'unauthorized') return fallbackShell(<SessionExpired onSignIn={() => router.push('/login')} />)
+    if (kind === 'forbidden') return fallbackShell(<PermissionDenied message="You do not have permission to view this order." />)
     if (kind === 'not_found') {
       return (
         <div className="grid gap-4 text-center">
@@ -59,7 +73,7 @@ export function OrderDetailView({ assignmentId }: { assignmentId: string }) {
         </div>
       )
     }
-    return <ErrorNotice message="Couldn't load this order." onRetry={() => query.refetch()} />
+    return fallbackShell(<ErrorNotice message="Couldn't load this order." onRetry={() => query.refetch()} />)
   }
 
   if (!query.data) return null
@@ -78,7 +92,7 @@ export function OrderDetailView({ assignmentId }: { assignmentId: string }) {
     <div className="grid gap-6">
       <div>
         <Link href="/orders" className="text-sm text-muted-foreground underline-offset-4 hover:underline">
-          ← Back to orders
+          <span aria-hidden="true">← </span>Back to orders
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <h1 className="text-lg font-semibold text-foreground">{orderReferenceLabel(detail.orderNumber)}</h1>

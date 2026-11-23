@@ -36,12 +36,17 @@ export function EarningsView() {
   const blockingError = [balanceQuery.error, earningsQuery.error].find(
     (err): err is ApiError => err instanceof ApiError && (err.isUnauthorized || err.isForbidden),
   )
-  if (blockingError?.isUnauthorized) {
-    return <SessionExpired onSignIn={() => router.push('/login')} />
-  }
-  if (blockingError?.isForbidden) {
+  // Blocked states keep the page heading (WCAG 1.3.1, 2.4.6).
+  if (blockingError?.isUnauthorized || blockingError?.isForbidden) {
     return (
-      <PermissionDenied message="Earnings and payouts are only visible to the business owner account. Ask the business owner if you need this information." />
+      <div className="grid gap-6">
+        <h1 className="text-lg font-semibold text-foreground">Earnings</h1>
+        {blockingError.isUnauthorized ? (
+          <SessionExpired onSignIn={() => router.push('/login')} />
+        ) : (
+          <PermissionDenied message="Earnings and payouts are only visible to the business owner account. Ask the business owner if you need this information." />
+        )}
+      </div>
     )
   }
 
@@ -51,7 +56,7 @@ export function EarningsView() {
         <h1 className="text-lg font-semibold text-foreground">Earnings</h1>
         <p className="text-sm text-muted-foreground">
           Commission recorded per assigned order. See the{' '}
-          <Link href="/ledger" className="text-primary underline-offset-4 hover:underline">
+          <Link href="/ledger" className="text-primary underline underline-offset-4 hover:decoration-2">
             full ledger
           </Link>{' '}
           for payouts and adjustments.

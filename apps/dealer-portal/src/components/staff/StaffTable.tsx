@@ -30,6 +30,8 @@ export function StaffTable({
     <>
       <TableContainer className="hidden sm:block">
         <Table>
+          {/* Names the table for screen-reader table navigation (1.3.1). */}
+          <caption className="sr-only">Staff members</caption>
           <TableHead>
             <TableRow>
               <TableHeaderCell>Name</TableHeaderCell>

@@ -27,7 +27,7 @@ export { Table, TableBody, TableCell, TableContainer, TableHead, TableHeaderCell
 
 // Forms.
 export { Button, buttonVariants, type ButtonProps } from './button'
-export { Checkbox, Field, fieldDescribedBy, Input, Label, Select, Textarea } from './form'
+export { Checkbox, Field, fieldDescribedBy, focusFirstInvalid, Input, Label, Select, Textarea } from './form'
 
 // Dialogs.
 export { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from './dialog'

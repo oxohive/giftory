@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { ApiError } from '@gift/api-client'
 import { EmptyState, ErrorNotice, LoadingState, Pagination, PermissionDenied, SessionExpired } from '@gift/ui'
 import {
@@ -48,14 +48,24 @@ export function OrdersListView() {
   const query = useQuery({
     queryKey: ['orders-list', state.page, state.status, state.sortField, state.sortDir],
     queryFn: () => fetchOrdersListPage(state),
+    // Keep the current page (and the pager) on screen while the next page loads. Without this the
+    // pager unmounted on every page change, dropping the keyboard user's focus to <body> (2.4.3).
+    placeholderData: keepPreviousData,
   })
 
   const error = query.error instanceof ApiError ? query.error : null
-  if (error?.isUnauthorized) {
-    return <SessionExpired onSignIn={() => router.push('/login')} />
-  }
-  if (error?.isForbidden) {
-    return <PermissionDenied message="You do not have permission to view assigned orders." />
+  // Blocked states keep the page heading (WCAG 1.3.1, 2.4.6).
+  if (error?.isUnauthorized || error?.isForbidden) {
+    return (
+      <div className="grid gap-6">
+        <h1 className="text-lg font-semibold text-foreground">Orders</h1>
+        {error.isUnauthorized ? (
+          <SessionExpired onSignIn={() => router.push('/login')} />
+        ) : (
+          <PermissionDenied message="You do not have permission to view assigned orders." />
+        )}
+      </div>
+    )
   }
 
   const hasActiveFilter = state.status !== ''

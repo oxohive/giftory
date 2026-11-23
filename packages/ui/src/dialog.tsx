@@ -2,14 +2,27 @@
 
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { X } from 'lucide-react'
-import type { ComponentProps } from 'react'
+import { useRef, type ComponentProps } from 'react'
 import { cn } from './cn'
 
 export const Dialog = DialogPrimitive.Root
 export const DialogTrigger = DialogPrimitive.Trigger
 export const DialogClose = DialogPrimitive.Close
 
-export function DialogContent({ className, children, ...props }: ComponentProps<typeof DialogPrimitive.Content>) {
+/**
+ * Focus return (WCAG 2.4.3): Radix only restores focus to a `<DialogTrigger>`. Our dialogs are
+ * usually controlled (`open` state set by an ordinary button elsewhere), so without this the
+ * focus fell to <body> on close. We remember whatever had focus when the dialog opened and
+ * return to it, unless the caller handles `onCloseAutoFocus` itself or that element is gone.
+ */
+export function DialogContent({
+  className,
+  children,
+  onOpenAutoFocus,
+  onCloseAutoFocus,
+  ...props
+}: ComponentProps<typeof DialogPrimitive.Content>) {
+  const returnFocusRef = useRef<HTMLElement | null>(null)
   return (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-foreground/40 backdrop-blur-sm" />
@@ -18,6 +31,22 @@ export function DialogContent({ className, children, ...props }: ComponentProps<
           'fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-surface p-6 shadow-card focus:outline-none',
           className,
         )}
+        onOpenAutoFocus={(event) => {
+          const active = document.activeElement instanceof HTMLElement ? document.activeElement : null
+          const container = event.currentTarget instanceof Node ? event.currentTarget : null
+          // Something inside the dialog already took focus (e.g. autoFocus): the opener is unknown.
+          returnFocusRef.current = active && !(container && container.contains(active)) ? active : null
+          onOpenAutoFocus?.(event)
+        }}
+        onCloseAutoFocus={(event) => {
+          onCloseAutoFocus?.(event)
+          if (event.defaultPrevented) return
+          const target = returnFocusRef.current
+          if (target && target.isConnected && target !== document.body) {
+            event.preventDefault()
+            target.focus()
+          }
+        }}
         {...props}
       >
         {children}

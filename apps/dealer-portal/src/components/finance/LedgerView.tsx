@@ -37,12 +37,17 @@ export function LedgerView() {
   const blockingError = [balanceQuery.error, ledgerQuery.error].find(
     (err): err is ApiError => err instanceof ApiError && (err.isUnauthorized || err.isForbidden),
   )
-  if (blockingError?.isUnauthorized) {
-    return <SessionExpired onSignIn={() => router.push('/login')} />
-  }
-  if (blockingError?.isForbidden) {
+  // Blocked states keep the page heading (WCAG 1.3.1, 2.4.6).
+  if (blockingError?.isUnauthorized || blockingError?.isForbidden) {
     return (
-      <PermissionDenied message="Earnings and payouts are only visible to the business owner account. Ask the business owner if you need this information." />
+      <div className="grid gap-6">
+        <h1 className="text-lg font-semibold text-foreground">Ledger</h1>
+        {blockingError.isUnauthorized ? (
+          <SessionExpired onSignIn={() => router.push('/login')} />
+        ) : (
+          <PermissionDenied message="Earnings and payouts are only visible to the business owner account. Ask the business owner if you need this information." />
+        )}
+      </div>
     )
   }
 
@@ -57,7 +62,7 @@ export function LedgerView() {
         <h1 className="text-lg font-semibold text-foreground">Ledger</h1>
         <p className="text-sm text-muted-foreground">
           Append-only record of commissions earned, payouts recorded, and manual adjustments. See{' '}
-          <Link href="/earnings" className="text-primary underline-offset-4 hover:underline">
+          <Link href="/earnings" className="text-primary underline underline-offset-4 hover:decoration-2">
             earnings
           </Link>{' '}
           for commission detail per assigned order.
