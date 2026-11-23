@@ -10,7 +10,10 @@
       "invalidStatusTransition": "Invalid status transition: {{from}} → {{to}}",
       "assignmentCancelled": "Assignment is cancelled and cannot be updated",
       "idempotencyKeyRequired": "Idempotency-Key header is required for this operation",
-      "assignmentVersionMismatch": "This order was updated by someone else; reload and try again"
+      "assignmentVersionMismatch": "This order was updated by someone else; reload and try again",
+      "idempotencyKeyInvalid": "Idempotency-Key must be 16-128 characters of letters, digits, \"-\", \"_\", \":\" or \".\"",
+      "idempotencyKeyReused": "This Idempotency-Key was already used for a different request",
+      "idempotencyInProgress": "A request with this Idempotency-Key is still being processed. Retry shortly."
     },
     "audit": {
       "assign": "Assign order to dealer",
@@ -93,7 +96,8 @@
           "dealerRequired": "Select a dealer",
           "deadlineRequired": "Select a production deadline",
           "orderNotPaid": "This order must be paid before it can be assigned",
-          "generic": "Could not save this assignment"
+          "generic": "Could not save this assignment",
+          "inProgress": "This change is still being processed. Try again in a moment."
         }
       },
       "cancelDialog": {

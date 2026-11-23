@@ -1,9 +1,12 @@
 import { Migration } from '@mikro-orm/migrations'
 
 /**
- * HAND-WRITTEN (WS-A, Milestone 1) — `yarn db:generate` needs a live database
- * connection and none was available to the agent that wrote this. Mirrors
- * `PayoutsIdempotencyKey` in `../data/entities.ts`. Review before applying.
+ * HAND-WRITTEN (WS-A, Milestone 1) — `yarn db:generate` was not run against
+ * the shared database. Mirrors `PayoutsIdempotencyKey` in `../data/entities.ts`
+ * and was cross-checked against MikroORM's migrator output on a local scratch
+ * Postgres 17 (identical apart from the `created_at` default, kept here for
+ * consistency with `dealer_ledger_entries`). NOT YET APPLIED — review, then
+ * `yarn db:migrate`.
  *
  * Adds the replay store for `Idempotency-Key` on the admin ledger write
  * routes. Purely additive — no existing table or row is touched.

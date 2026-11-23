@@ -170,6 +170,12 @@ export function AssignDialog({
       onForbidden()
       return
     }
+    if (result.error.code === 'in_progress') {
+      // Same intent still running server-side — keep the key so the retry is
+      // replayed (or reports the outcome) instead of executing twice.
+      setFieldError(result.error.message || t('dealer_orders.admin.assignDialog.error.inProgress', 'This change is still being processed. Try again in a moment.'))
+      return
+    }
     // validation / order_not_paid / idempotency_key_required / request_failed:
     // keep the dialog open and the same idempotency key so a resubmit of the
     // SAME intent reuses it, per this task's idempotency requirement.

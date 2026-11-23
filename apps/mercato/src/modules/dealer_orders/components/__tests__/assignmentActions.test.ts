@@ -156,3 +156,23 @@ describe('formatDateOnly', () => {
     expect(formatDateOnly(date)).toBe('2026-01-05')
   })
 })
+
+describe('idempotency outcomes from the replay store', () => {
+  it('a malformed Idempotency-Key 400 is not misread as order_not_paid', async () => {
+    const post = jest.fn<AssignPost>().mockRejectedValue(httpError(400, 'Idempotency-Key must be 16-128 characters', 'idempotency_key_invalid'))
+    const result = await submitAssignOrder({ dealerProfileId: 'dealer-1', requiredBy: '2099-01-01', post })
+    expect(result).toEqual({ ok: false, error: { code: 'idempotency_key_required', message: 'Idempotency-Key must be 16-128 characters' } })
+  })
+
+  it('409 idempotency_request_in_progress maps to in_progress (dialog keeps its key and retries)', async () => {
+    const post = jest.fn<ReassignPost>().mockRejectedValue(httpError(409, 'still processing', 'idempotency_request_in_progress'))
+    const result = await submitReassignOrder({ dealerProfileId: 'dealer-1', requiredBy: '2099-01-01', post })
+    expect(result).toEqual({ ok: false, error: { code: 'in_progress', message: 'still processing' } })
+  })
+
+  it('409 idempotency_key_reused stays a conflict (dialog refetches the real state)', async () => {
+    const post = jest.fn<AssignPost>().mockRejectedValue(httpError(409, 'reused', 'idempotency_key_reused'))
+    const result = await submitAssignOrder({ dealerProfileId: 'dealer-1', requiredBy: '2099-01-01', post })
+    expect(result).toEqual({ ok: false, error: { code: 'conflict', message: 'reused' } })
+  })
+})
