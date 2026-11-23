@@ -32,6 +32,8 @@ export function OrdersTable({ items }: { items: EnrichedOrderRow[] }) {
     <>
       <TableContainer className="hidden sm:block">
         <Table>
+          {/* Names the table for screen-reader table navigation (1.3.1). */}
+          <caption className="sr-only">Assigned orders</caption>
           <TableHead>
             <TableRow>
               <TableHeaderCell>Order</TableHeaderCell>

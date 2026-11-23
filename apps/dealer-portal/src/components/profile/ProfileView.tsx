@@ -1,11 +1,12 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { ApiError } from '@gift/api-client'
 import { ErrorNotice, LoadingState, PermissionDenied, SessionExpired } from '@gift/ui'
 import type { DealerRole } from '@/components/layout/nav-items'
 import { fetchDealerOrgProfile } from '@/lib/features/profile/api'
+import type { DealerOrgProfile } from '@/lib/features/profile/types'
 import { BusinessProfileCard } from './BusinessProfileCard'
 import { CapabilitiesSummaryCard } from './CapabilitiesSummaryCard'
 
@@ -28,12 +29,34 @@ export function ProfileView({ role }: { role: DealerRole }) {
   const router = useRouter()
   const query = useQuery({ queryKey: ['dealer-org-profile'], queryFn: fetchDealerOrgProfile, retry: false })
 
+  // The page heading renders in every state (loading/error included) so the page always has an
+  // h1 for screen-reader navigation (WCAG 1.3.1, 2.4.6).
+  return (
+    <div className="grid gap-6">
+      <div>
+        <h1 className="text-2xl font-semibold text-foreground">Profile</h1>
+        <p className="text-sm text-muted-foreground">Your business profile and production capabilities.</p>
+      </div>
+      <ProfileBody query={query} role={role} onSignIn={() => router.push('/login')} />
+    </div>
+  )
+}
+
+function ProfileBody({
+  query,
+  role,
+  onSignIn,
+}: {
+  query: UseQueryResult<DealerOrgProfile>
+  role: DealerRole
+  onSignIn: () => void
+}) {
   if (query.isLoading) return <LoadingState label="Loading your profile…" />
 
   if (query.isError) {
     const err = query.error
     if (err instanceof ApiError && err.isUnauthorized) {
-      return <SessionExpired onSignIn={() => router.push('/login')} />
+      return <SessionExpired onSignIn={onSignIn} />
     }
     if (err instanceof ApiError && err.isForbidden) {
       return <PermissionDenied message="You do not have permission to view this organization's profile." />
@@ -46,14 +69,9 @@ export function ProfileView({ role }: { role: DealerRole }) {
   if (!profile) return null
 
   return (
-    <div className="grid gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">Profile</h1>
-        <p className="text-sm text-muted-foreground">Your business profile and production capabilities.</p>
-      </div>
-
+    <>
       <BusinessProfileCard profile={profile} />
       <CapabilitiesSummaryCard capabilities={profile.capabilities} role={role} />
-    </div>
+    </>
   )
 }

@@ -4,7 +4,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { ApiError } from '@gift/api-client'
 import type { AssignmentStatus } from '@gift/api-client'
-import { Button, ErrorNotice, Field, Textarea } from '@gift/ui'
+import { Button, ErrorNotice, Field, statusLabel, Textarea } from '@gift/ui'
 import { classifyOrderDetailError, isTerminalStatus, nextStatusFor, updateOrderStatus } from '@/lib/features/orders/detail'
 
 /** The action label for the one real forward transition available from each non-terminal status. */
@@ -42,15 +42,19 @@ export function StatusUpdateForm({
   onUpdated: () => Promise<unknown>
 }) {
   const [note, setNote] = useState('')
+  // Text for the always-mounted live region below; set only after a successful update so the
+  // new status is announced (WCAG 4.1.3) — the badge change alone is silent to screen readers.
+  const [announcement, setAnnouncement] = useState('')
 
   const next = nextStatusFor(status)
 
   const mutation = useMutation({
     mutationFn: (targetStatus: AssignmentStatus) =>
       updateOrderStatus(assignmentId, { status: targetStatus, note, updatedAt: updatedAt ?? undefined }),
-    onSuccess: async () => {
+    onSuccess: async (_data, targetStatus) => {
       setNote('')
       await onUpdated()
+      setAnnouncement(`Status updated to ${statusLabel(targetStatus)}.`)
     },
   })
 
@@ -62,10 +66,21 @@ export function StatusUpdateForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, updatedAt])
 
+  const liveRegion = (
+    <p role="status" className="sr-only">
+      {announcement}
+    </p>
+  )
+
   if (isTerminalStatus(status) || !next) {
-    return status === 'dispatched' ? (
-      <p className="text-sm text-muted-foreground">This order has been dispatched. No further action is needed.</p>
-    ) : null
+    return (
+      <>
+        {liveRegion}
+        {status === 'dispatched' ? (
+          <p className="text-sm text-muted-foreground">This order has been dispatched. No further action is needed.</p>
+        ) : null}
+      </>
+    )
   }
 
   const errorKind = mutation.error ? classifyOrderDetailError(mutation.error) : null
@@ -100,6 +115,7 @@ export function StatusUpdateForm({
   return (
     <form onSubmit={onSubmit} className="grid gap-4 rounded-lg border border-border bg-surface p-4" aria-busy={mutation.isPending}>
       <h2 className="text-sm font-semibold text-foreground">Update production status</h2>
+      {liveRegion}
 
       {errorMessage ? (
         <ErrorNotice message={errorMessage} onRetry={isConflict || errorKind === 'not_found' ? () => onUpdated() : undefined} />
