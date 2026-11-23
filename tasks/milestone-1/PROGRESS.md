@@ -23,7 +23,7 @@ _(filled in when the run finishes)_
 |---|---|---|---|
 | WS-A | Money safety: idempotency replay, payout balance guard, adjustment balance math (known gaps 2–4) | [WS-A-money-safety.md](WS-A-money-safety.md) | Running |
 | WS-B | KYC/security hardening: PII encryption scope, upload `storageKey` validation, register `organizationId` trust (known gaps 5–7) | [WS-B-kyc-security.md](WS-B-kyc-security.md) | **Merged** — gap 5 fixed (also fixed an admin-detail route that almost certainly returns 500 today), gap 6 verified already fixed and now tested, gap 7 hardened without breaking invite links; tenant ids removed from logs. **Found: GSTIN/PAN are almost certainly stored unencrypted today** (see your actions) |
-| WS-C | Phase 1 backend unit tests: cart, checkout, Stripe, gift catalog, storefront API | [WS-C-phase1-tests.md](WS-C-phase1-tests.md) | Running |
+| WS-C | Phase 1 backend unit tests: cart, checkout, Stripe, gift catalog, storefront API | [WS-C-phase1-tests.md](WS-C-phase1-tests.md) | **Merged** — Phase 1 tests went from 11 suites/113 tests to 26 suites/381 tests. One real bug fixed: the order page rounded amounts differently from checkout, so tax/shipping/subtotal could be off by ₹0.01 (display only). Two gaps recorded as `it.todo` |
 | WS-D | Test tooling + CI: Windows path test fix, dealer-portal tests in CI, mobile test run | [WS-D-test-ci.md](WS-D-test-ci.md) | **Merged** — mercato 638/638, dealer-portal 300/300, packages 8/8 + 15/15, mobile 44/44; CI now runs package + dealer-portal tests |
 | WS-E | Migrations review + runbook, second-tenant isolation test, local end-to-end + Phase 1 regression runs | [WS-E-migrations-isolation-e2e.md](WS-E-migrations-isolation-e2e.md) | Running |
 | WS-F | Dealer portal accessibility pass | [WS-F-accessibility.md](WS-F-accessibility.md) | Running |
@@ -48,6 +48,12 @@ From WS-B (KYC/security). Exact SQL and commands are in [WS-B-kyc-security.md](W
 - Decide: admin-issued single-use invite tokens (design in the handoff), and whether the unauthenticated `409 email already registered` response is acceptable (it reveals whether an email is registered).
 - Check that the backend trusts the dealer portal's forwarded client IP. Otherwise all dealers share one 5-per-hour registration rate-limit bucket.
 
+From WS-C (Phase 1 tests):
+- Decide: should a payment retry be blocked while an earlier attempt is only `authorized`? It can't happen with today's automatic capture, but it becomes a double-charge risk if manual capture is ever turned on.
+- Storefront address commands check the owner's organization but not the tenant, because the storefront system context carries no tenant id. Fixing that changes every storefront system command, so plan it as a separate reviewed change.
+- Stripe webhook and session logic lives in the upstream `@open-mercato/gateway-stripe` package and isn't unit-tested in this repo; only our side of it is.
+- Optional: add the new test files to the Evidence sections of FEAT-003/004/006 in `spec/phase-1/`.
+
 From WS-D (tests/CI):
 - Review the `buildspec.yml` change before it reaches `main`; the first CodeBuild run is the real test of the dealer-portal install.
 - Decide on lockfiles. The root `.gitignore` excludes `package-lock.json`, so CI can't use `npm ci`. Recommendation: commit lockfiles, switch CI to `npm ci --ignore-scripts`, then add storefront typecheck/lint to CI.
@@ -60,3 +66,4 @@ From WS-D (tests/CI):
 - WS-G finished → merged (docs only, 34 files). It found that known gap 6 (KYC `storageKey`) looks already fixed in code and that a `money.ts` comment contradicts the balance math; both were forwarded to WS-B and WS-A while they were still running.
 - WS-D finished → `buildspec.yml` diff reviewed (new steps run before the Docker build, CodeBuild already on Node 24) → merged.
 - WS-B finished → merged. Combined branch: `yarn test` in `apps/mercato` **686/686 passing, 69 suites** (Windows).
+- WS-C finished → reviewed its only production change (2 lines in `storefront/lib/orders.ts`, now rounding through `round2()`/`orderTotals()` like checkout) → merged. Combined branch: **84 suites, 952 passed, 2 todo, 0 failed**.
