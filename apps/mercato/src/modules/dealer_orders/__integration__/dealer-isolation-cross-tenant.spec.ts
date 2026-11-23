@@ -520,7 +520,7 @@ test.describe.serial('WS-E: cross-tenant + cross-dealer isolation across every P
     // A1's own assignment status is unchanged by the denied transitions.
     const ownDetail = await getJson(request, `/api/dealer_orders/dealer/orders/${assignments.OA1}`, A1.jar)
     expect(ownDetail.status).toBe(200)
-    expect(ownDetail.text).toContain('"assigned"')
+    expect(ownDetail.json.assignment?.status, "A1's assignment status unchanged by the denied transitions").toBe('assigned')
   })
 
   test('ISOLATION commissions: rules, order/dealer commission and dealer earnings', async ({ request }) => {
