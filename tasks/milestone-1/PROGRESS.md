@@ -22,7 +22,7 @@ _(filled in when the run finishes)_
 | ID | Workstream | Handoff file | Status |
 |---|---|---|---|
 | WS-A | Money safety: idempotency replay, payout balance guard, adjustment balance math (known gaps 2–4) | [WS-A-money-safety.md](WS-A-money-safety.md) | Running |
-| WS-B | KYC/security hardening: PII encryption scope, upload `storageKey` validation, register `organizationId` trust (known gaps 5–7) | [WS-B-kyc-security.md](WS-B-kyc-security.md) | Running |
+| WS-B | KYC/security hardening: PII encryption scope, upload `storageKey` validation, register `organizationId` trust (known gaps 5–7) | [WS-B-kyc-security.md](WS-B-kyc-security.md) | **Merged** — gap 5 fixed (also fixed an admin-detail route that almost certainly returns 500 today), gap 6 verified already fixed and now tested, gap 7 hardened without breaking invite links; tenant ids removed from logs. **Found: GSTIN/PAN are almost certainly stored unencrypted today** (see your actions) |
 | WS-C | Phase 1 backend unit tests: cart, checkout, Stripe, gift catalog, storefront API | [WS-C-phase1-tests.md](WS-C-phase1-tests.md) | Running |
 | WS-D | Test tooling + CI: Windows path test fix, dealer-portal tests in CI, mobile test run | [WS-D-test-ci.md](WS-D-test-ci.md) | **Merged** — mercato 638/638, dealer-portal 300/300, packages 8/8 + 15/15, mobile 44/44; CI now runs package + dealer-portal tests |
 | WS-E | Migrations review + runbook, second-tenant isolation test, local end-to-end + Phase 1 regression runs | [WS-E-migrations-isolation-e2e.md](WS-E-migrations-isolation-e2e.md) | Running |
@@ -41,6 +41,13 @@ From WS-G (docs):
 - Run the smoke test in `tasks/phase-2-ui/DELIVERY.md` §5.3.
 - Decide ADR-001 (region/currency) and ADR-002 (payout provider). Both are still "Proposed".
 
+From WS-B (KYC/security). Exact SQL and commands are in [WS-B-kyc-security.md](WS-B-kyc-security.md):
+- **GSTIN/PAN encryption is probably off.** Run the read-only SQL to confirm. Then check that a real `TENANT_DATA_ENCRYPTION_KEY` (or Vault) is in SSM, not the `.env.example` fallback. Add the targeted tenant-wide encryption map row for `dealer_onboarding:dealer_profile` only; do **not** run a blanket `seed-encryption --tenant`. Restart, then run `yarn mercato entities rotate-encryption-key --tenant <id> --dry-run`, then run it for real.
+- Wider gap (not fixed): other data written in dealer orgs is probably unencrypted too, including dealer users' email/name and audit-log snapshots containing GSTIN/PAN.
+- **Check before deploying WS-B:** root org `5e4fe2d8-…` must have no parent and be active, or existing dealer invite links will start returning 404.
+- Decide: admin-issued single-use invite tokens (design in the handoff), and whether the unauthenticated `409 email already registered` response is acceptable (it reveals whether an email is registered).
+- Check that the backend trusts the dealer portal's forwarded client IP. Otherwise all dealers share one 5-per-hour registration rate-limit bucket.
+
 From WS-D (tests/CI):
 - Review the `buildspec.yml` change before it reaches `main`; the first CodeBuild run is the real test of the dealer-portal install.
 - Decide on lockfiles. The root `.gitignore` excludes `package-lock.json`, so CI can't use `npm ci`. Recommendation: commit lockfiles, switch CI to `npm ci --ignore-scripts`, then add storefront typecheck/lint to CI.
@@ -52,3 +59,4 @@ From WS-D (tests/CI):
 - 2026-11-23 — Branch created, workstreams launched in parallel, each in its own git worktree at `C:\Users\danie\Gift-App-wt\ws-a` … `ws-g` on branches `m1/ws-a` … `m1/ws-g` (the automatic worktree feature failed on a `c:` vs `C:` path check, so they were created by hand). The coordinator merges each into `milestone-1-hardening` after re-running the tests.
 - WS-G finished → merged (docs only, 34 files). It found that known gap 6 (KYC `storageKey`) looks already fixed in code and that a `money.ts` comment contradicts the balance math; both were forwarded to WS-B and WS-A while they were still running.
 - WS-D finished → `buildspec.yml` diff reviewed (new steps run before the Docker build, CodeBuild already on Node 24) → merged.
+- WS-B finished → merged. Combined branch: `yarn test` in `apps/mercato` **686/686 passing, 69 suites** (Windows).
