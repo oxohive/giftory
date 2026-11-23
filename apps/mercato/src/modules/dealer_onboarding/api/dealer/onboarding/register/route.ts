@@ -5,6 +5,7 @@ import type { CommandBus, CommandRuntimeContext } from '@open-mercato/shared/lib
 import { dealerHandler, readJsonBody, parseOrThrow } from '../../../../lib/http'
 import { dealerRegisterSchema } from '../../../../data/validators'
 import { DEALER_REGISTER_COMMAND } from '../../../../lib/constants'
+import { resolveRegistrationTarget, type RegistrationOrganizationRow } from '../../../../lib/registrationTarget'
 import type { OpenApiRouteDoc } from '@open-mercato/shared/lib/openapi'
 import { dealerTag, registerRequestSchema, registerResponseSchema, commonDealerErrors } from '../../../openapi'
 
@@ -24,28 +25,36 @@ export const metadata = {
   },
 }
 
+async function loadDirectoryOrganization(em: EntityManager, organizationId: string): Promise<RegistrationOrganizationRow | null> {
+  const { Organization } = await import('@open-mercato/core/modules/directory/data/entities')
+  const org = await em.findOne(Organization, { id: organizationId, deletedAt: null }, { populate: ['tenant'] as never[] })
+  if (!org) return null
+  return {
+    id: String(org.id),
+    tenant: org.tenant as unknown as RegistrationOrganizationRow['tenant'],
+    isActive: org.isActive,
+    parentId: org.parentId ?? null,
+    deletedAt: org.deletedAt ?? null,
+  }
+}
+
 export const POST = dealerHandler('dealer.register', async ({ req, container, translate }) => {
   const body = await readJsonBody(req)
   const parsed = parseOrThrow(registerWithOrgSchema, body, translate)
 
-  // Resolve the platform tenant from the supplied marketplace organization ID.
+  // Resolve the platform tenant from the invite link's marketplace organization ID.
+  // The org must be an active ROOT organization that is not itself a dealer org
+  // (known gap 7). Every rejection reason gets the SAME 404 body so this
+  // unauthenticated endpoint cannot be used to probe organization ids.
   const em = container.resolve<EntityManager>('em')
-  const { Organization } = await import('@open-mercato/core/modules/directory/data/entities')
-  const org = await em.findOne(Organization, { id: parsed.organizationId, deletedAt: null }, { populate: ['tenant'] as never[] })
-  if (!org) {
+  const resolution = await resolveRegistrationTarget(em, parsed.organizationId, loadDirectoryOrganization)
+  if (!resolution.ok) {
     return NextResponse.json(
       { error: translate('dealer_onboarding.errors.orgNotFound', 'Marketplace organization not found'), code: 'org_not_found' },
       { status: 404 },
     )
   }
-  const tenantId =
-    typeof org.tenant === 'string' ? org.tenant : (org.tenant as { id?: string } | null)?.id ?? null
-  if (!tenantId) {
-    return NextResponse.json(
-      { error: translate('dealer_onboarding.errors.orgNotFound', 'Marketplace organization not found'), code: 'org_not_found' },
-      { status: 404 },
-    )
-  }
+  const { tenantId } = resolution.target
 
   const commandBus = container.resolve<CommandBus>('commandBus')
   const ctx: CommandRuntimeContext = {
@@ -87,7 +96,7 @@ export const openApi: OpenApiRouteDoc = {
     POST: {
       summary: 'Register as a dealer',
       description:
-        'Creates a pending dealer organization and sends a verification email. Unauthenticated. Pass the marketplace `organizationId` to identify the platform tenant.',
+        'Creates a pending dealer organization and sends a verification email. Unauthenticated. Pass the marketplace `organizationId` from the invite link to identify the platform tenant; it must be an active root (marketplace) organization that is not itself a dealer organization, otherwise the request is rejected with 404 `org_not_found` (the same response for every ineligible or unknown id).',
       tags: [dealerTag],
       body: registerRequestSchema,
       responses: [{ status: 201, description: 'Registration accepted', schema: registerResponseSchema }],

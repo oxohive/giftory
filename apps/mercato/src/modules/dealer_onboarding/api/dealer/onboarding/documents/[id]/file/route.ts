@@ -5,7 +5,7 @@ import { z } from 'zod'
 import type { AttachmentService } from '@open-mercato/core/modules/attachments'
 import { dealerHandler, readParam } from '../../../../../../lib/http'
 import { DEALER_DOCUMENT_ENTITY_ID, DEALER_DOCUMENT_ATTACHMENT_PARTITION } from '../../../../../../lib/constants'
-import { loadOwnDealerDocument } from '../../../../../../commands/shared'
+import { loadOwnDealerDocument, resolveKycAttachmentId } from '../../../../../../commands/shared'
 import { dealerTag, commonDealerErrors } from '../../../../../openapi'
 
 export const metadata = {
@@ -30,10 +30,13 @@ export const GET = dealerHandler('dealer.documents.file', async ({ req, ctx, con
   const em = container.resolve<EntityManager>('em')
   const { profile, document } = await loadOwnDealerDocument(em, auth.orgId, auth.tenantId, id)
 
+  // Reject legacy/free-form storage keys before touching storage (known gap 6).
+  const attachmentId = await resolveKycAttachmentId(document)
+
   const attachmentService = container.resolve<AttachmentService>('attachmentService')
   const url = new URL(req.url)
   const result = await attachmentService.readScoped({
-    attachmentId: document.storageKey,
+    attachmentId,
     auth,
     expectedOwner: { entityId: DEALER_DOCUMENT_ENTITY_ID, recordId: profile.id },
     expectedPartitionCode: DEALER_DOCUMENT_ATTACHMENT_PARTITION,
