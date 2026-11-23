@@ -53,7 +53,6 @@ export default async function onDealerOrderAssigned(
     logger.warn('dealer_order.assigned — dealer profile not found, skipping notification', {
       assignmentId: payload.id,
       dealerProfileId: payload.dealerProfileId,
-      tenantId: payload.tenantId,
     })
     return
   }
@@ -70,6 +69,5 @@ export default async function onDealerOrderAssigned(
     assignmentId: payload.id,
     orderId: payload.orderId,
     dealerProfileId: payload.dealerProfileId,
-    tenantId: payload.tenantId,
   })
 }
