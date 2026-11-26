@@ -3,9 +3,9 @@ import { findOneWithDecryption, findWithDecryption } from '@open-mercato/shared/
 import { SalesOrder, SalesOrderLine } from '@open-mercato/core/modules/sales/data/entities'
 import { StorefrontCheckout } from '../data/entities'
 import { ORDER_ACCESS_COOKIE } from './constants'
-import { shopperPaymentStatus } from './paymentState'
+import { orderTotals, shopperPaymentStatus } from './paymentState'
 import { readLinkedPersonId } from './customerLink'
-import { toNumberOrNull } from './pricing'
+import { round2, toNumberOrNull } from './pricing'
 import type { ShopperContext, StorefrontScope } from './scope'
 import { parseOrderAccess, readCookie, tokenMatchesHash } from './tokens'
 
@@ -65,9 +65,10 @@ function iso(value: Date | string | null | undefined): string | null {
   return Number.isNaN(date.getTime()) ? null : date.toISOString()
 }
 
+/** 4-decimal sales amount -> 2-decimal major units, rounded through toMinor/fromMinor like orderTotals(). */
 function money(value: unknown): number | null {
   const numeric = toNumberOrNull(value)
-  return numeric === null ? null : Math.round(numeric * 100) / 100
+  return numeric === null ? null : round2(numeric)
 }
 
 function shopperOrderStatus(order: SalesOrder, paymentStatus: string | null): string | null {
@@ -133,8 +134,8 @@ export async function serializeOrderDetail(em: EntityManager, scope: StorefrontS
     fulfillmentStatus: order.fulfillmentStatus ?? null,
     placedAt: iso(order.placedAt ?? order.createdAt),
     currencyCode: order.currencyCode,
-    // SalesOrder subtotal includes shipping; subtract it to get product-only subtotal (see orderTotals()).
-    subtotal: Math.max(0, Math.round(((money(order.subtotalGrossAmount) ?? 0) - (money(order.shippingGrossAmount) ?? 0)) * 100) / 100),
+    // SalesOrder subtotal includes shipping; orderTotals() subtracts it to get the product-only subtotal.
+    subtotal: orderTotals(order).subtotal,
     shippingTotal: money(order.shippingGrossAmount),
     taxTotal: money(order.taxTotalAmount),
     discountTotal: money(order.discountTotalAmount),

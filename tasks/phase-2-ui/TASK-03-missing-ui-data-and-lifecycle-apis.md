@@ -1,6 +1,6 @@
 # P2-UI-03: Missing UI data and lifecycle APIs
 
-- Status: Review
+- Status: Implemented and API-verified (`db63874`, `ccd4d0c`, plus follow-up fixes `849caaa`, `fbe097c`, `dc1d076`). The 12/12 integration journey on 2026-10-20 exercised KYC upload, dashboard, orders list, staff deactivation and invite emails (captured by the test channel). Approval and assignment emails were not asserted.
 - Owner lane: A
 - Depends on: P2-UI-00, P2-UI-02
 - Owned paths: Backend non-UI code in dealer_onboarding/, dealer_org_rbac/, dealer_orders/; related API specs/tests
@@ -29,6 +29,7 @@ Read [README.md](README.md) before starting. Dependencies must have verified han
 ## Agent handoff
 
 - Status: Review
+- Status review (2026-11-23, WS-G): the status line at the top of this file supersedes the status above. It was re-checked against git history and the 12/12 integration journey. Per-task evidence is in the README task index.
 
 - **Scope note:** this task's priority was revised mid-flight, same as TASK-02 — while implementing item 2 (safe order detail), discovered a NEW, severe bug: `dealer_orders/commands/assignments.ts`'s `assertOrderIsPaid` queried a table literally named `orders`, which does not exist in this app's schema (Phase 1 checkout writes to `sales_orders`/`sales_order_lines`, verified against `storefront/lib/checkout.ts`). Every unit test mocks the DB connection, so this was invisible until now — against a real Postgres instance, **every admin order assignment would have failed** with `relation "orders" does not exist`. Fixed as part of this task (in owned paths); the identical bug exists in `commissions/subscribers/snapshot-on-assignment.ts` (`orders`/`order_lines`/`gifts`) but that file is outside this task's owned paths — flagged below for the commissions-owning lane/coordinator, not fixed here.
 

@@ -19,6 +19,10 @@ import { parseRupeesToPaise } from './money'
 export type LedgerMutationError =
   | { code: 'invalid_amount'; message: string }
   | { code: 'missing_note'; message: string }
+  /** Server 422 `insufficient_balance` (payout > dealer's pendingAmount). */
+  | { code: 'insufficient_balance'; message: string; availableAmount: number | null }
+  /** Server 409 `idempotency_key_reused`: this dialog's key already recorded a DIFFERENT request. */
+  | { code: 'idempotency_conflict'; message: string }
   | { code: 'request_failed'; message: string }
 
 export type LedgerMutationResult =
@@ -28,11 +32,32 @@ export type LedgerMutationResult =
 export type RecordPayoutInput = {
   amountRaw: string
   note: string
+  /** Performs the POST; the caller attaches the dialog's `Idempotency-Key` header. */
   post: (body: { amount: number; note: string }) => Promise<{ id: string }>
 }
 
 function errorMessageOf(err: unknown, fallback: string): string {
   return err instanceof Error && err.message ? err.message : fallback
+}
+
+/**
+ * Maps a thrown server error (`apiCallOrThrow` copies the JSON body's `code`
+ * and extra fields onto the error) to a structured failure. Anything
+ * unrecognised stays the generic `request_failed`.
+ */
+export function classifyLedgerMutationFailure(err: unknown): LedgerMutationError {
+  const message = errorMessageOf(err, '')
+  const record = (err && typeof err === 'object' ? err : {}) as Record<string, unknown>
+  if (record.code === 'insufficient_balance') {
+    const available = record.availableAmount
+    return {
+      code: 'insufficient_balance',
+      message,
+      availableAmount: typeof available === 'number' && Number.isSafeInteger(available) ? available : null,
+    }
+  }
+  if (record.code === 'idempotency_key_reused') return { code: 'idempotency_conflict', message }
+  return { code: 'request_failed', message }
 }
 
 /**
@@ -56,7 +81,7 @@ export async function submitRecordPayout(input: RecordPayoutInput): Promise<Ledg
     const result = await input.post({ amount: paise, note })
     return { ok: true, id: result.id }
   } catch (err) {
-    return { ok: false, error: { code: 'request_failed', message: errorMessageOf(err, '') } }
+    return { ok: false, error: classifyLedgerMutationFailure(err) }
   }
 }
 
@@ -81,6 +106,6 @@ export async function submitCreateAdjustment(input: CreateAdjustmentInput): Prom
     const result = await input.post({ direction: input.direction, amount: paise, note })
     return { ok: true, id: result.id }
   } catch (err) {
-    return { ok: false, error: { code: 'request_failed', message: errorMessageOf(err, '') } }
+    return { ok: false, error: classifyLedgerMutationFailure(err) }
   }
 }

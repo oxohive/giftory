@@ -2,7 +2,7 @@
 
 Gift marketplace with 3D customization. Product plan: [docs/Gift_Marketplace_Complete_Phased_Plan.docx](docs/Gift_Marketplace_Complete_Phased_Plan.docx). Architecture: [docs/architecture.md](docs/architecture.md). Current state: [docs/phase-2-status.md](docs/phase-2-status.md).
 
-**Status:** Phase 1 (Commerce Foundation) implemented, deployed. Phase 2 dealer marketplace implemented and deployed — backend on ECS (`admin.giftory.dev.oxohive.com`), storefront and dealer portal on Vercel.
+**Status:** Phase 1 (Commerce Foundation) implemented, deployed. Phase 2 dealer marketplace implemented and its code deployed: backend on ECS (`admin.giftory.dev.oxohive.com`), storefront and dealer portal on Vercel. Its `dealer_onboarding`/`dealer_org_rbac`/`payouts` database migrations are **not yet applied** to real databases, so dealer onboarding does not work there yet. See [docs/phase-2-status.md](docs/phase-2-status.md).
 
 ## Layout
 
@@ -48,9 +48,10 @@ cd apps/storefront
 npm install
 npm run dev
 
-# Dealer portal (scaffold): http://localhost:3200
+# Dealer portal: http://localhost:3200 (set OM_API_BASE_URL in apps/dealer-portal/.env.local)
 cd apps/dealer-portal
 npm install
+npm install --prefix ../../packages/ui --legacy-peer-deps   # packages/ui's own deps (no workspaces)
 npm run dev
 ```
 
@@ -86,10 +87,10 @@ yarn mercato gift_catalog seed-demo      --tenant <tenantId> --org <orgId>
 | [docs/architecture.md](docs/architecture.md) | Full system architecture, tech stack, data model, roadmap |
 | [docs/phase-2-status.md](docs/phase-2-status.md) | Current project status: what is done, what is in progress, what is left |
 | [docs/dealer-marketplace-api.md](docs/dealer-marketplace-api.md) | Phase 2 dealer API reference, money flow and known gaps |
-| [docs/phase-2-testing-guide.md](docs/phase-2-testing-guide.md) | Live end-to-end checklist for the dealer flows (not yet executed) |
-| [tasks/phase-2-ui/](tasks/phase-2-ui/README.md) | 19-task plan for the dealer portal and admin UI |
-| [docs/features/](docs/features/) | Per-feature specifications (status, requirements, acceptance criteria) |
-| [tasks/](tasks/) | User stories and engineering tasks |
+| [docs/phase-2-testing-guide.md](docs/phase-2-testing-guide.md) | Manual checklist for the dealer flows against the dev environment. Not yet run there; annotated with what the automated journey covered |
+| [tasks/phase-2-ui/](tasks/phase-2-ui/README.md) | 19-task pack for the dealer portal and admin UI: per-task status and evidence, [VERIFICATION.md](tasks/phase-2-ui/VERIFICATION.md), [DELIVERY.md](tasks/phase-2-ui/DELIVERY.md) (deployment plan) |
+| [spec/](spec/) | Per-feature specifications, user stories and ADRs (status, requirements, acceptance criteria) |
+| [tasks/](tasks/) | Engineering task packs and run logs |
 | [apps/storefront/__integration__/storefront-and-admin.spec.ts](apps/storefront/__integration__/storefront-and-admin.spec.ts) | Phase 1 Playwright end-to-end test suite (storefront + admin) |
 | [apps/storefront/docs/backend-api-contract.md](apps/storefront/docs/backend-api-contract.md) | Storefront API contract (verified against the running backend) |
 | [spec/mobile/README.md](spec/mobile/README.md) | Mobile app task breakdown, status, and [IMPLEMENTATION-NOTES.md](spec/mobile/IMPLEMENTATION-NOTES.md) for every discrepancy/open item |

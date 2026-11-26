@@ -29,7 +29,11 @@ export function ForgotPasswordForm() {
   if (done) {
     return (
       <div className="grid gap-3 text-center">
-        <h1 className="text-lg font-semibold text-foreground">Check your email</h1>
+        {/* The form (and the button that had focus) was just replaced: move focus to the result's
+            heading so keyboard/screen-reader users hear the outcome (WCAG 2.4.3, 4.1.3). */}
+        <h1 ref={(el) => el?.focus()} tabIndex={-1} className="text-lg font-semibold text-foreground focus:outline-none">
+          Check your email
+        </h1>
         <p className="text-sm text-muted-foreground">
           If an account exists for that address, we sent a link to reset your password.
         </p>

@@ -32,7 +32,7 @@ export function RecentActivityCard({
         {isLoading ? <LoadingState label="Loading recent activity…" /> : null}
         {isError ? <ErrorNotice message={errorMessage ?? 'Could not load recent activity.'} onRetry={onRetry} /> : null}
         {!isLoading && !isError && items && items.length === 0 ? (
-          <EmptyState title="No orders yet">Assigned orders will show up here as soon as you have one.</EmptyState>
+          <EmptyState title="No orders yet" headingLevel={3}>Assigned orders will show up here as soon as you have one.</EmptyState>
         ) : null}
         {!isLoading && !isError && items && items.length > 0 ? (
           <ul className="grid gap-3">

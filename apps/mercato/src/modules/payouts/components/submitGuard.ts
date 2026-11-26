@@ -1,13 +1,12 @@
 /**
  * Plain (non-React) double-submit guard for the ledger mutation dialogs.
  *
- * The payout/adjustment endpoints accept no idempotency key and have no
- * server-side duplicate guard (see CONTRACT-HANDOFF.md / API-CONTRACTS.md
- * "Gap 4/5" — a retried `POST .../ledger/payout` or `.../ledger/adjustment`
- * double-records). This UI task cannot change those routes (outside its
- * owned paths), so the only mitigation available here is client-side:
- * refuse to start a second submission while one is already in flight,
- * whether that's a genuine double-click or a repeated Cmd/Ctrl+Enter.
+ * The payout/adjustment endpoints now require an `Idempotency-Key` and replay
+ * a retried request instead of double-recording it (see `idempotencyKey.ts`
+ * and `payouts/lib/idempotency.ts`). This guard remains as the first line of
+ * defence: it refuses to start a second submission while one is already in
+ * flight, whether that's a genuine double-click or a repeated Cmd/Ctrl+Enter,
+ * so the server never even sees the duplicate.
  *
  * Kept outside React so it's unit-testable without mounting a component.
  */

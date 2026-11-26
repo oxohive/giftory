@@ -1,6 +1,6 @@
 # P2-UI-14: Dealer earnings and ledger screens
 
-- Status: Review
+- Status: Implemented (`b51aa19`). The 12/12 journey on 2026-10-20 exercised the earnings list and ledger balance (own data, plus cross-dealer exclusion) through the API. The ledger entry list and the screens were not exercised.
 - Owner lane: E
 - Depends on: P2-UI-00, P2-UI-01, P2-UI-02, P2-UI-04
 - Owned paths: apps/dealer-portal/src/app/(portal)/earnings/; src/app/(portal)/ledger/; src/components/finance/; src/lib/features/finance/
@@ -25,6 +25,7 @@ Read [README.md](README.md) before starting. Dependencies must have verified han
 ## Agent handoff
 
 - Status: Review
+- Status review (2026-11-23, WS-G): the status line at the top of this file supersedes the status above. It was re-checked against git history and the 12/12 integration journey. Per-task evidence is in the README task index.
 - Changed files:
   - `apps/dealer-portal/src/app/(portal)/earnings/page.tsx` — owner-only server page (`requireRole(['dealer:owner'])`), renders `EarningsView` inside `PortalShell`.
   - `apps/dealer-portal/src/app/(portal)/ledger/page.tsx` — same gate, renders `LedgerView`.

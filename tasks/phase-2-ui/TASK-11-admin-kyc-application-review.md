@@ -1,6 +1,6 @@
 # P2-UI-11: Admin KYC application review
 
-- Status: Review
+- Status: Implemented (`ba1dbba`). The 12/12 journey on 2026-10-20 exercised approve, reject and early-approve (400) through the API. The list and detail GETs and the screens were not exercised.
 - Owner lane: D
 - Depends on: P2-UI-00, P2-UI-03
 - Owned paths: dealer_onboarding/backend/; dealer_onboarding/components/; dealer_onboarding/i18n/ under apps/mercato/src/modules/
@@ -25,6 +25,7 @@ Read [README.md](README.md) before starting. Dependencies must have verified han
 ## Agent handoff
 
 - Status: Review
+- Status review (2026-11-23, WS-G): the status line at the top of this file supersedes the status above. It was re-checked against git history and the 12/12 integration journey. Per-task evidence is in the README task index.
 
 - Changed files:
 

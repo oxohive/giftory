@@ -5,7 +5,7 @@ import { z } from 'zod'
 import type { AttachmentService } from '@open-mercato/core/modules/attachments'
 import { dealerHandler, readParam } from '../../../../../../../../lib/http'
 import { DEALER_DOCUMENT_ENTITY_ID, DEALER_DOCUMENT_ATTACHMENT_PARTITION } from '../../../../../../../../lib/constants'
-import { loadDealerDocumentForReview, buildReviewerAttachmentAuth } from '../../../../../../../../commands/shared'
+import { loadDealerDocumentForReview, buildReviewerAttachmentAuth, resolveKycAttachmentId } from '../../../../../../../../commands/shared'
 import { adminDealerTag, commonAdminErrors } from '../../../../../../../openapi'
 
 export const metadata = {
@@ -46,10 +46,13 @@ export const GET = dealerHandler('admin.dealers.applications.documents.file', as
   const em = container.resolve<EntityManager>('em')
   const { profile, document } = await loadDealerDocumentForReview(em, auth.tenantId, applicationId, documentId)
 
+  // Reject legacy/free-form storage keys before touching storage (known gap 6).
+  const attachmentId = await resolveKycAttachmentId(document)
+
   const attachmentService = container.resolve<AttachmentService>('attachmentService')
   const url = new URL(req.url)
   const result = await attachmentService.readScoped({
-    attachmentId: document.storageKey,
+    attachmentId,
     auth: buildReviewerAttachmentAuth(auth, profile),
     expectedOwner: { entityId: DEALER_DOCUMENT_ENTITY_ID, recordId: profile.id },
     expectedPartitionCode: DEALER_DOCUMENT_ATTACHMENT_PARTITION,

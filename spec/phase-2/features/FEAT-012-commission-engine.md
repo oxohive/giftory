@@ -2,7 +2,7 @@
 
 - **Feature ID:** FEAT-012
 - **Phase:** 2
-- **Status:** Draft
+- **Status:** Implemented (status re-checked 2026-11-23). The code is on `main` (PR #2). The API-level integration journey passed 12/12 on 2026-10-20 in a disposable local environment. The `dealer_onboarding`/`dealer_org_rbac`/`payouts` migrations are not yet applied to real databases, and no screen has been browser-tested. See [docs/phase-2-status.md](../../../docs/phase-2-status.md). The live run created no rule, so only the 0-bps fallback path ran end to end. Rule precedence is covered by unit tests only.
 - **Objective:** Calculate and record the dealer's commission for each assigned order at the time of assignment, creating an immutable financial snapshot.
 - **Business Value:** Commission is the dealer's incentive and the platform's revenue model. Snapshotting at assignment time protects both parties from rate changes and provides a clear audit trail.
 - **Scope:** Commission rule configuration, commission calculation on order assignment, snapshot storage, dealer earnings view.

@@ -16,16 +16,20 @@
   --surface-muted: oklch(0.955 0.006 240);
   --muted-foreground: oklch(0.48 0.012 250);
   --border: oklch(0.88 0.008 240);
-  --input: oklch(0.8 0.008 240);
+  /* Contrast notes (WCAG 2.2 AA, checked against --surface/--surface-muted/--background):
+     --input >= 3:1 (1.4.11 non-text contrast for form-control boundaries);
+     --primary/--success >= 4.5:1 as text AND under their -foreground (1.4.3) — the original brass
+     (L 0.6) measured 4.06:1 as link text and 3.94:1 under white button text. */
+  --input: oklch(0.62 0.008 240);
   --ring: oklch(0.55 0.1 250);
 
-  --primary: oklch(0.6 0.13 70); /* brass — the accent that stands for "act on this" */
+  --primary: oklch(0.53 0.13 70); /* brass — the accent that stands for "act on this" */
   --primary-foreground: oklch(0.99 0.01 80);
   --secondary: oklch(0.93 0.01 240); /* cool slate tint */
   --secondary-foreground: oklch(0.3 0.015 250);
   --accent: oklch(0.72 0.1 220); /* slate-blue — in-progress / informational */
   --accent-foreground: oklch(0.2 0.02 230);
-  --success: oklch(0.56 0.12 155);
+  --success: oklch(0.52 0.12 155);
   --success-foreground: oklch(0.99 0 0);
   --warning: oklch(0.78 0.14 75);
   --warning-foreground: oklch(0.28 0.06 60);
@@ -47,7 +51,7 @@
     --surface-muted: oklch(0.29 0.014 250);
     --muted-foreground: oklch(0.72 0.012 240);
     --border: oklch(0.36 0.014 250);
-    --input: oklch(0.4 0.014 250);
+    --input: oklch(0.56 0.014 250); /* >= 3:1 vs surface (1.4.11) */
     --ring: oklch(0.68 0.09 250);
 
     --primary: oklch(0.72 0.13 72);

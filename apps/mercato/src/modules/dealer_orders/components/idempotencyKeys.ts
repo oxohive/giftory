@@ -4,16 +4,14 @@
  *
  * Per API-CONTRACTS.md, only `POST`/`PUT /admin/orders/{id}/assignment`
  * (assign, reassign) require the header — `DELETE` (cancel) does not. The
- * backend currently requires-but-does-not-consume the header (Gap 4: no
- * replay store exists yet; the `409` on an existing active assignment is
- * what actually stops a duplicate *assign* today). This module is strictly
- * the client-side half this task owns: mint ONE key per distinct user
- * operation and make sure a retry of the SAME operation (a double-click
- * before the button disables, or a caller-level retried request) reuses
- * that same key instead of minting a new one — so this UI is already
- * correct the moment the backend grows a real replay store, and so two
- * fast clicks cannot even theoretically be read by a future server as two
- * different write intents.
+ * backend consumes the key (`dealer_orders/lib/idempotency.ts`): a same-key,
+ * same-body retry replays the original response without assigning again, a
+ * same-key, different-body request is 409 `idempotency_key_reused`, and a
+ * failed attempt does not consume the key. This module is the client-side
+ * half: mint ONE key per distinct user operation and make sure a retry of
+ * the SAME operation (a double-click before the button disables, or a
+ * caller-level retried request) reuses that same key instead of minting a
+ * new one, so two fast clicks are never read as two write intents.
  *
  * A "distinct operation" is one dialog session for one action on one
  * order — `assign:<orderId>` or `reassign:<orderId>`. The owning dialog

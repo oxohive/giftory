@@ -2,20 +2,32 @@ import { AlertTriangle, Inbox, Loader2, LogIn, ShieldOff } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { cn } from './cn'
 
-/** An empty list/collection — "nothing here yet", not an error. */
+type HeadingLevel = 1 | 2 | 3 | 4
+
+const HEADING_TAGS = { 1: 'h1', 2: 'h2', 3: 'h3', 4: 'h4' } as const
+
+/**
+ * An empty list/collection — "nothing here yet", not an error.
+ *
+ * `headingLevel` keeps the page outline intact (WCAG 1.3.1/2.4.6): 2 (default) directly under a
+ * page's h1, 3 inside an h2 section, 1 when the empty state IS the page (e.g. not-found).
+ */
 export function EmptyState({
   title,
   icon,
   action,
   className,
   children,
+  headingLevel = 2,
 }: {
   title: string
   icon?: ReactNode
   action?: ReactNode
   className?: string
   children?: ReactNode
+  headingLevel?: HeadingLevel
 }) {
+  const Heading = HEADING_TAGS[headingLevel]
   return (
     <div
       className={cn(
@@ -26,7 +38,7 @@ export function EmptyState({
       <div className="text-muted-foreground" aria-hidden="true">
         {icon ?? <Inbox className="size-8" />}
       </div>
-      <h3 className="text-base font-semibold text-foreground">{title}</h3>
+      <Heading className="text-base font-semibold text-foreground">{title}</Heading>
       {children ? <p className="max-w-sm text-sm text-muted-foreground">{children}</p> : null}
       {action ? <div className="mt-1">{action}</div> : null}
     </div>
@@ -92,17 +104,26 @@ export function PermissionDenied({
 }
 
 /** The session expired (401). `onSignIn`, when given, renders a sign-in action. */
-export function SessionExpired({ onSignIn, className }: { onSignIn?: () => void; className?: string }) {
+export function SessionExpired({
+  onSignIn,
+  className,
+  headingLevel = 2,
+}: {
+  onSignIn?: () => void
+  className?: string
+  headingLevel?: HeadingLevel
+}) {
+  const Heading = HEADING_TAGS[headingLevel]
   return (
     <div role="alert" className={cn('grid place-items-center gap-3 rounded-lg border border-border bg-surface px-6 py-12 text-center', className)}>
       <LogIn className="size-8 text-muted-foreground" aria-hidden="true" />
-      <h3 className="text-base font-semibold text-foreground">Your session has ended</h3>
+      <Heading className="text-base font-semibold text-foreground">Your session has ended</Heading>
       <p className="max-w-sm text-sm text-muted-foreground">Sign in again to keep going.</p>
       {onSignIn ? (
         <button
           type="button"
           onClick={onSignIn}
-          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:brightness-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         >
           Sign in
         </button>

@@ -153,6 +153,33 @@ export async function loadDealerDocumentForReview(
   return { profile, document }
 }
 
+const ATTACHMENT_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * Returns the attachments-module id a KYC document row points at, or throws
+ * the same 404 as an unknown document (known gap 6).
+ *
+ * Since the switch to real uploads, `storage_key` is ALWAYS the server-
+ * generated id returned by `attachmentService.createScoped` (the upload route
+ * never accepts a client-supplied key). Rows written by the original
+ * implementation, however, stored a client-chosen free-form string. Such a
+ * value must never be handed to the storage layer: it is not an attachment
+ * this server created, and passing a non-UUID into the uuid-typed
+ * `attachments.id` lookup would surface as a 500. Everything that IS
+ * UUID-shaped is still re-verified by `attachmentService.readScoped` against
+ * the dealer's tenant + organization, the owning record (`expectedOwner`),
+ * the KYC partition (`expectedPartitionCode`) and `requirePrivatePartition`
+ * before a single byte is read.
+ */
+export async function resolveKycAttachmentId(document: DealerKycDocument): Promise<string> {
+  const storageKey = typeof document.storageKey === 'string' ? document.storageKey.trim() : ''
+  if (!ATTACHMENT_ID_PATTERN.test(storageKey)) {
+    const { translate } = await resolveTranslations()
+    throw notFound(translate('dealer_onboarding.errors.documentNotFound', 'Document not found'))
+  }
+  return storageKey.toLowerCase()
+}
+
 /**
  * Builds the auth context used for the one `attachmentService.readScoped`
  * call a reviewer makes: the attachment is scoped to the DEALER's

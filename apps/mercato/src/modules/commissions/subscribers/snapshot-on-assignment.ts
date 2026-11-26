@@ -63,7 +63,7 @@ export default async function onDealerOrderAssigned(
     )
 
     if (!rows.length) {
-      logger.warn('commission snapshot skipped — order not found', { orderId: payload.orderId, tenantId: payload.tenantId })
+      logger.warn('commission snapshot skipped — order not found', { orderId: payload.orderId })
       return
     }
 

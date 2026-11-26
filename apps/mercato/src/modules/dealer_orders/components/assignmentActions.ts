@@ -20,9 +20,16 @@
  *   - 409                -> assign only: an active assignment already exists
  *                           (conflict — "someone already assigned this order")
  *   - 422                -> request body failed zod validation
- *   - 400 idempotency_key_required -> missing `Idempotency-Key` header
- *     (should never happen from these dialogs, which always send one, but
- *     classified distinctly rather than folded into "order not paid")
+ *   - 400 idempotency_key_required / idempotency_key_invalid -> missing or
+ *     malformed `Idempotency-Key` header (should never happen from these
+ *     dialogs, which always send a UUID, but classified distinctly rather
+ *     than folded into "order not paid")
+ *   - 409 idempotency_request_in_progress -> an earlier attempt with this
+ *     dialog's key is still running server-side: keep the key and retry
+ *   - 409 idempotency_key_reused -> this dialog's key already completed a
+ *     DIFFERENT request (e.g. the first attempt succeeded but its response
+ *     was lost, then the form was edited): treated as a generic conflict, so
+ *     the tab refetches and shows the real current assignment
  */
 
 export type AssignmentActionErrorCode =
@@ -32,6 +39,7 @@ export type AssignmentActionErrorCode =
   | 'not_found'
   | 'order_not_paid'
   | 'idempotency_key_required'
+  | 'in_progress'
   | 'request_failed'
 
 export type AssignmentActionError = { code: AssignmentActionErrorCode; message: string }
@@ -72,8 +80,11 @@ function classifyAssignmentFailure(err: unknown): AssignmentActionError {
   const status = statusOf(err)
   const serverCode = serverCodeOf(err)
   const message = messageOf(err)
-  if (status === 400 && serverCode === 'idempotency_key_required') {
+  if (status === 400 && (serverCode === 'idempotency_key_required' || serverCode === 'idempotency_key_invalid')) {
     return { code: 'idempotency_key_required', message }
+  }
+  if (status === 409 && serverCode === 'idempotency_request_in_progress') {
+    return { code: 'in_progress', message }
   }
   const common = classifyCommon(status, message)
   if (common) return common

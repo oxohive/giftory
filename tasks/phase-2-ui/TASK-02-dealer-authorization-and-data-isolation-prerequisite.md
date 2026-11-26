@@ -1,6 +1,6 @@
 # P2-UI-02: Dealer authorization and data isolation prerequisite
 
-- Status: Review
+- Status: Implemented and API-verified (`159336b`, `ccd4d0c`, plus P2-UI-17 fixes `70b94d0`, `c4ad820`, `0796a28`). Same-tenant cross-dealer isolation passed in the 12/12 integration journey on 2026-10-20. Isolation across a second tenant was never tested.
 - Owner lane: A
 - Depends on: P2-UI-00
 - Owned paths: Backend non-UI code in dealer_orders/, commissions/, payouts/ and dealer_org_rbac/ authorization/setup; scoped security tests
@@ -25,6 +25,7 @@ Read [README.md](README.md) before starting. Dependencies must have verified han
 ## Agent handoff
 
 - Status: Review
+- Status review (2026-11-23, WS-G): the status line at the top of this file supersedes the status above. It was re-checked against git history and the 12/12 integration journey. Per-task evidence is in the README task index.
 
 - **Scope note:** this task's priority was revised mid-flight (see README.md's background section and `API-CONTRACTS.md`/`CONTRACT-HANDOFF.md` from P2-UI-00) to fix three issues in this order: (1) a NEW, severe ACL replace-vs-merge data-corruption bug in the already-merged dealer approval flow, (2) NEW missing `*.dealer_access` grants that made every dealer-facing route in `dealer_orders`/`commissions`/`payouts` unreachable by any dealer, and (3) the originally-scoped caller-supplied-`dealerProfileId` trust gap. All three are fixed below, in that order.
 

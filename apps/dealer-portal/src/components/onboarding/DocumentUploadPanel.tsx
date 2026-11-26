@@ -96,6 +96,8 @@ function DocumentTypeRow({
         setState({ phase: 'done', document: result })
         setSelectedFile(null)
         onUploaded(result)
+        // The Upload button that had focus is gone now; keep focus in this row (WCAG 2.4.3).
+        inputRef.current?.focus()
       })
       .catch((err) => {
         if (err instanceof DOMException && err.name === 'AbortError') {
@@ -127,13 +129,13 @@ function DocumentTypeRow({
   return (
     <div className="grid gap-2 rounded-md border border-border p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-foreground">{DOCUMENT_TYPE_LABELS[documentType]}</h3>
+        <h2 className="text-sm font-semibold text-foreground">{DOCUMENT_TYPE_LABELS[documentType]}</h2>
         {displayDocument ? (
           <a
             href={kycDocumentFileUrl(displayDocument.id, { download: true })}
             className="text-xs font-medium text-primary underline-offset-4 hover:underline"
           >
-            Download
+            Download<span className="sr-only"> {DOCUMENT_TYPE_LABELS[documentType]}</span>
           </a>
         ) : null}
       </div>
@@ -162,12 +164,22 @@ function DocumentTypeRow({
             type="file"
             accept={DOCUMENT_ACCEPT_ATTR}
             disabled={state.phase === 'uploading'}
+            aria-invalid={state.phase === 'validation-error' || undefined}
+            aria-describedby={
+              state.phase === 'validation-error' ? `file-${documentType}-error file-${documentType}-hint` : `file-${documentType}-hint`
+            }
             onChange={(e) => pickFile(e.target.files?.[0] ?? null)}
-            className="text-sm text-foreground file:mr-3 file:rounded-md file:border file:border-input file:bg-surface file:px-3 file:py-1.5 file:text-sm file:font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className="w-full min-w-0 text-sm text-foreground file:mr-3 file:rounded-md file:border file:border-input file:bg-surface file:px-3 file:py-1.5 file:text-sm file:font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           />
-          <p className="text-xs text-muted-foreground">{DOCUMENT_ACCEPT_LABEL}</p>
+          <p id={`file-${documentType}-hint`} className="text-xs text-muted-foreground">
+            {DOCUMENT_ACCEPT_LABEL}
+          </p>
 
-          {state.phase === 'validation-error' ? <ErrorNotice message={state.message} /> : null}
+          {state.phase === 'validation-error' ? (
+            <div id={`file-${documentType}-error`}>
+              <ErrorNotice message={state.message} />
+            </div>
+          ) : null}
 
           {state.phase === 'uploading' ? (
             <div className="grid gap-1">
@@ -186,9 +198,9 @@ function DocumentTypeRow({
                 <button
                   type="button"
                   onClick={cancelUpload}
-                  className="text-xs font-medium text-muted-foreground underline-offset-4 hover:underline"
+                  className="-my-1 px-1 py-1 text-xs font-medium text-muted-foreground underline-offset-4 hover:underline"
                 >
-                  Cancel
+                  Cancel<span className="sr-only"> upload</span>
                 </button>
               </div>
             </div>
@@ -203,6 +215,10 @@ function DocumentTypeRow({
             </div>
           ) : null}
 
+          {/* Always-mounted (visually hidden) live region so an upload's result is announced (4.1.3). */}
+          <p role="status" className="sr-only">
+            {state.phase === 'done' ? `${DOCUMENT_TYPE_LABELS[documentType]} uploaded successfully.` : ''}
+          </p>
           {state.phase === 'done' ? <p className="text-xs font-medium text-success">Uploaded successfully.</p> : null}
 
           {state.phase !== 'uploading' && selectedFile && state.phase !== 'done' ? (
@@ -257,7 +273,10 @@ export function DocumentUploadPanel() {
     // beyond the immediate row — keeps the rest of the page (e.g. a later kycStatus transition
     // to under_review on first upload) accurate without a second manual reload.
     void doc
-    load()
+    // Background refresh (no full-panel loading state): swapping the whole panel for a spinner
+    // unmounted the row that just succeeded, so its "Uploaded successfully" message was never
+    // seen/announced and keyboard focus fell to <body> (WCAG 4.1.3, 2.4.3).
+    fetchStatus()
     void documentType
   }
 

@@ -13,6 +13,7 @@ import {
   Field,
   Input,
   fieldDescribedBy,
+  focusFirstInvalid,
 } from '@gift/ui'
 import { inviteStaffMember } from '@/lib/features/staff/api'
 import { mapStaffInviteError, type StaffMutationError } from '@/lib/features/staff/errors'
@@ -66,7 +67,10 @@ export function InviteStaffDialog({
 
     const errors = validateInviteForm(values)
     setFieldErrors(errors)
-    if (Object.keys(errors).length > 0) return
+    if (Object.keys(errors).length > 0) {
+      focusFirstInvalid(event.currentTarget as HTMLFormElement) // WCAG 3.3.1/2.4.3
+      return
+    }
 
     const payload = buildInvitePayload(values)
     setSubmitting(true)
@@ -97,6 +101,8 @@ export function InviteStaffDialog({
           </DialogDescription>
         </DialogHeader>
 
+        {/* No autoFocus on the email input: Radix already focuses the first field on open, and an
+            explicit autoFocus ran first and hid the opener from DialogContent's focus-return. */}
         <form onSubmit={handleSubmit} className="grid gap-4" noValidate aria-busy={submitting}>
           {mutationError ? (
             <ErrorNotice
@@ -117,7 +123,6 @@ export function InviteStaffDialog({
               aria-describedby={fieldDescribedBy('staff-invite-email', fieldErrors.email)}
               aria-invalid={fieldErrors.email ? true : undefined}
               disabled={submitting}
-              autoFocus
               required
             />
           </Field>

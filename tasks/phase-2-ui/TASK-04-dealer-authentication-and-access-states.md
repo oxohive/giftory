@@ -1,6 +1,6 @@
 # P2-UI-04: Dealer authentication and access states
 
-- Status: Review
+- Status: Implemented (`b69028d`). Backend login and invite password setup were exercised by the 12/12 journey on 2026-10-20, which called apps/mercato directly, not through this portal's BFF. The portal screens have not been browser-tested.
 - Owner lane: B
 - Depends on: P2-UI-00, P2-UI-01, P2-UI-02, P2-UI-03
 - Owned paths: apps/dealer-portal/src/app/(auth)/; src/lib/auth/; src/app/api/om/; src/components/auth/
@@ -25,6 +25,7 @@ Read [README.md](README.md) before starting. Dependencies must have verified han
 ## Agent handoff
 
 - Status: Review
+- Status review (2026-11-23, WS-G): the status line at the top of this file supersedes the status above. It was re-checked against git history and the 12/12 integration journey. Per-task evidence is in the README task index.
 - Changed files:
   - `apps/dealer-portal/src/lib/auth/` (new, this task's primary deliverable):
     - `return-to.ts` (pure) — `sanitizeReturnTo()`, the open-redirect guard for `?returnTo=`.

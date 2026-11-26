@@ -1,6 +1,6 @@
 'use client'
 
-import { Field, Input } from '@gift/ui'
+import { Field, fieldDescribedBy, Input } from '@gift/ui'
 import { INDIAN_STATE_CODES, PRINTING_METHODS, PRINTING_METHOD_LABELS } from '@/lib/features/profile/constants'
 import type { CapabilitiesFormValues, FieldErrors } from '@/lib/features/profile/types'
 import { MultiSelectCheckboxGroup } from './MultiSelectCheckboxGroup'
@@ -34,37 +34,39 @@ export function CapabilitiesForm({
         error={errors.productTypeCodes}
         hint="Free text — there is no fixed catalog yet. Press Enter or comma to add."
       >
+        {/* `id` must reach the real <input> so the Field's <label for> names it (1.3.1, 4.1.2). */}
         <ProductTypeTagsInput
+          id="productTypeCodes"
           value={values.productTypeCodes}
           onChange={(next) => setField('productTypeCodes', next)}
           disabled={disabled}
           error={errors.productTypeCodes}
-          describedBy={errors.productTypeCodes ? 'productTypeCodes-error' : undefined}
+          describedBy={fieldDescribedBy('productTypeCodes', errors.productTypeCodes, true)}
         />
       </Field>
 
-      <Field id="printingMethods" label="Printing methods" error={errors.printingMethods}>
-        <MultiSelectCheckboxGroup
-          legend="Printing methods"
-          options={PRINTING_METHOD_OPTIONS}
-          value={values.printingMethods}
-          onChange={(next) => setField('printingMethods', next)}
-          disabled={disabled}
-          describedBy={errors.printingMethods ? 'printingMethods-error' : undefined}
-        />
-      </Field>
+      {/* Checkbox groups are named by their <fieldset>/<legend>, not a <label for> (a label can't
+          point at a fieldset), so they don't go through <Field>. */}
+      <MultiSelectCheckboxGroup
+        id="printingMethods"
+        legend="Printing methods"
+        options={PRINTING_METHOD_OPTIONS}
+        value={values.printingMethods}
+        onChange={(next) => setField('printingMethods', next)}
+        disabled={disabled}
+        error={errors.printingMethods}
+      />
 
-      <Field id="serviceableStates" label="Serviceable states" error={errors.serviceableStates}>
-        <MultiSelectCheckboxGroup
-          legend="Serviceable states"
-          options={STATE_OPTIONS}
-          value={values.serviceableStates}
-          onChange={(next) => setField('serviceableStates', next)}
-          disabled={disabled}
-          columns={3}
-          describedBy={errors.serviceableStates ? 'serviceableStates-error' : undefined}
-        />
-      </Field>
+      <MultiSelectCheckboxGroup
+        id="serviceableStates"
+        legend="Serviceable states"
+        options={STATE_OPTIONS}
+        value={values.serviceableStates}
+        onChange={(next) => setField('serviceableStates', next)}
+        disabled={disabled}
+        columns={3}
+        error={errors.serviceableStates}
+      />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field id="maxDailyCapacity" label="Max daily capacity" required error={errors.maxDailyCapacity}>

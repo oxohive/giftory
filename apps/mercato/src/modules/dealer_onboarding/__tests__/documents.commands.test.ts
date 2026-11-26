@@ -241,6 +241,36 @@ describe('executeUploadDocument', () => {
     expect(em.flush).toHaveBeenCalledTimes(0)
   })
 
+  it('ignores client-supplied storageKey / partition / foreign scope in the payload (known gap 6)', async () => {
+    const em = makeEm()
+    const de = makeDataEngine(makeDocument())
+    const attachmentService = makeAttachmentService()
+    const findOne = em.findOne as unknown as jest.Mock<() => Promise<unknown>>
+    findOne.mockResolvedValueOnce(makeProfile({ kycStatus: 'under_review' })).mockResolvedValueOnce(null)
+    const ctx = makeCtx(em, de, attachmentService)
+
+    await executeUploadDocument(
+      {
+        ...VALID_INPUT,
+        storageKey: 'kyc/other-tenant/stolen.pdf',
+        attachmentId: 'eeeeeeee-0000-4000-a000-0000000000ff',
+        partitionCode: 'productsMedia',
+        tenantId: 'ffffffff-0000-4000-a000-000000000009',
+        organizationId: 'ffffffff-0000-4000-a000-00000000000a',
+      },
+      ctx,
+    )
+
+    // Bytes go to the KYC private partition under the SESSION's tenant + org…
+    expect(attachmentService.createScoped).toHaveBeenCalledWith(
+      expect.objectContaining({ tenantId: TENANT_ID, organizationId: ORG_ID, partitionCode: 'privateAttachments' }),
+    )
+    // …and the persisted key is the id the attachments module generated, never a client value.
+    const persisted = (de.createOrmEntity.mock.calls[0] as unknown as [{ data: Record<string, unknown> }])[0].data
+    expect(persisted.storageKey).toBe(ATTACHMENT_ID)
+    expect(persisted.tenantId).toBe(TENANT_ID)
+  })
+
   it('soft-deletes an existing document of the same type before creating a replacement', async () => {
     const existingDoc = makeDocument({ id: 'old-doc-id', deletedAt: null })
     const newDoc = makeDocument({ id: 'new-doc-id' })

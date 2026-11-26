@@ -1,6 +1,6 @@
 # P2-UI-16: Admin ledger, payout recording and adjustments
 
-- Status: Implemented, ready for review
+- Status: Implemented (`414f98a`). Payout recording (201) was exercised by the 12/12 journey on 2026-10-20. Adjustments, the ledger list and the screens were not exercised.
 - Owner lane: E
 - Depends on: P2-UI-00, P2-UI-02
 - Owned paths: payouts/backend/; payouts/components/; payouts/i18n/ under apps/mercato/src/modules/
@@ -25,6 +25,7 @@ Read [README.md](README.md) before starting. Dependencies must have verified han
 ## Agent handoff
 
 - Status: Implemented, ready for review
+- Status review (2026-11-23, WS-G): the status line at the top of this file supersedes the status above. It was re-checked against git history and the 12/12 integration journey. Per-task evidence is in the README task index.
 
 - Changed files (all under `apps/mercato/src/modules/payouts/`, the owned paths — nothing outside `payouts/backend/`, `payouts/components/`, `payouts/i18n/` was touched):
   - `components/money.ts` — integer-paise helpers: `parseRupeesToPaise` (string-only rupee→paise conversion, no float multiplication), `formatPaise` (integer div/mod display formatting), `computeLedgerBalanceFromEntries` (mirrors the exact SQL in `payouts/api/admin/dealers/[id]/ledger/balance/route.ts`, documented including the `adjustment_credit` doesn't raise `totalEarned` asymmetry — "Gap 6" in CONTRACT-HANDOFF.md).

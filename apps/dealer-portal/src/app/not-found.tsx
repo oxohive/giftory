@@ -6,6 +6,7 @@ export default function NotFound() {
     <main id="main" className="grid min-h-dvh place-items-center px-4">
       <EmptyState
         title="We can't find that page"
+        headingLevel={1}
         action={
           <Link href="/" className="font-medium text-primary underline-offset-4 hover:underline">
             Back to dashboard

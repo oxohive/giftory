@@ -35,6 +35,5 @@ export default async function onDealerProfileRejected(
   })
   logger.info('dealer_onboarding.profile.rejected — rejection email sent', {
     dealerProfileId: payload.id,
-    tenantId: payload.tenantId,
   })
 }

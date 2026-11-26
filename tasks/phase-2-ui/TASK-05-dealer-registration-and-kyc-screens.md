@@ -1,6 +1,6 @@
 # P2-UI-05: Dealer registration and KYC screens
 
-- Status: Review
+- Status: Implemented (`28487ba`). The 12/12 journey on 2026-10-20 exercised register, multipart KYC upload, and reject → resubmit → approve through the API. The screens have not been browser-tested.
 - Owner lane: B
 - Depends on: P2-UI-01, P2-UI-03, P2-UI-04
 - Owned paths: apps/dealer-portal/src/app/(onboarding)/; src/components/onboarding/; src/lib/features/onboarding/
@@ -25,6 +25,7 @@ Read [README.md](README.md) before starting. Dependencies must have verified han
 ## Agent handoff
 
 - Status: Review
+- Status review (2026-11-23, WS-G): the status line at the top of this file supersedes the status above. It was re-checked against git history and the 12/12 integration journey. Per-task evidence is in the README task index.
 
 - **Scope note, found mid-flight (not guessed, verified directly):** the shared BFF proxy
   (`src/app/api/om/[...path]/route.ts`, P2-UI-01/04 territory, outside this task's owned paths)

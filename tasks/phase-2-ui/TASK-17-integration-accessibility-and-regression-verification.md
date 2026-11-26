@@ -1,6 +1,6 @@
 # P2-UI-17: Integration, accessibility and regression verification
 
-- Status: Review; full real journey passes 12/12 live — see Agent handoff
+- Status: Review. The 12-step API-level journey passed 12/12 on 2026-10-20 (`dd7c121` … `6e44da4`). Three gaps are still open on `main`: a browser accessibility/responsive pass, the Phase 1 regression run, and a second-tenant isolation test. See Agent handoff and VERIFICATION.md.
 - Owner lane: A
 - Depends on: P2-UI-05, P2-UI-06, P2-UI-07, P2-UI-08, P2-UI-09, P2-UI-10, P2-UI-11, P2-UI-12, P2-UI-13, P2-UI-14, P2-UI-15, P2-UI-16
 - Owned paths: apps/dealer-portal/__integration__/; consolidated test config via lane A; tasks/phase-2-ui/ evidence; regression fixes only by assigned owner
@@ -26,6 +26,7 @@ Read [README.md](README.md) before starting. Dependencies must have verified han
 ## Agent handoff
 
 - Status: Review — the full real dealer-marketplace journey now passes 12/12 live. Seven real bugs found and fixed across this task; three remaining gaps (browser a11y, Phase 1 regression, second tenant) are out of this session's reach and named explicitly. Full detail in [VERIFICATION.md](VERIFICATION.md) (see the "Update" section at the top for the final state; the rest of the document is the honest record of the first checkpoint).
+- Status review (2026-11-23, WS-G): the status line at the top of this file supersedes the status above. It was re-checked against git history and the 12/12 integration journey. Per-task evidence is in the README task index.
 - Changed files (full list; see individual commit messages for complete detail):
   - `apps/mercato/src/modules/commissions/subscribers/snapshot-on-assignment.ts` (+ test) — fixed a wrong column name that silently prevented every real commission snapshot from ever being created.
   - `apps/mercato/src/modules/payouts/acl.ts` — added the missing `export default features` that broke every real production build.

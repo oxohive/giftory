@@ -26,6 +26,8 @@ export function EarningsTable({ items, loading }: { items: CommissionSnapshot[];
   return (
     <TableContainer>
       <Table>
+        {/* Names the table for screen-reader table navigation (1.3.1). */}
+        <caption className="sr-only">Commission earnings per assigned order</caption>
         <TableHead>
           <TableRow>
             <TableHeaderCell>Date</TableHeaderCell>

@@ -1,7 +1,7 @@
 'use client'
 
 import { X } from 'lucide-react'
-import { useId, useState, type KeyboardEvent } from 'react'
+import { useRef, useState, type KeyboardEvent } from 'react'
 import { cn, Input } from '@gift/ui'
 
 /**
@@ -16,12 +16,15 @@ import { cn, Input } from '@gift/ui'
  * `@open-mercato/ui` package does, and that package is not a dependency of this app).
  */
 export function ProductTypeTagsInput({
+  id,
   value,
   onChange,
   disabled,
   error,
   describedBy,
 }: {
+  /** Put on the text input so an external <label htmlFor> names it. */
+  id: string
   value: string[]
   onChange: (next: string[]) => void
   disabled?: boolean
@@ -29,7 +32,7 @@ export function ProductTypeTagsInput({
   describedBy?: string
 }) {
   const [draft, setDraft] = useState('')
-  const inputId = useId()
+  const inputRef = useRef<HTMLInputElement>(null)
 
   function commitDraft() {
     const trimmed = draft.trim()
@@ -50,6 +53,8 @@ export function ProductTypeTagsInput({
 
   function removeAt(index: number) {
     onChange(value.filter((_, i) => i !== index))
+    // The clicked remove button is about to unmount — keep keyboard focus in the control (2.4.3).
+    inputRef.current?.focus()
   }
 
   return (
@@ -70,7 +75,7 @@ export function ProductTypeTagsInput({
               type="button"
               onClick={() => removeAt(index)}
               aria-label={`Remove ${code}`}
-              className="rounded-full hover:text-danger focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="-my-1 -mr-1.5 inline-flex size-6 items-center justify-center rounded-full hover:text-danger focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               <X className="size-3" aria-hidden="true" />
             </button>
@@ -78,7 +83,8 @@ export function ProductTypeTagsInput({
         </span>
       ))}
       <Input
-        id={inputId}
+        ref={inputRef}
+        id={id}
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         onKeyDown={handleKeyDown}
@@ -86,6 +92,7 @@ export function ProductTypeTagsInput({
         disabled={disabled}
         placeholder={value.length ? '' : 'Add a product type and press Enter'}
         aria-describedby={describedBy}
+        aria-invalid={error ? true : undefined}
         className="h-7 flex-1 min-w-[10ch] border-0 bg-transparent px-1 focus-visible:outline-none"
       />
     </div>
